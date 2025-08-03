@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.js-debug-nightly",
+        "zixuanchen.vitest-explorer"
+    ]
+}
