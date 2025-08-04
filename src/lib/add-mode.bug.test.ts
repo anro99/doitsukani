@@ -98,7 +98,6 @@ describe("🔧 Synonym Mode Behavior Tests", () => {
 
             // Reproduce the exact scenario from user logs
             const existingSynonyms = ["herkunft", "herkunft"]; // Duplicates already exist
-            const newTranslation = "Herkunft"; // Case difference
 
             // OLD BUGGY logic (would cause 422)
             const buggyResult = existingSynonyms; // Just preserved duplicates

@@ -1,7 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import dotenv from "dotenv";
-import { WKRadical, WKStudyMaterial } from "@bachmacintosh/wanikani-api-types";
-import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from "./wanikani";
+import { getRadicals, getRadicalStudyMaterials } from "./wanikani";
 
 // Load environment variables
 dotenv.config();
@@ -74,7 +73,6 @@ describe("🐛 Bug Reproduction: Duplicate Synonyms 422 Error", () => {
             // Same scenario as above, but with fixed logic
             const existingSynonyms = ["herkunft", "herkunft"]; // Duplicates already exist
             const newTranslation = "Herkunft"; // Case difference
-            const synonymMode = "smart-merge";
 
             // FIXED logic with proper deduplication
             const fixedSmartMerge = (existing: string[], newSyn: string): string[] => {
@@ -175,166 +173,169 @@ describe("🐛 Bug Reproduction: Duplicate Synonyms 422 Error", () => {
         });
 
         it("should test all synonym modes with proper deduplication", () => {
-            existing: ["old1", "old2", "old1"], // Has duplicates
-                newTranslation: "new",
+            const testCases = [
+                {
+                    mode: "replace",
+                    existing: ["old1", "old2", "old1"], // Has duplicates
+                    newTranslation: "new",
                     expected: ["new"]
-        },
-            {
-                mode: "add",
-                existing: ["existing", "existing"], // Has duplicates
-                newTranslation: "new",
-                expected: ["existing", "new"]
-            },
-            {
-                mode: "smart-merge",
-                existing: ["same", "same"], // Has duplicates  
-                newTranslation: "same", // Same as existing
-                expected: ["same"] // Should deduplicate
-            },
-            {
-                mode: "smart-merge",
-                existing: ["existing", "existing"], // Has duplicates
-                newTranslation: "new", // Different from existing
-                expected: ["existing", "new"] // Should deduplicate and add
-            }
+                },
+                {
+                    mode: "add",
+                    existing: ["existing", "existing"], // Has duplicates
+                    newTranslation: "new",
+                    expected: ["existing", "new"]
+                },
+                {
+                    mode: "smart-merge",
+                    existing: ["same", "same"], // Has duplicates  
+                    newTranslation: "same", // Same as existing
+                    expected: ["same"] // Should deduplicate
+                },
+                {
+                    mode: "smart-merge",
+                    existing: ["existing", "existing"], // Has duplicates
+                    newTranslation: "new", // Different from existing
+                    expected: ["existing", "new"] // Should deduplicate and add
+                }
             ];
 
-        // FIXED logic for all modes
-        const processWithDeduplication = (existing: string[], newSyn: string, mode: string): string[] => {
-            const normalizedNew = newSyn.toLowerCase().trim();
-            let result: string[] = [];
+            // FIXED logic for all modes
+            const processWithDeduplication = (existing: string[], newSyn: string, mode: string): string[] => {
+                const normalizedNew = newSyn.toLowerCase().trim();
+                let result: string[] = [];
 
-            switch (mode) {
-                case 'replace':
-                    result = [normalizedNew];
-                    break;
-                case 'add':
-                    result = [...existing, normalizedNew];
-                    break;
-                case 'smart-merge':
-                    if (!existing.some(syn => syn.toLowerCase().trim() === normalizedNew)) {
+                switch (mode) {
+                    case 'replace':
+                        result = [normalizedNew];
+                        break;
+                    case 'add':
                         result = [...existing, normalizedNew];
-                    } else {
+                        break;
+                    case 'smart-merge':
+                        if (!existing.some(syn => syn.toLowerCase().trim() === normalizedNew)) {
+                            result = [...existing, normalizedNew];
+                        } else {
+                            result = existing;
+                        }
+                        break;
+                    default:
                         result = existing;
-                    }
-                    break;
-                default:
-                    result = existing;
-            }
+                }
 
-            // Always deduplicate and filter
-            return [...new Set(
-                result
-                    .map(syn => syn.toLowerCase().trim())
-                    .filter(syn => syn.length > 0)
-            )];
-        };
+                // Always deduplicate and filter
+                return [...new Set(
+                    result
+                        .map(syn => syn.toLowerCase().trim())
+                        .filter(syn => syn.length > 0)
+                )];
+            };
 
-        testCases.forEach(testCase => {
-            const result = processWithDeduplication(testCase.existing, testCase.newTranslation, testCase.mode);
-            console.log(`Mode "${testCase.mode}":`, testCase.existing, "+", testCase.newTranslation, "→", result);
+            testCases.forEach(testCase => {
+                const result = processWithDeduplication(testCase.existing, testCase.newTranslation, testCase.mode);
+                console.log(`Mode "${testCase.mode}":`, testCase.existing, "+", testCase.newTranslation, "→", result);
 
-            expect(result).toEqual(testCase.expected);
-            expect(result.length).toBe(new Set(result).size); // No duplicates
-        });
-    });
-
-    it("should test edge cases that cause validation errors", () => {
-        console.log("🚨 Testing edge cases that cause API validation errors...");
-
-        const edgeCases = [
-            {
-                name: "empty strings",
-                input: ["valid", "", "another", ""],
-                expected: ["valid", "another"]
-            },
-            {
-                name: "whitespace-only strings",
-                input: ["valid", "   ", "\t", "another"],
-                expected: ["valid", "another"]
-            },
-            {
-                name: "case variations",
-                input: ["Word", "word", "WORD", "WoRd"],
-                expected: ["word"]
-            },
-            {
-                name: "whitespace variations",
-                input: [" padded ", "padded", "  padded  "],
-                expected: ["padded"]
-            },
-            {
-                name: "mixed issues",
-                input: ["Valid", "", "  ", "valid", "VALID", " valid "],
-                expected: ["valid"]
-            }
-        ];
-
-        const cleanAndDeduplicate = (synonyms: string[]): string[] => {
-            return [...new Set(
-                synonyms
-                    .map(syn => syn.toLowerCase().trim())
-                    .filter(syn => syn.length > 0)
-            )];
-        };
-
-        edgeCases.forEach(edgeCase => {
-            const result = cleanAndDeduplicate(edgeCase.input);
-            console.log(`Edge case "${edgeCase.name}":`, edgeCase.input, "→", result);
-
-            expect(result).toEqual(edgeCase.expected);
-            expect(result.length).toBe(new Set(result).size); // No duplicates
-            expect(result.every(syn => syn.trim().length > 0)).toBe(true); // No empty strings
-        });
-    });
-});
-
-describe("Integration Tests - Safe API Testing", () => {
-    it("should test the actual API behavior with duplicates (read-only)", async () => {
-        if (!apiToken) {
-            console.log("Skipping integration test: WANIKANI_API_TOKEN not available");
-            return;
-        }
-
-        console.log("🔍 Testing actual API behavior with study materials...");
-
-        try {
-            // Get radicals (safe read operation)
-            const radicals = await getRadicals(apiToken);
-            console.log(`📚 Found ${radicals.length} radicals`);
-
-            // Get existing study materials (safe read operation)
-            const studyMaterials = await getRadicalStudyMaterials(apiToken);
-            console.log(`📊 Found ${studyMaterials.length} study materials`);
-
-            // Find study materials with duplicates
-            const materialsWithDuplicates = studyMaterials.filter(sm => {
-                const synonyms = sm.data.meaning_synonyms || [];
-                return synonyms.length !== new Set(synonyms).size;
+                expect(result).toEqual(testCase.expected);
+                expect(result.length).toBe(new Set(result).size); // No duplicates
             });
+        });
 
-            console.log(`🔍 Study materials with duplicates: ${materialsWithDuplicates.length}`);
+        it("should test edge cases that cause validation errors", () => {
+            console.log("🚨 Testing edge cases that cause API validation errors...");
 
-            if (materialsWithDuplicates.length > 0) {
-                materialsWithDuplicates.slice(0, 3).forEach(sm => {
-                    console.log(`📝 Subject ${sm.data.subject_id}: ${sm.data.meaning_synonyms}`);
+            const edgeCases = [
+                {
+                    name: "empty strings",
+                    input: ["valid", "", "another", ""],
+                    expected: ["valid", "another"]
+                },
+                {
+                    name: "whitespace-only strings",
+                    input: ["valid", "   ", "\t", "another"],
+                    expected: ["valid", "another"]
+                },
+                {
+                    name: "case variations",
+                    input: ["Word", "word", "WORD", "WoRd"],
+                    expected: ["word"]
+                },
+                {
+                    name: "whitespace variations",
+                    input: [" padded ", "padded", "  padded  "],
+                    expected: ["padded"]
+                },
+                {
+                    name: "mixed issues",
+                    input: ["Valid", "", "  ", "valid", "VALID", " valid "],
+                    expected: ["valid"]
+                }
+            ];
 
+            const cleanAndDeduplicate = (synonyms: string[]): string[] => {
+                return [...new Set(
+                    synonyms
+                        .map(syn => syn.toLowerCase().trim())
+                        .filter(syn => syn.length > 0)
+                )];
+            };
+
+            edgeCases.forEach(edgeCase => {
+                const result = cleanAndDeduplicate(edgeCase.input);
+                console.log(`Edge case "${edgeCase.name}":`, edgeCase.input, "→", result);
+
+                expect(result).toEqual(edgeCase.expected);
+                expect(result.length).toBe(new Set(result).size); // No duplicates
+                expect(result.every(syn => syn.trim().length > 0)).toBe(true); // No empty strings
+            });
+        });
+    });
+
+    describe("Integration Tests - Safe API Testing", () => {
+        it("should test the actual API behavior with duplicates (read-only)", async () => {
+            if (!apiToken) {
+                console.log("Skipping integration test: WANIKANI_API_TOKEN not available");
+                return;
+            }
+
+            console.log("🔍 Testing actual API behavior with study materials...");
+
+            try {
+                // Get radicals (safe read operation)
+                const radicals = await getRadicals(apiToken);
+                console.log(`📚 Found ${radicals.length} radicals`);
+
+                // Get existing study materials (safe read operation)
+                const studyMaterials = await getRadicalStudyMaterials(apiToken);
+                console.log(`📊 Found ${studyMaterials.length} study materials`);
+
+                // Find study materials with duplicates
+                const materialsWithDuplicates = studyMaterials.filter(sm => {
                     const synonyms = sm.data.meaning_synonyms || [];
-                    const duplicates = synonyms.filter((syn, index) => synonyms.indexOf(syn) !== index);
-                    console.log(`🔍 Duplicates found:`, duplicates);
-
-                    expect(synonyms.length).toBeGreaterThan(new Set(synonyms).size);
+                    return synonyms.length !== new Set(synonyms).size;
                 });
 
-                console.log(`🚨 CONFIRMED: Existing data contains duplicates that cause 422 errors!`);
-            } else {
-                console.log(`✅ No duplicates found in current study materials`);
-            }
+                console.log(`🔍 Study materials with duplicates: ${materialsWithDuplicates.length}`);
 
-        } catch (error) {
-            console.error("❌ API test failed:", error);
-            // Don't fail the test, just log the error
-        }
+                if (materialsWithDuplicates.length > 0) {
+                    materialsWithDuplicates.slice(0, 3).forEach(sm => {
+                        console.log(`📝 Subject ${sm.data.subject_id}: ${sm.data.meaning_synonyms}`);
+
+                        const synonyms = sm.data.meaning_synonyms || [];
+                        const duplicates = synonyms.filter((syn, index) => synonyms.indexOf(syn) !== index);
+                        console.log(`🔍 Duplicates found:`, duplicates);
+
+                        expect(synonyms.length).toBeGreaterThan(new Set(synonyms).size);
+                    });
+
+                    console.log(`🚨 CONFIRMED: Existing data contains duplicates that cause 422 errors!`);
+                } else {
+                    console.log(`✅ No duplicates found in current study materials`);
+                }
+
+            } catch (error) {
+                console.error("❌ API test failed:", error);
+                // Don't fail the test, just log the error
+            }
+        });
     });
-});
 });

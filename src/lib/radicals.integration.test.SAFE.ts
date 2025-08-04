@@ -27,7 +27,7 @@ dotenv.config();
 // CRITICAL: These functions must ONLY perform READ operations (GET requests)
 // They must NEVER call createSynonyms, updateSynonyms or any POST/PUT/DELETE operations
 const getRadicals = async (
-    token: string,
+    _token: string,
     setProgress?: any,
     options?: { levels?: string; limit?: number }
 ): Promise<WKRadical[]> => {
@@ -39,7 +39,7 @@ const getRadicals = async (
 };
 
 const getRadicalStudyMaterials = async (
-    token: string,
+    _token: string,
     setProgress?: any,
     options?: { subject_ids?: string; limit?: number }
 ): Promise<WKStudyMaterial[]> => {

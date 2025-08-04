@@ -1,6 +1,5 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import dotenv from "dotenv";
-import { WKRadical, WKStudyMaterial } from "@bachmacintosh/wanikani-api-types";
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms, deleteRadicalSynonyms } from "./wanikani";
 
 // Load environment variables
@@ -31,16 +30,10 @@ dotenv.config();
  * All tests are limited to these 3 specific test radicals.
  */
 
-// Test radicals that are safe for manipulation
-const TEST_RADICALS = {
-    RICE: { meaning: "Rice", characters: "米", slug: "rice" },
-    SPIKES: { meaning: "Spikes", characters: null, slug: "spikes" },
-    UMBRELLA: { meaning: "Umbrella", characters: null, slug: "umbrella" }
-} as const;
+// Global variable for API token accessible across all test suites
+let apiToken: string;
 
 describe("Radical API Integration Tests - TEST RADICALS ONLY", () => {
-    let apiToken: string;
-
     beforeAll(() => {
         // Check if we have a Wanikani API token for integration tests
         apiToken = process.env.WANIKANI_API_TOKEN || "";
@@ -618,5 +611,4 @@ describe("Rate Limiting with Test Radicals", () => {
         // Test passes if all calls succeed (rate limiting is per-function, not global)
         expect(totalTime).toBeGreaterThan(0);
     }, 30000);
-});
 });
