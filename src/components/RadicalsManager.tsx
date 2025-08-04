@@ -51,7 +51,6 @@ export const RadicalsManager: React.FC = () => {
     const [results, setResults] = useState<ProcessResult[]>([]);
     const [translationStatus, setTranslationStatus] = useState('');
     const [uploadStatus, setUploadStatus] = useState('');
-    const [isUploadingToWanikani, setIsUploadingToWanikani] = useState(false);
     const [uploadStats, setUploadStats] = useState({ created: 0, updated: 0, failed: 0 });
 
     // API Integration State
@@ -165,6 +164,93 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
+    // 🔧 Upload single radical to Wanikani
+    const uploadSingleRadical = async (result: ProcessResult, totalStats: { created: number, updated: number, failed: number }): Promise<{ created: number, updated: number, failed: number }> => {
+        if (!apiToken) {
+            result.status = 'error';
+            result.message = '❌ Kein API Token verfügbar';
+            return { ...totalStats, failed: totalStats.failed + 1 };
+        }
+
+        const radical = result.radical;
+
+        try {
+            // Check if study material already exists for this radical
+            const existingStudyMaterial = studyMaterials.find(sm => sm.data.subject_id === radical.id);
+
+            console.log(`🔧 DEBUG: Processing radical ${radical.id} (${radical.meaning})`);
+            console.log(`🔧 DEBUG: Existing study material:`, existingStudyMaterial);
+            console.log(`🔧 DEBUG: New synonyms to upload:`, radical.currentSynonyms);
+
+            // 🔧 CRITICAL FIX: Apply mode-specific validation before uploading 
+            const rawSynonyms = radical.currentSynonyms || [];
+            let validSynonyms: string[] = [];
+
+            // Apply same logic as in translation phase
+            switch (synonymMode) {
+                case 'delete':
+                    // Delete mode: Always empty array
+                    validSynonyms = [];
+                    break;
+                case 'replace':
+                case 'smart-merge':
+                default:
+                    // Other modes: Deduplicate case-insensitively but preserve original case - keep first occurrence
+                    const seenUploadSynonyms = new Map<string, string>();
+                    rawSynonyms
+                        .map(syn => typeof syn === 'string' ? syn.trim() : '')
+                        .filter(syn => syn.length > 0)
+                        .forEach(syn => {
+                            const lowerKey = syn.toLowerCase();
+                            if (!seenUploadSynonyms.has(lowerKey)) {
+                                seenUploadSynonyms.set(lowerKey, syn); // Keep first occurrence
+                            }
+                        });
+                    validSynonyms = [...seenUploadSynonyms.values()]; // Get unique values preserving original case
+                    break;
+            }
+
+            console.log(`🔧 DEBUG: Raw synonyms from radical:`, rawSynonyms);
+            console.log(`🔧 DEBUG: Synonym mode applied: ${synonymMode}`);
+            console.log(`🔧 DEBUG: Final synonyms for upload:`, validSynonyms);
+
+            // For DELETE mode, empty arrays are valid and should be uploaded
+            // For other modes, we need at least one synonym
+            if (validSynonyms.length === 0 && synonymMode !== 'delete') {
+                console.log(`⚠️ DEBUG: No valid synonyms to upload for ${radical.meaning}`);
+                result.status = 'error';
+                result.message = `❌ Keine gültigen Synonyme zum Upload für "${radical.meaning}"`;
+                return { ...totalStats, failed: totalStats.failed + 1 };
+            } else {
+                if (existingStudyMaterial) {
+                    // Update existing study material
+                    console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
+                    await updateRadicalSynonyms(
+                        apiToken,
+                        existingStudyMaterial.id,
+                        validSynonyms
+                    );
+                    return { ...totalStats, updated: totalStats.updated + 1 };
+                } else {
+                    // Create new study material
+                    console.log(`➕ DEBUG: Creating new study material for radical ${radical.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
+                    await createRadicalSynonyms(
+                        apiToken,
+                        radical.id,
+                        validSynonyms
+                    );
+                    return { ...totalStats, created: totalStats.created + 1 };
+                }
+            }
+
+        } catch (error) {
+            console.error(`❌ DEBUG: Upload error for ${radical.meaning}:`, error);
+            result.status = 'error';
+            result.message = `❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+            return { ...totalStats, failed: totalStats.failed + 1 };
+        }
+    };
+
     // 🔧 CRITICAL: Process translation with mode-specific synonym logic
     const processTranslations = async (selectedRadicals: Radical[]) => {
         if (synonymMode !== 'delete' && !deeplToken) {
@@ -181,18 +267,20 @@ export const RadicalsManager: React.FC = () => {
         setProgress(0);
         setTranslationStatus('🔄 Starte Verarbeitung...');
         setResults([]);
+        setUploadStats({ created: 0, updated: 0, failed: 0 });
 
         const processResults: ProcessResult[] = [];
         const filteredRadicals = selectedRadicals.filter(r => r.selected);
+        let uploadStats = { created: 0, updated: 0, failed: 0 };
 
         try {
             // Handle delete mode without translation
             if (synonymMode === 'delete') {
-                setTranslationStatus(`🗑️ Lösche Synonyme für ${filteredRadicals.length} Radicals...`);
+                setTranslationStatus(`🗑️ Verarbeite ${filteredRadicals.length} Radicals im DELETE-Modus...`);
 
                 for (let i = 0; i < filteredRadicals.length; i++) {
                     const radical = filteredRadicals[i];
-                    setTranslationStatus(`🗑️ Lösche ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+                    setTranslationStatus(`🗑️ Verarbeite ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
 
                     const updatedRadical: Radical = {
                         ...radical,
@@ -200,17 +288,34 @@ export const RadicalsManager: React.FC = () => {
                         currentSynonyms: []
                     };
 
-                    processResults.push({
+                    const result: ProcessResult = {
                         radical: updatedRadical,
                         status: 'success',
                         message: `🗑️ Synonyme gelöscht für "${radical.meaning}"`
-                    });
+                    };
 
-                    setProgress(50 + (i + 1) / filteredRadicals.length * 50);
+                    // Immediately upload to Wanikani
+                    setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+                    uploadStats = await uploadSingleRadical(result, uploadStats);
+
+                    if (result.status === 'error') {
+                        // Upload failed, keep error status and message from uploadSingleRadical
+                    } else {
+                        result.status = 'uploaded';
+                        if (synonymMode === 'delete') {
+                            result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
+                        }
+                    }
+
+                    processResults.push(result);
+                    setResults([...processResults]); // Update results in real-time
+                    setUploadStats(uploadStats); // Update upload stats in real-time
+
+                    setProgress((i + 1) / filteredRadicals.length * 100);
                 }
             } else {
-                // Handle translation modes
-                setTranslationStatus(`🌐 Übersetze ${filteredRadicals.length} Radicals...`);
+                // Handle translation modes with immediate upload
+                setTranslationStatus(`🌐 Verarbeite ${filteredRadicals.length} Radicals mit Übersetzung...`);
 
                 for (let i = 0; i < filteredRadicals.length; i++) {
                     const radical = filteredRadicals[i];
@@ -263,161 +368,52 @@ export const RadicalsManager: React.FC = () => {
                             currentSynonyms: cleanedSynonyms
                         };
 
-                        processResults.push({
+                        const result: ProcessResult = {
                             radical: updatedRadical,
                             status: 'success',
                             message: `Übersetzt: "${radical.meaning}" → "${translation}"`
-                        });
+                        };
+
+                        // Immediately upload to Wanikani after translation
+                        setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+                        uploadStats = await uploadSingleRadical(result, uploadStats);
+
+                        if (result.status === 'error') {
+                            // Upload failed, keep error status and message from uploadSingleRadical
+                        } else {
+                            result.status = 'uploaded';
+                            result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
+                        }
+
+                        processResults.push(result);
 
                     } catch (error) {
-                        processResults.push({
+                        const result: ProcessResult = {
                             radical,
                             status: 'error',
-                            message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
-                        });
+                            message: `❌ Übersetzungsfehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+                        };
+                        processResults.push(result);
+                        uploadStats.failed++;
                     }
 
+                    setResults([...processResults]); // Update results in real-time
+                    setUploadStats(uploadStats); // Update upload stats in real-time
                     setProgress((i + 1) / filteredRadicals.length * 100);
                 }
             }
 
             setResults(processResults);
-            const successCount = processResults.filter(r => r.status === 'success').length;
-            const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt';
+            const successCount = processResults.filter(r => r.status === 'uploaded').length;
+            const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt und hochgeladen';
             setTranslationStatus(`✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}.`);
-
-            // Automatically upload to Wanikani if there are successful results
-            const successfulResults = processResults.filter(r => r.status === 'success');
-            if (successfulResults.length > 0) {
-                const actionText = synonymMode === 'delete' ? 'lösche' : 'lade';
-                setTranslationStatus(`🔄 ${actionText} ${successfulResults.length} Synonyme zu Wanikani hoch...`);
-                await uploadSynonymsToWanikani(processResults);
-            }
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}`);
 
         } catch (error) {
             console.error('Processing error:', error);
             setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
         } finally {
             setIsProcessing(false);
-        }
-    };
-
-    // 🔧 Upload synonyms to Wanikani with mode-specific validation
-    const uploadSynonymsToWanikani = async (resultsToUpload: ProcessResult[]) => {
-        if (!apiToken || resultsToUpload.length === 0) {
-            setUploadStatus('❌ Keine Daten zum Hochladen verfügbar.');
-            return;
-        }
-
-        setIsUploadingToWanikani(true);
-        setUploadStatus('🚀 Starte Upload zu Wanikani...');
-        setUploadStats({ created: 0, updated: 0, failed: 0 });
-
-        const successfulResults = resultsToUpload.filter(r => r.status === 'success');
-        let created = 0, updated = 0, failed = 0;
-
-        try {
-            for (let i = 0; i < successfulResults.length; i++) {
-                const result = successfulResults[i];
-                const radical = result.radical;
-
-                try {
-                    setUploadStatus(`📤 Lade ${i + 1}/${successfulResults.length}: ${radical.meaning}...`);
-
-                    // Check if study material already exists for this radical
-                    const existingStudyMaterial = studyMaterials.find(sm => sm.data.subject_id === radical.id);
-
-                    console.log(`🔧 DEBUG: Processing radical ${radical.id} (${radical.meaning})`);
-                    console.log(`🔧 DEBUG: Existing study material:`, existingStudyMaterial);
-                    console.log(`🔧 DEBUG: New synonyms to upload:`, radical.currentSynonyms);
-
-                    // 🔧 CRITICAL FIX: Apply mode-specific validation before uploading 
-                    const rawSynonyms = radical.currentSynonyms || [];
-                    let validSynonyms: string[] = [];
-
-                    // Apply same logic as in translation phase
-                    switch (synonymMode) {
-                        case 'delete':
-                            // Delete mode: Always empty array
-                            validSynonyms = [];
-                            break;
-                        case 'replace':
-                        case 'smart-merge':
-                        default:
-                            // Other modes: Deduplicate case-insensitively but preserve original case - keep first occurrence
-                            const seenUploadSynonyms = new Map<string, string>();
-                            rawSynonyms
-                                .map(syn => typeof syn === 'string' ? syn.trim() : '')
-                                .filter(syn => syn.length > 0)
-                                .forEach(syn => {
-                                    const lowerKey = syn.toLowerCase();
-                                    if (!seenUploadSynonyms.has(lowerKey)) {
-                                        seenUploadSynonyms.set(lowerKey, syn); // Keep first occurrence
-                                    }
-                                });
-                            validSynonyms = [...seenUploadSynonyms.values()]; // Get unique values preserving original case
-                            break;
-                    }
-
-                    console.log(`🔧 DEBUG: Raw synonyms from radical:`, rawSynonyms);
-                    console.log(`🔧 DEBUG: Synonym mode applied: ${synonymMode}`);
-                    console.log(`🔧 DEBUG: Final synonyms for upload:`, validSynonyms);
-
-                    // For DELETE mode, empty arrays are valid and should be uploaded
-                    // For other modes, we need at least one synonym
-                    if (validSynonyms.length === 0 && synonymMode !== 'delete') {
-                        console.log(`⚠️ DEBUG: No valid synonyms to upload for ${radical.meaning}`);
-                        result.status = 'error';
-                        result.message = `❌ Keine gültigen Synonyme zum Upload für "${radical.meaning}"`;
-                        failed++;
-                    } else {
-                        if (existingStudyMaterial) {
-                            // Update existing study material
-                            console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
-                            await updateRadicalSynonyms(
-                                apiToken,
-                                existingStudyMaterial.id,
-                                validSynonyms
-                            );
-                            updated++;
-                        } else {
-                            // Create new study material
-                            console.log(`➕ DEBUG: Creating new study material for radical ${radical.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
-                            await createRadicalSynonyms(
-                                apiToken,
-                                radical.id,
-                                validSynonyms
-                            );
-                            created++;
-                        }
-
-                        result.status = 'uploaded';
-                        if (synonymMode === 'delete') {
-                            result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
-                        } else {
-                            result.message = `✅ Erfolgreich hochgeladen: ${validSynonyms.join(', ')}`;
-                        }
-                        console.log(`✅ DEBUG: Successfully processed synonyms for ${radical.meaning}: [${validSynonyms.join(', ')}]`);
-                    }
-
-                } catch (error) {
-                    console.error(`❌ DEBUG: Upload error for ${radical.meaning}:`, error);
-                    result.status = 'error';
-                    result.message = `❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
-                    failed++;
-                }
-
-                setUploadStats({ created, updated, failed });
-            }
-
-            setResults([...resultsToUpload]);
-            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${created}, Aktualisiert: ${updated}, Fehler: ${failed}`);
-
-        } catch (error) {
-            console.error('Upload error:', error);
-            setUploadStatus(`❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
-        } finally {
-            setIsUploadingToWanikani(false);
         }
     };
 
