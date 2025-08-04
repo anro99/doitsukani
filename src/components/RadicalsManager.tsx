@@ -137,7 +137,7 @@ export const RadicalsManager: React.FC = () => {
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
             return;
         }
-        
+
         if (selectedRadicals.length === 0) {
             setTranslationStatus('❌ Keine Radicals ausgewählt.');
             return;
@@ -155,7 +155,7 @@ export const RadicalsManager: React.FC = () => {
             // Handle delete mode without translation
             if (synonymMode === 'delete') {
                 setTranslationStatus(`🗑️ Lösche Synonyme für ${filteredRadicals.length} Radicals...`);
-                
+
                 for (let i = 0; i < filteredRadicals.length; i++) {
                     const radical = filteredRadicals[i];
                     setTranslationStatus(`🗑️ Lösche ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
@@ -316,7 +316,9 @@ export const RadicalsManager: React.FC = () => {
                     console.log(`🔧 DEBUG: Synonym mode applied: ${synonymMode}`);
                     console.log(`🔧 DEBUG: Final synonyms for upload:`, validSynonyms);
 
-                    if (validSynonyms.length === 0) {
+                    // For DELETE mode, empty arrays are valid and should be uploaded
+                    // For other modes, we need at least one synonym
+                    if (validSynonyms.length === 0 && synonymMode !== 'delete') {
                         console.log(`⚠️ DEBUG: No valid synonyms to upload for ${radical.meaning}`);
                         result.status = 'error';
                         result.message = `❌ Keine gültigen Synonyme zum Upload für "${radical.meaning}"`;
@@ -324,7 +326,7 @@ export const RadicalsManager: React.FC = () => {
                     } else {
                         if (existingStudyMaterial) {
                             // Update existing study material
-                            console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with synonyms`);
+                            console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
                             await updateRadicalSynonyms(
                                 apiToken,
                                 existingStudyMaterial.id,
@@ -333,7 +335,7 @@ export const RadicalsManager: React.FC = () => {
                             updated++;
                         } else {
                             // Create new study material
-                            console.log(`➕ DEBUG: Creating new study material for radical ${radical.id}`);
+                            console.log(`➕ DEBUG: Creating new study material for radical ${radical.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
                             await createRadicalSynonyms(
                                 apiToken,
                                 radical.id,
@@ -343,8 +345,12 @@ export const RadicalsManager: React.FC = () => {
                         }
 
                         result.status = 'uploaded';
-                        result.message = `✅ Erfolgreich hochgeladen: ${validSynonyms.join(', ')}`;
-                        console.log(`✅ DEBUG: Successfully uploaded synonyms for ${radical.meaning}: [${validSynonyms.join(', ')}]`);
+                        if (synonymMode === 'delete') {
+                            result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
+                        } else {
+                            result.message = `✅ Erfolgreich hochgeladen: ${validSynonyms.join(', ')}`;
+                        }
+                        console.log(`✅ DEBUG: Successfully processed synonyms for ${radical.meaning}: [${validSynonyms.join(', ')}]`);
                     }
 
                 } catch (error) {
