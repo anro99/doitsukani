@@ -32,8 +32,18 @@ interface ProcessResult {
 }
 
 export const RadicalsManager: React.FC = () => {
-    const [apiToken, setApiToken] = useState('');
-    const [deeplToken, setDeeplToken] = useState('');
+    const [apiToken, setApiToken] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('wanikani-api-token') || '';
+        }
+        return '';
+    });
+    const [deeplToken, setDeeplToken] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('deepl-api-token') || '';
+        }
+        return '';
+    });
     const [selectedLevel, setSelectedLevel] = useState<number | 'all'>(1);
     const [synonymMode, setSynonymMode] = useState<SynonymMode>('smart-merge');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -49,6 +59,30 @@ export const RadicalsManager: React.FC = () => {
     const [studyMaterials, setStudyMaterials] = useState<WKStudyMaterial[]>([]);
     const [isLoadingRadicals, setIsLoadingRadicals] = useState(false);
     const [apiError, setApiError] = useState<string>('');
+
+    // Handle API token changes with localStorage persistence
+    const handleApiTokenChange = (token: string) => {
+        setApiToken(token);
+        if (typeof window !== 'undefined') {
+            if (token.trim()) {
+                localStorage.setItem('wanikani-api-token', token);
+            } else {
+                localStorage.removeItem('wanikani-api-token');
+            }
+        }
+    };
+
+    // Handle DeepL token changes with localStorage persistence
+    const handleDeeplTokenChange = (token: string) => {
+        setDeeplToken(token);
+        if (typeof window !== 'undefined') {
+            if (token.trim()) {
+                localStorage.setItem('deepl-api-token', token);
+            } else {
+                localStorage.removeItem('deepl-api-token');
+            }
+        }
+    };
 
     // Load radicals from Wanikani API when token changes
     useEffect(() => {
@@ -396,7 +430,7 @@ export const RadicalsManager: React.FC = () => {
                         type="password"
                         placeholder="Geben Sie Ihren Wanikani API Token ein..."
                         value={apiToken}
-                        onChange={(e) => setApiToken(e.target.value)}
+                        onChange={(e) => handleApiTokenChange(e.target.value)}
                         className="mb-4"
                         disabled={isLoadingRadicals}
                     />
@@ -431,7 +465,7 @@ export const RadicalsManager: React.FC = () => {
                         type="password"
                         placeholder="Geben Sie Ihren DeepL API Token ein..."
                         value={deeplToken}
-                        onChange={(e) => setDeeplToken(e.target.value)}
+                        onChange={(e) => handleDeeplTokenChange(e.target.value)}
                         className="mb-4"
                         disabled={isProcessing}
                     />
@@ -603,7 +637,7 @@ export const RadicalsManager: React.FC = () => {
                         <div className="flex gap-4">
                             <Button
                                 onClick={() => processTranslations(filteredRadicals)}
-                                disabled={!apiToken || !deeplToken || filteredRadicals.length === 0 || isProcessing}
+                                disabled={!apiToken || (synonymMode !== 'delete' && !deeplToken) || filteredRadicals.length === 0 || isProcessing}
                                 className="flex-1"
                             >
                                 {isProcessing ? 'Verarbeitung läuft...' : 'Synonyme übersetzen und aktualisieren'}
