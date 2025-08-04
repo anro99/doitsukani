@@ -222,7 +222,7 @@ export const RadicalsManager: React.FC = () => {
                         // Apply synonym mode logic
                         let newSynonyms: string[] = [];
                         const currentSynonyms = radical.currentSynonyms || [];
-                        const translatedSynonym = translation.toLowerCase().trim();
+                        const translatedSynonym = translation.trim(); // Keep original case
 
                         console.log(`🔧 DEBUG: Processing synonym logic for "${radical.meaning}"`);
                         console.log(`🔧 DEBUG: Current synonyms:`, currentSynonyms);
@@ -233,7 +233,8 @@ export const RadicalsManager: React.FC = () => {
                                 newSynonyms = [translatedSynonym];
                                 break;
                             case 'smart-merge':
-                                if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym)) {
+                                // Case-insensitive comparison but preserve original case
+                                if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym.toLowerCase())) {
                                     newSynonyms = [...currentSynonyms, translatedSynonym];
                                 } else {
                                     newSynonyms = currentSynonyms;
@@ -241,12 +242,18 @@ export const RadicalsManager: React.FC = () => {
                                 break;
                         }
 
-                        // Clean and deduplicate synonyms
-                        const cleanedSynonyms = [...new Set(
-                            newSynonyms
-                                .map(syn => syn.toLowerCase().trim())
-                                .filter(syn => syn.length > 0)
-                        )];
+                        // Clean synonyms but preserve case - keep first occurrence of each case-insensitive match
+                        const seenSynonyms = new Map<string, string>();
+                        newSynonyms
+                            .map(syn => syn.trim())
+                            .filter(syn => syn.length > 0)
+                            .forEach(syn => {
+                                const lowerKey = syn.toLowerCase();
+                                if (!seenSynonyms.has(lowerKey)) {
+                                    seenSynonyms.set(lowerKey, syn); // Keep first occurrence
+                                }
+                            });
+                        const cleanedSynonyms = [...seenSynonyms.values()]; // Get unique values preserving original case
 
                         console.log(`🔧 DEBUG: After processing:`, cleanedSynonyms);
 
@@ -337,12 +344,18 @@ export const RadicalsManager: React.FC = () => {
                         case 'replace':
                         case 'smart-merge':
                         default:
-                            // Other modes: Deduplicate and validate
-                            validSynonyms = [...new Set(
-                                rawSynonyms
-                                    .map(syn => typeof syn === 'string' ? syn.toLowerCase().trim() : '')
-                                    .filter(syn => syn.length > 0)
-                            )];
+                            // Other modes: Deduplicate case-insensitively but preserve original case - keep first occurrence
+                            const seenUploadSynonyms = new Map<string, string>();
+                            rawSynonyms
+                                .map(syn => typeof syn === 'string' ? syn.trim() : '')
+                                .filter(syn => syn.length > 0)
+                                .forEach(syn => {
+                                    const lowerKey = syn.toLowerCase();
+                                    if (!seenUploadSynonyms.has(lowerKey)) {
+                                        seenUploadSynonyms.set(lowerKey, syn); // Keep first occurrence
+                                    }
+                                });
+                            validSynonyms = [...seenUploadSynonyms.values()]; // Get unique values preserving original case
                             break;
                     }
 
