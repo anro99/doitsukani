@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+# Note: .env.production is tracked in Git (contains only public config)
 
 # Editor directories and files
 .vscode/*
