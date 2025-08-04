@@ -32,7 +32,6 @@ export const RadicalsManager: React.FC = () => {
     const [apiToken, setApiToken] = useState('');
     const [selectedLevel, setSelectedLevel] = useState<number | 'all'>(1);
     const [synonymMode, setSynonymMode] = useState<SynonymMode>('smart-merge');
-    const [targetLanguage, setTargetLanguage] = useState('DE');
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress] = useState(0);
     const [results] = useState<ProcessResult[]>([]);
@@ -260,31 +259,6 @@ export const RadicalsManager: React.FC = () => {
                 </Card>
             )}
 
-            {/* Language Selection - Only show if we have data */}
-            {apiToken && wkRadicals.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>🌐 Zielsprache</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <select
-                            value={targetLanguage}
-                            onChange={(e) => setTargetLanguage(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        >
-                            <option value="DE">Deutsch</option>
-                            <option value="ES">Spanisch</option>
-                            <option value="FR">Französisch</option>
-                            <option value="IT">Italienisch</option>
-                            <option value="PT">Portugiesisch</option>
-                            <option value="RU">Russisch</option>
-                            <option value="JA">Japanisch</option>
-                            <option value="ZH">Chinesisch</option>
-                        </select>
-                    </CardContent>
-                </Card>
-            )}
-
             {/* Radicals Preview - Only show if we have data */}
             {apiToken && wkRadicals.length > 0 && (
                 <Card>
@@ -379,7 +353,7 @@ export const RadicalsManager: React.FC = () => {
                         <div className="text-sm text-gray-600">
                             <p>📊 <strong>{filteredRadicals.length}</strong> Radicals werden verarbeitet</p>
                             <p>🎯 <strong>{synonymMode}</strong> Modus wird verwendet</p>
-                            <p>🌐 Übersetzung nach <strong>{targetLanguage}</strong></p>
+                            <p>🌐 Übersetzung nach <strong>Deutsch</strong></p>
                         </div>
                     </CardContent>
                 </Card>
