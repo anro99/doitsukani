@@ -21,7 +21,7 @@ interface Radical {
     translatedSynonyms?: string[];
 }
 
-type SynonymMode = 'replace' | 'add' | 'smart-merge';
+type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 interface ProcessResult {
     radical: Radical;
@@ -124,142 +124,138 @@ export const RadicalsManager: React.FC = () => {
         switch (mode) {
             case 'replace':
                 return 'Ersetzt alle vorhandenen Synonyme durch Übersetzungen';
-            case 'add':
-                return 'Fügt Übersetzungen zu vorhandenen Synonymen hinzu';
             case 'smart-merge':
                 return 'Fügt nur neue Übersetzungen hinzu (keine Duplikate)';
+            case 'delete':
+                return 'Löscht alle Synonyme (leere Liste)';
         }
     };
 
     // 🔧 CRITICAL: Process translation with mode-specific synonym logic
     const processTranslations = async (selectedRadicals: Radical[]) => {
-        if (!deeplToken || selectedRadicals.length === 0) {
-            setTranslationStatus('❌ DeepL Token oder Radical-Auswahl fehlt.');
+        if (synonymMode !== 'delete' && !deeplToken) {
+            setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
+            return;
+        }
+        
+        if (selectedRadicals.length === 0) {
+            setTranslationStatus('❌ Keine Radicals ausgewählt.');
             return;
         }
 
         setIsProcessing(true);
         setProgress(0);
-        setTranslationStatus('🔄 Starte Übersetzung...');
+        setTranslationStatus('🔄 Starte Verarbeitung...');
         setResults([]);
 
         const processResults: ProcessResult[] = [];
         const filteredRadicals = selectedRadicals.filter(r => r.selected);
 
         try {
-            // First phase: Translation (0-50%)
-            setTranslationStatus(`🌐 Übersetze ${filteredRadicals.length} Radicals...`);
-
-            for (let i = 0; i < filteredRadicals.length; i++) {
-                const radical = filteredRadicals[i];
-                setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-
-                const translation = await translateText(deeplToken, radical.meaning, 'DE', false);
+            // Handle delete mode without translation
+            if (synonymMode === 'delete') {
+                setTranslationStatus(`🗑️ Lösche Synonyme für ${filteredRadicals.length} Radicals...`);
                 
-                try {
-                    // 🔧 FIXED: Apply synonym mode logic with proper deduplication
-                    let newSynonyms: string[] = [];
-                    const currentSynonyms = radical.currentSynonyms || [];
-                    const translatedSynonym = translation.toLowerCase().trim();
-
-                    console.log(`🔧 DEBUG: Processing synonym logic for "${radical.meaning}"`);
-                    console.log(`🔧 DEBUG: Current synonyms:`, currentSynonyms);
-                    console.log(`🔧 DEBUG: New translation:`, translatedSynonym);
-
-                    switch (synonymMode) {
-                        case 'replace':
-                            newSynonyms = [translatedSynonym];
-                            break;
-                        case 'add':
-                            newSynonyms = [...currentSynonyms, translatedSynonym];
-                            break;
-                        case 'smart-merge':
-                            if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym)) {
-                                newSynonyms = [...currentSynonyms, translatedSynonym];
-                            } else {
-                                newSynonyms = currentSynonyms;
-                            }
-                            break;
-                    }
-
-                    // 🔧 FIXED: Apply mode-specific synonym logic
-                    let cleanedSynonyms: string[];
-
-                    console.log(`🔧 DEBUG: Synonym mode: ${synonymMode}`);
-                    console.log(`🔧 DEBUG: Raw newSynonyms:`, newSynonyms);
-
-                    switch (synonymMode) {
-                        case 'replace':
-                            // Replace mode: Use only the new translation, deduplicated
-                            cleanedSynonyms = [...new Set(
-                                newSynonyms
-                                    .map(syn => syn.toLowerCase().trim())
-                                    .filter(syn => syn.length > 0)
-                            )];
-                            break;
-                        case 'add':
-                            // 🔧 ADD mode: Keep ALL synonyms (existing + new), only remove empty ones
-                            // This is the key fix: don't deduplicate in add mode!
-                            cleanedSynonyms = newSynonyms
-                                .map(syn => syn.toLowerCase().trim())
-                                .filter(syn => syn.length > 0);
-                            break;
-                        case 'smart-merge':
-                            // Smart-merge mode: Deduplicate intelligently
-                            cleanedSynonyms = [...new Set(
-                                newSynonyms
-                                    .map(syn => syn.toLowerCase().trim())
-                                    .filter(syn => syn.length > 0)
-                            )];
-                            break;
-                        default:
-                            cleanedSynonyms = [...new Set(
-                                newSynonyms
-                                    .map(syn => syn.toLowerCase().trim())
-                                    .filter(syn => syn.length > 0)
-                            )];
-                            break;
-                    }
-
-                    console.log(`🔧 DEBUG: After mode-specific processing:`, cleanedSynonyms);
+                for (let i = 0; i < filteredRadicals.length; i++) {
+                    const radical = filteredRadicals[i];
+                    setTranslationStatus(`🗑️ Lösche ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
 
                     const updatedRadical: Radical = {
                         ...radical,
-                        translatedSynonyms: [translation],
-                        currentSynonyms: cleanedSynonyms
+                        translatedSynonyms: [],
+                        currentSynonyms: []
                     };
 
                     processResults.push({
                         radical: updatedRadical,
                         status: 'success',
-                        message: `Übersetzt: "${radical.meaning}" → "${translation}"`
+                        message: `🗑️ Synonyme gelöscht für "${radical.meaning}"`
                     });
 
-                } catch (error) {
-                    processResults.push({
-                        radical,
-                        status: 'error',
-                        message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
-                    });
+                    setProgress(50 + (i + 1) / filteredRadicals.length * 50);
                 }
+            } else {
+                // Handle translation modes
+                setTranslationStatus(`🌐 Übersetze ${filteredRadicals.length} Radicals...`);
 
-                // Update progress
-                setProgress(50 + (i + 1) / filteredRadicals.length * 50);
+                for (let i = 0; i < filteredRadicals.length; i++) {
+                    const radical = filteredRadicals[i];
+                    setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+
+                    try {
+                        const translation = await translateText(deeplToken, radical.meaning, 'DE', false);
+
+                        // Apply synonym mode logic
+                        let newSynonyms: string[] = [];
+                        const currentSynonyms = radical.currentSynonyms || [];
+                        const translatedSynonym = translation.toLowerCase().trim();
+
+                        console.log(`🔧 DEBUG: Processing synonym logic for "${radical.meaning}"`);
+                        console.log(`🔧 DEBUG: Current synonyms:`, currentSynonyms);
+                        console.log(`🔧 DEBUG: New translation:`, translatedSynonym);
+
+                        switch (synonymMode) {
+                            case 'replace':
+                                newSynonyms = [translatedSynonym];
+                                break;
+                            case 'smart-merge':
+                                if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym)) {
+                                    newSynonyms = [...currentSynonyms, translatedSynonym];
+                                } else {
+                                    newSynonyms = currentSynonyms;
+                                }
+                                break;
+                        }
+
+                        // Clean and deduplicate synonyms
+                        const cleanedSynonyms = [...new Set(
+                            newSynonyms
+                                .map(syn => syn.toLowerCase().trim())
+                                .filter(syn => syn.length > 0)
+                        )];
+
+                        console.log(`🔧 DEBUG: After processing:`, cleanedSynonyms);
+
+                        const updatedRadical: Radical = {
+                            ...radical,
+                            translatedSynonyms: [translation],
+                            currentSynonyms: cleanedSynonyms
+                        };
+
+                        processResults.push({
+                            radical: updatedRadical,
+                            status: 'success',
+                            message: `Übersetzt: "${radical.meaning}" → "${translation}"`
+                        });
+
+                    } catch (error) {
+                        processResults.push({
+                            radical,
+                            status: 'error',
+                            message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+                        });
+                    }
+
+                    setProgress((i + 1) / filteredRadicals.length * 100);
+                }
             }
 
             setResults(processResults);
-            setTranslationStatus(`✅ Übersetzung abgeschlossen! ${processResults.filter(r => r.status === 'success').length}/${processResults.length} erfolgreich übersetzt.`);
+            const successCount = processResults.filter(r => r.status === 'success').length;
+            const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt';
+            setTranslationStatus(`✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}.`);
 
-            // Automatically upload to Wanikani if there are successful translations
-            const successfulTranslations = processResults.filter(r => r.status === 'success');
-            if (successfulTranslations.length > 0) {
-                setTranslationStatus(`🔄 Lade ${successfulTranslations.length} Synonyme zu Wanikani hoch...`);
+            // Automatically upload to Wanikani if there are successful results
+            const successfulResults = processResults.filter(r => r.status === 'success');
+            if (successfulResults.length > 0) {
+                const actionText = synonymMode === 'delete' ? 'lösche' : 'lade';
+                setTranslationStatus(`🔄 ${actionText} ${successfulResults.length} Synonyme zu Wanikani hoch...`);
                 await uploadSynonymsToWanikani(processResults);
             }
 
         } catch (error) {
-            console.error('Translation error:', error);
-            setTranslationStatus(`❌ Fehler bei der Übersetzung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+            console.error('Processing error:', error);
+            setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
         } finally {
             setIsProcessing(false);
         }
@@ -297,19 +293,17 @@ export const RadicalsManager: React.FC = () => {
                     // 🔧 CRITICAL FIX: Apply mode-specific validation before uploading 
                     const rawSynonyms = radical.currentSynonyms || [];
                     let validSynonyms: string[] = [];
-                    
+
                     // Apply same logic as in translation phase
                     switch (synonymMode) {
-                        case 'add':
-                            // ADD mode: Don't deduplicate, just validate
-                            validSynonyms = rawSynonyms
-                                .map(syn => typeof syn === 'string' ? syn.toLowerCase().trim() : '')
-                                .filter(syn => syn.length > 0);
+                        case 'delete':
+                            // Delete mode: Always empty array
+                            validSynonyms = [];
                             break;
                         case 'replace':
                         case 'smart-merge':
                         default:
-                            // Other modes: Deduplicate
+                            // Other modes: Deduplicate and validate
                             validSynonyms = [...new Set(
                                 rawSynonyms
                                     .map(syn => typeof syn === 'string' ? syn.toLowerCase().trim() : '')
@@ -513,20 +507,20 @@ export const RadicalsManager: React.FC = () => {
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="add" id="add" />
-                                <Label htmlFor="add" className="cursor-pointer">
-                                    <span className="font-medium">Hinzufügen</span>
-                                    <span className="text-sm text-gray-600 ml-2">
-                                        - {getModeDescription('add')}
-                                    </span>
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="replace" id="replace" />
                                 <Label htmlFor="replace" className="cursor-pointer">
                                     <span className="font-medium">Ersetzen</span>
                                     <span className="text-sm text-gray-600 ml-2">
                                         - {getModeDescription('replace')}
+                                    </span>
+                                </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="delete" id="delete" />
+                                <Label htmlFor="delete" className="cursor-pointer">
+                                    <span className="font-medium">Löschen</span>
+                                    <span className="text-sm text-gray-600 ml-2">
+                                        - {getModeDescription('delete')}
                                     </span>
                                 </Label>
                             </div>
@@ -665,10 +659,10 @@ export const RadicalsManager: React.FC = () => {
                                 <div
                                     key={index}
                                     className={`p-3 rounded-lg ${result.status === 'success'
-                                            ? 'bg-green-50 border border-green-200'
-                                            : result.status === 'error'
-                                                ? 'bg-red-50 border border-red-200'
-                                                : 'bg-blue-50 border border-blue-200'
+                                        ? 'bg-green-50 border border-green-200'
+                                        : result.status === 'error'
+                                            ? 'bg-red-50 border border-red-200'
+                                            : 'bg-blue-50 border border-blue-200'
                                         }`}
                                 >
                                     <div className="flex justify-between items-center">
