@@ -1,6 +1,7 @@
 import {
   WKAssignment,
   WKCollection,
+  WKRadical,
   WKStudyMaterial,
   WKSubject,
   WKVocabulary,
@@ -258,4 +259,205 @@ export const upload = async (apiToken: string, setProgress?: SetProgress) => {
       return { subject: v.id, synonyms: translations[v.id] };
     });
   await writeStudyMaterials(apiToken, studyMaterials, setProgress);
+};
+
+/**
+ * Get radicals from Wanikani API
+ * @param token - Wanikani API token
+ * @param setProgress - Optional progress callback
+ * @param options - Optional filters for levels, limit, and slugs
+ * @returns Promise<WKRadical[]>
+ */
+export const getRadicals = async (
+  token: string,
+  setProgress?: SetProgress,
+  options?: { levels?: string; limit?: number; slugs?: string }
+): Promise<WKRadical[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/subjects?types=radical";
+
+  // Add query parameters if provided
+  const params = new URLSearchParams();
+  if (options?.levels) params.append("levels", options.levels);
+  if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.slugs) params.append("slugs", options.slugs);
+
+  if (params.toString()) {
+    url += "&" + params.toString();
+  }
+
+  const progress = {
+    text: "Fetching radicals from Wanikani...",
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(progress);
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  const finalProgress = {
+    text: `Found ${collection.data.length} radicals`,
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(finalProgress);
+
+  return collection.data as WKRadical[];
+};
+
+/**
+ * Get study materials for radicals from Wanikani API
+ * @param token - Wanikani API token
+ * @param setProgress - Optional progress callback
+ * @param options - Optional filters for subject_ids and limit
+ * @returns Promise<WKStudyMaterial[]>
+ */
+export const getRadicalStudyMaterials = async (
+  token: string,
+  setProgress?: SetProgress,
+  options?: { subject_ids?: string; limit?: number }
+): Promise<WKStudyMaterial[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/study_materials?subject_types=radical";
+
+  // Add query parameters if provided
+  const params = new URLSearchParams();
+  if (options?.subject_ids) params.append("subject_ids", options.subject_ids);
+  if (options?.limit) params.append("limit", options.limit.toString());
+
+  if (params.toString()) {
+    url += "&" + params.toString();
+  }
+
+  const progress = {
+    text: "Fetching radical study materials...",
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(progress);
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  const finalProgress = {
+    text: `Found ${collection.data.length} study materials`,
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(finalProgress);
+
+  return collection.data as WKStudyMaterial[];
+};
+
+/**
+ * Create synonyms for a radical (creates new study material)
+ * ⚠️ SAFE ONLY for test radicals: Rice, Spikes, Umbrella
+ * @param token - Wanikani API token
+ * @param subjectId - ID of the radical subject
+ * @param synonyms - Array of synonyms to add
+ * @returns Promise<WKStudyMaterial>
+ */
+export const createRadicalSynonyms = async (
+  token: string,
+  subjectId: number,
+  synonyms: string[]
+): Promise<WKStudyMaterial> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  const payload = {
+    study_material: {
+      subject_id: subjectId,
+      meaning_synonyms: synonyms
+    }
+  };
+
+  const response = await limiter.schedule(() =>
+    axios.post("https://api.wanikani.com/v2/study_materials", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
+  return response.data;
+};
+
+/**
+ * Update synonyms for an existing study material
+ * ⚠️ SAFE ONLY for test radicals: Rice, Spikes, Umbrella
+ * @param token - Wanikani API token
+ * @param studyMaterialId - ID of the study material to update
+ * @param synonyms - Array of synonyms to set
+ * @returns Promise<WKStudyMaterial>
+ */
+export const updateRadicalSynonyms = async (
+  token: string,
+  studyMaterialId: number,
+  synonyms: string[]
+): Promise<WKStudyMaterial> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  const payload = {
+    study_material: {
+      meaning_synonyms: synonyms
+    }
+  };
+
+  const response = await limiter.schedule(() =>
+    axios.put(`https://api.wanikani.com/v2/study_materials/${studyMaterialId}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
+  return response.data;
+};
+
+/**
+ * Delete all user synonyms for a radical (removes all meaning_synonyms)
+ * ⚠️ SAFE ONLY for test radicals: Rice, Spikes, Umbrella
+ * @param token - Wanikani API token
+ * @param studyMaterialId - ID of the study material to clear synonyms from
+ * @returns Promise<WKStudyMaterial>
+ */
+export const deleteRadicalSynonyms = async (
+  token: string,
+  studyMaterialId: number
+): Promise<WKStudyMaterial> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  const payload = {
+    study_material: {
+      meaning_synonyms: []
+    }
+  };
+
+  const response = await limiter.schedule(() =>
+    axios.put(`https://api.wanikani.com/v2/study_materials/${studyMaterialId}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
+  return response.data;
 };
