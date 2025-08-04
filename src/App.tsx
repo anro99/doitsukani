@@ -15,11 +15,13 @@ import {
 import { upload } from "./lib/wanikani";
 import { ProgressReport } from "./components/progress";
 import { writeProgressAtom } from "./lib/progressreporter";
+import { RadicalsManager } from "./components/RadicalsManager";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals'>('vocabulary');
   const [, setProgress] = useAtom(writeProgressAtom);
 
   const handleUpload = async () => {
@@ -60,61 +62,127 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto mt-10 w-96 flex flex-col">
-        <img
-          src="doitsukani.webp"
-          className="mx-auto w-24 logo"
-          alt="Doitsukani logo"
-        />
-        <h1 className="text-3xl">Doitsukani</h1>
-        <p>
-          Add German to <a href="https://wanikani.com/">Wanikani</a>.
-        </p>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Input
-              type="text"
-              placeholder="Enter Wanikani API token"
-              value={apiToken}
-              onFocus={() => setError("")}
-              onChange={(e) => setApiToken(e.target.value)}
-              className="mx-auto mt-10 w-80"
-            />
-          </TooltipTrigger>
-          <TooltipContent>
-            <ul className="m-4 text-left list-disc">
-              <li>
-                On the Wanikani dashboard, click on your profile and select "API
-                Tokens".
-              </li>
-              <li>
-                Click "Generate a new token" and check "study_materials:create"
-                and "study_materials:update".
-              </li>
-              <li>Click "Generate token".</li>
-              <li>Copy the text of the token here.</li>
-            </ul>
-          </TooltipContent>
-        </Tooltip>
-        <Button
-          className="mx-auto mt-4 w-48"
-          onClick={handleUpload}
-          disabled={!apiToken || uploading}
-        >
-          {uploading ? "Uploading..." : "Upload Translations"}
-        </Button>
-        {uploading && <ProgressReport />}
-        {error && (
-          <p className="mx-auto mt-4 font-medium text-red-400">{error}</p>
-        )}
-        <p className="mx-auto mt-4 mb-4 text-xs">
-          Due to Wanikani's server limitations, the upload can take more than
-          one hour. Please do not use Wanikani at the same time. If you navigate
-          away from this page, the upload will be stopped. You can resume the
-          upload by returning to this page and entering the API token again.
-          <br />
-          <i>Note: This service is provide as-is and without any warranty.</i>
-        </p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-center py-6">
+              <img
+                src="doitsukani.webp"
+                className="w-16 h-16 mr-4"
+                alt="Doitsukani logo"
+              />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">Doitsukani</h1>
+                <p className="text-gray-600">
+                  Deutsche Übersetzungen für <a href="https://wanikani.com/" className="text-blue-600 hover:underline">Wanikani</a>
+                </p>
+              </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex justify-center border-b">
+              <div className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('vocabulary')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'vocabulary'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  📚 Vocabulary
+                </button>
+                <button
+                  onClick={() => setActiveTab('radicals')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'radicals'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  🌸 Radicals
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="container mx-auto px-4 py-8">
+          {activeTab === 'vocabulary' && (
+            <div className="max-w-md mx-auto">
+              <div className="bg-white rounded-lg shadow-sm border p-8">
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                    Vocabulary Übersetzungen
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Füge deutsche Übersetzungen für all deine Wanikani-Vokabeln hinzu
+                  </p>
+                </div>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      type="text"
+                      placeholder="Wanikani API Token eingeben"
+                      value={apiToken}
+                      onFocus={() => setError("")}
+                      onChange={(e) => setApiToken(e.target.value)}
+                      className="mb-4"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <ul className="m-4 text-left list-disc">
+                      <li>
+                        Gehe zum Wanikani Dashboard und klicke auf dein Profil → "API Tokens"
+                      </li>
+                      <li>
+                        Klicke "Generate a new token" und wähle "study_materials:create" und "study_materials:update"
+                      </li>
+                      <li>Klicke "Generate token"</li>
+                      <li>Kopiere den Token hier hinein</li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Button
+                  className="w-full mb-4"
+                  onClick={handleUpload}
+                  disabled={!apiToken || uploading}
+                >
+                  {uploading ? "Lade hoch..." : "Übersetzungen hochladen"}
+                </Button>
+
+                {uploading && <ProgressReport />}
+
+                {error && (
+                  <div className={`p-3 rounded-md text-sm ${error === "Done!"
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                    }`}>
+                    {error}
+                  </div>
+                )}
+
+                <div className="mt-6 text-xs text-gray-500 space-y-2">
+                  <p>
+                    ⚠️ Der Upload kann über eine Stunde dauern (Wanikani Server-Limits)
+                  </p>
+                  <p>
+                    💡 Benutze Wanikani nicht gleichzeitig. Bei Seitenwechsel wird der Upload gestoppt.
+                  </p>
+                  <p className="italic">
+                    Hinweis: Dieser Service wird "wie er ist" ohne Garantie bereitgestellt.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'radicals' && (
+            <RadicalsManager />
+          )}
+        </div>
       </div>
     </TooltipProvider>
   );
