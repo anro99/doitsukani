@@ -11,4 +11,24 @@ export default defineConfig({
     },
   },
   base: process.env.NODE_ENV === "production" ? "/doitsukani/" : "/",
+  server: {
+    proxy: {
+      '/api/deepl': {
+        target: 'https://api-free.deepl.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/deepl/, ''),
+        headers: {
+          'Origin': 'https://api-free.deepl.com'
+        }
+      },
+      '/api/deepl-pro': {
+        target: 'https://api.deepl.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/deepl-pro/, ''),
+        headers: {
+          'Origin': 'https://api.deepl.com'
+        }
+      }
+    }
+  }
 });

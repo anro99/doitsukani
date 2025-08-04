@@ -7,8 +7,9 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Progress } from './ui/progress';
 import { Alert, AlertDescription } from './ui/alert';
-import { getRadicals, getRadicalStudyMaterials } from '../lib/wanikani';
+import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from '../lib/wanikani';
 import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
+import { translateText } from '../lib/deepl';
 
 interface Radical {
     id: number;
@@ -24,17 +25,24 @@ type SynonymMode = 'replace' | 'add' | 'smart-merge';
 
 interface ProcessResult {
     radical: Radical;
-    status: 'success' | 'error' | 'processing';
+    status: 'success' | 'error' | 'processing' | 'translated' | 'uploaded';
     message?: string;
+    originalSynonyms?: string[];
+    newSynonyms?: string[];
 }
 
 export const RadicalsManager: React.FC = () => {
     const [apiToken, setApiToken] = useState('');
+    const [deeplToken, setDeeplToken] = useState('');
     const [selectedLevel, setSelectedLevel] = useState<number | 'all'>(1);
     const [synonymMode, setSynonymMode] = useState<SynonymMode>('smart-merge');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [progress] = useState(0);
-    const [results] = useState<ProcessResult[]>([]);
+    const [progress, setProgress] = useState(0);
+    const [results, setResults] = useState<ProcessResult[]>([]);
+    const [translationStatus, setTranslationStatus] = useState('');
+    const [uploadStatus, setUploadStatus] = useState('');
+    const [isUploadingToWanikani, setIsUploadingToWanikani] = useState(false);
+    const [uploadStats, setUploadStats] = useState({ created: 0, updated: 0, failed: 0 });
 
     // API Integration State
     const [wkRadicals, setWkRadicals] = useState<WKRadical[]>([]);
@@ -64,7 +72,7 @@ export const RadicalsManager: React.FC = () => {
             characters: radical.data.characters || undefined,
             level: radical.data.level,
             currentSynonyms: studyMaterialsMap.get(radical.id)?.data.meaning_synonyms || [],
-            selected: false,
+            selected: true,
             translatedSynonyms: []
         }));
     };
@@ -123,6 +131,249 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
+    // 🔧 CRITICAL: Process translation with mode-specific synonym logic
+    const processTranslations = async (selectedRadicals: Radical[]) => {
+        if (!deeplToken || selectedRadicals.length === 0) {
+            setTranslationStatus('❌ DeepL Token oder Radical-Auswahl fehlt.');
+            return;
+        }
+
+        setIsProcessing(true);
+        setProgress(0);
+        setTranslationStatus('🔄 Starte Übersetzung...');
+        setResults([]);
+
+        const processResults: ProcessResult[] = [];
+        const filteredRadicals = selectedRadicals.filter(r => r.selected);
+
+        try {
+            // First phase: Translation (0-50%)
+            setTranslationStatus(`🌐 Übersetze ${filteredRadicals.length} Radicals...`);
+
+            for (let i = 0; i < filteredRadicals.length; i++) {
+                const radical = filteredRadicals[i];
+                setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+
+                const translation = await translateText(deeplToken, radical.meaning, 'DE', false);
+                
+                try {
+                    // 🔧 FIXED: Apply synonym mode logic with proper deduplication
+                    let newSynonyms: string[] = [];
+                    const currentSynonyms = radical.currentSynonyms || [];
+                    const translatedSynonym = translation.toLowerCase().trim();
+
+                    console.log(`🔧 DEBUG: Processing synonym logic for "${radical.meaning}"`);
+                    console.log(`🔧 DEBUG: Current synonyms:`, currentSynonyms);
+                    console.log(`🔧 DEBUG: New translation:`, translatedSynonym);
+
+                    switch (synonymMode) {
+                        case 'replace':
+                            newSynonyms = [translatedSynonym];
+                            break;
+                        case 'add':
+                            newSynonyms = [...currentSynonyms, translatedSynonym];
+                            break;
+                        case 'smart-merge':
+                            if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym)) {
+                                newSynonyms = [...currentSynonyms, translatedSynonym];
+                            } else {
+                                newSynonyms = currentSynonyms;
+                            }
+                            break;
+                    }
+
+                    // 🔧 FIXED: Apply mode-specific synonym logic
+                    let cleanedSynonyms: string[];
+
+                    console.log(`🔧 DEBUG: Synonym mode: ${synonymMode}`);
+                    console.log(`🔧 DEBUG: Raw newSynonyms:`, newSynonyms);
+
+                    switch (synonymMode) {
+                        case 'replace':
+                            // Replace mode: Use only the new translation, deduplicated
+                            cleanedSynonyms = [...new Set(
+                                newSynonyms
+                                    .map(syn => syn.toLowerCase().trim())
+                                    .filter(syn => syn.length > 0)
+                            )];
+                            break;
+                        case 'add':
+                            // 🔧 ADD mode: Keep ALL synonyms (existing + new), only remove empty ones
+                            // This is the key fix: don't deduplicate in add mode!
+                            cleanedSynonyms = newSynonyms
+                                .map(syn => syn.toLowerCase().trim())
+                                .filter(syn => syn.length > 0);
+                            break;
+                        case 'smart-merge':
+                            // Smart-merge mode: Deduplicate intelligently
+                            cleanedSynonyms = [...new Set(
+                                newSynonyms
+                                    .map(syn => syn.toLowerCase().trim())
+                                    .filter(syn => syn.length > 0)
+                            )];
+                            break;
+                        default:
+                            cleanedSynonyms = [...new Set(
+                                newSynonyms
+                                    .map(syn => syn.toLowerCase().trim())
+                                    .filter(syn => syn.length > 0)
+                            )];
+                            break;
+                    }
+
+                    console.log(`🔧 DEBUG: After mode-specific processing:`, cleanedSynonyms);
+
+                    const updatedRadical: Radical = {
+                        ...radical,
+                        translatedSynonyms: [translation],
+                        currentSynonyms: cleanedSynonyms
+                    };
+
+                    processResults.push({
+                        radical: updatedRadical,
+                        status: 'success',
+                        message: `Übersetzt: "${radical.meaning}" → "${translation}"`
+                    });
+
+                } catch (error) {
+                    processResults.push({
+                        radical,
+                        status: 'error',
+                        message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+                    });
+                }
+
+                // Update progress
+                setProgress(50 + (i + 1) / filteredRadicals.length * 50);
+            }
+
+            setResults(processResults);
+            setTranslationStatus(`✅ Übersetzung abgeschlossen! ${processResults.filter(r => r.status === 'success').length}/${processResults.length} erfolgreich übersetzt.`);
+
+            // Automatically upload to Wanikani if there are successful translations
+            const successfulTranslations = processResults.filter(r => r.status === 'success');
+            if (successfulTranslations.length > 0) {
+                setTranslationStatus(`🔄 Lade ${successfulTranslations.length} Synonyme zu Wanikani hoch...`);
+                await uploadSynonymsToWanikani(processResults);
+            }
+
+        } catch (error) {
+            console.error('Translation error:', error);
+            setTranslationStatus(`❌ Fehler bei der Übersetzung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // 🔧 Upload synonyms to Wanikani with mode-specific validation
+    const uploadSynonymsToWanikani = async (resultsToUpload: ProcessResult[]) => {
+        if (!apiToken || resultsToUpload.length === 0) {
+            setUploadStatus('❌ Keine Daten zum Hochladen verfügbar.');
+            return;
+        }
+
+        setIsUploadingToWanikani(true);
+        setUploadStatus('🚀 Starte Upload zu Wanikani...');
+        setUploadStats({ created: 0, updated: 0, failed: 0 });
+
+        const successfulResults = resultsToUpload.filter(r => r.status === 'success');
+        let created = 0, updated = 0, failed = 0;
+
+        try {
+            for (let i = 0; i < successfulResults.length; i++) {
+                const result = successfulResults[i];
+                const radical = result.radical;
+
+                try {
+                    setUploadStatus(`📤 Lade ${i + 1}/${successfulResults.length}: ${radical.meaning}...`);
+
+                    // Check if study material already exists for this radical
+                    const existingStudyMaterial = studyMaterials.find(sm => sm.data.subject_id === radical.id);
+
+                    console.log(`🔧 DEBUG: Processing radical ${radical.id} (${radical.meaning})`);
+                    console.log(`🔧 DEBUG: Existing study material:`, existingStudyMaterial);
+                    console.log(`🔧 DEBUG: New synonyms to upload:`, radical.currentSynonyms);
+
+                    // 🔧 CRITICAL FIX: Apply mode-specific validation before uploading 
+                    const rawSynonyms = radical.currentSynonyms || [];
+                    let validSynonyms: string[] = [];
+                    
+                    // Apply same logic as in translation phase
+                    switch (synonymMode) {
+                        case 'add':
+                            // ADD mode: Don't deduplicate, just validate
+                            validSynonyms = rawSynonyms
+                                .map(syn => typeof syn === 'string' ? syn.toLowerCase().trim() : '')
+                                .filter(syn => syn.length > 0);
+                            break;
+                        case 'replace':
+                        case 'smart-merge':
+                        default:
+                            // Other modes: Deduplicate
+                            validSynonyms = [...new Set(
+                                rawSynonyms
+                                    .map(syn => typeof syn === 'string' ? syn.toLowerCase().trim() : '')
+                                    .filter(syn => syn.length > 0)
+                            )];
+                            break;
+                    }
+
+                    console.log(`🔧 DEBUG: Raw synonyms from radical:`, rawSynonyms);
+                    console.log(`🔧 DEBUG: Synonym mode applied: ${synonymMode}`);
+                    console.log(`🔧 DEBUG: Final synonyms for upload:`, validSynonyms);
+
+                    if (validSynonyms.length === 0) {
+                        console.log(`⚠️ DEBUG: No valid synonyms to upload for ${radical.meaning}`);
+                        result.status = 'error';
+                        result.message = `❌ Keine gültigen Synonyme zum Upload für "${radical.meaning}"`;
+                        failed++;
+                    } else {
+                        if (existingStudyMaterial) {
+                            // Update existing study material
+                            console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with synonyms`);
+                            await updateRadicalSynonyms(
+                                apiToken,
+                                existingStudyMaterial.id,
+                                validSynonyms
+                            );
+                            updated++;
+                        } else {
+                            // Create new study material
+                            console.log(`➕ DEBUG: Creating new study material for radical ${radical.id}`);
+                            await createRadicalSynonyms(
+                                apiToken,
+                                radical.id,
+                                validSynonyms
+                            );
+                            created++;
+                        }
+
+                        result.status = 'uploaded';
+                        result.message = `✅ Erfolgreich hochgeladen: ${validSynonyms.join(', ')}`;
+                        console.log(`✅ DEBUG: Successfully uploaded synonyms for ${radical.meaning}: [${validSynonyms.join(', ')}]`);
+                    }
+
+                } catch (error) {
+                    console.error(`❌ DEBUG: Upload error for ${radical.meaning}:`, error);
+                    result.status = 'error';
+                    result.message = `❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+                    failed++;
+                }
+
+                setUploadStats({ created, updated, failed });
+            }
+
+            setResults([...resultsToUpload]);
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${created}, Aktualisiert: ${updated}, Fehler: ${failed}`);
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            setUploadStatus(`❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+        } finally {
+            setIsUploadingToWanikani(false);
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-6">
             {/* Header */}
@@ -165,6 +416,31 @@ export const RadicalsManager: React.FC = () => {
                     {apiToken && wkRadicals.length > 0 && (
                         <div className="mt-2 text-sm text-green-600">
                             ✅ {wkRadicals.length} Radicals erfolgreich geladen
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* DeepL API Token Input */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>🌐 DeepL API Token</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Input
+                        type="password"
+                        placeholder="Geben Sie Ihren DeepL API Token ein..."
+                        value={deeplToken}
+                        onChange={(e) => setDeeplToken(e.target.value)}
+                        className="mb-4"
+                        disabled={isProcessing}
+                    />
+                    <p className="text-sm text-gray-600">
+                        Ihr DeepL Token wird für die automatische Übersetzung der Radical-Bedeutungen verwendet.
+                    </p>
+                    {deeplToken && (
+                        <div className="mt-2 text-sm text-green-600">
+                            ✅ DeepL Token eingegeben
                         </div>
                     )}
                 </CardContent>
@@ -326,8 +602,8 @@ export const RadicalsManager: React.FC = () => {
                     <CardContent className="space-y-4">
                         <div className="flex gap-4">
                             <Button
-                                onClick={() => setIsProcessing(true)}
-                                disabled={!apiToken || filteredRadicals.length === 0 || isProcessing}
+                                onClick={() => processTranslations(filteredRadicals)}
+                                disabled={!apiToken || !deeplToken || filteredRadicals.length === 0 || isProcessing}
                                 className="flex-1"
                             >
                                 {isProcessing ? 'Verarbeitung läuft...' : 'Synonyme übersetzen und aktualisieren'}
@@ -347,6 +623,24 @@ export const RadicalsManager: React.FC = () => {
                                 <p className="text-sm text-gray-600 text-center">
                                     {progress}% abgeschlossen
                                 </p>
+                            </div>
+                        )}
+
+                        {/* Status displays */}
+                        {translationStatus && (
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-sm text-blue-700">{translationStatus}</p>
+                            </div>
+                        )}
+
+                        {uploadStatus && (
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-sm text-green-700">{uploadStatus}</p>
+                                {uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 ? (
+                                    <div className="text-xs text-green-600 mt-1">
+                                        Erstellt: {uploadStats.created} | Aktualisiert: {uploadStats.updated} | Fehler: {uploadStats.failed}
+                                    </div>
+                                ) : null}
                             </div>
                         )}
 

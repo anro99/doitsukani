@@ -37,9 +37,10 @@ export const translateText = async (
         throw new Error("Text cannot be empty");
     }
 
+    // Use proxy URLs for development
     const baseUrl = isPro
-        ? "https://api.deepl.com/v2/translate"
-        : "https://api-free.deepl.com/v2/translate";
+        ? "/api/deepl-pro/v2/translate"
+        : "/api/deepl/v2/translate";
 
     const translateWithRetry = async (retryCount: number = 0): Promise<string> => {
         try {
@@ -113,9 +114,10 @@ export const translateBatch = async (
     for (const chunk of chunks) {
         try {
             // Try batch translation first
+            // Use proxy URLs for development
             const baseUrl = isPro
-                ? "https://api.deepl.com/v2/translate"
-                : "https://api-free.deepl.com/v2/translate";
+                ? "/api/deepl-pro/v2/translate"
+                : "/api/deepl/v2/translate";
 
             const response = await limiter.schedule(() =>
                 axios.post(baseUrl, {
