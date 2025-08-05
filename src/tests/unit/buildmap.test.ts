@@ -77,7 +77,7 @@ describe("Vocabulary translation", () => {
     const dictionary = new Map<string, string[]>();
     dictionary.set("水", ["Wasser", "Wasser", "H2O"]); // Duplicate "Wasser"
 
-    const { translations, untranslated } = buildTranslations(dictionary, vocab);
+    const { translations } = buildTranslations(dictionary, vocab);
 
     expect(translations.get(1)).toEqual(["Wasser", "Wasser", "H2O"]);
     // Note: The function might need deduplication logic
@@ -108,7 +108,7 @@ describe("Vocabulary translation", () => {
     const dictionary = new Map<string, string[]>();
     dictionary.set("順序", ["Reihenfolge", "Ordnung", "Sequenz"]);
 
-    const { translations, untranslated } = buildTranslations(dictionary, vocab);
+    const { translations } = buildTranslations(dictionary, vocab);
 
     expect(translations.get(1)).toEqual(["Reihenfolge", "Ordnung", "Sequenz"]);
   });
