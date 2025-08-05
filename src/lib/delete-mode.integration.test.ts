@@ -191,7 +191,7 @@ describe("DELETE Mode Integration Tests - RadicalsManager", () => {
                     console.log(`🔧 DELETE MODE: Created new study material for ${primaryMeaning} with synonyms: [${tempSynonyms.join(', ')}]`);
                 } else {
                     studyMaterialId = studyMaterials[0].id;
-                    
+
                     // Ensure there are some synonyms to delete
                     if (studyMaterials[0].data.meaning_synonyms.length === 0) {
                         console.log(`🔧 DELETE MODE: Adding temporary synonyms to ${primaryMeaning}`);
@@ -268,7 +268,7 @@ describe("DELETE Mode Integration Tests - RadicalsManager", () => {
                     studyMaterialId = created.id;
                 } else {
                     studyMaterialId = studyMaterials[0].id;
-                    
+
                     // Ensure there are some synonyms to delete
                     if (studyMaterials[0].data.meaning_synonyms.length === 0) {
                         console.log(`🔧 DELETE MODE: Adding temporary synonyms to ${primaryMeaning}`);
