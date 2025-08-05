@@ -25,7 +25,7 @@ In `wanikani.ts` existieren folgende **schreibende** Funktionen:
 - Alle gefährlichen Tests sind mit `.skip` deaktiviert
 
 ### 5. **Dokumentation erstellt**
-- `INTEGRATION_TEST_SAFETY.md` - Detaillierte Sicherheitsrichtlinien
+- `src/tests/integration/SAFETY.md` - Detaillierte Sicherheitsrichtlinien
 - `radicals.README.md` - Aktualisiert mit Sicherheitshinweisen
 - Inline-Kommentare in kritischen Code-Bereichen
 

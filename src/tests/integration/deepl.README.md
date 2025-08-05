@@ -4,13 +4,13 @@ Diese Datei enthält Tests für die DeepL API Integration, die **tatsächliche A
 
 ## 🧪 Test-Kategorien
 
-### Unit Tests (`deepl.test.ts`)
+### Unit Tests (in `../unit/deepl.test.ts`)
 - Mock-basierte Tests
 - Laufen automatisch bei `npm test`
 - 30 Tests die alle Funktionen mocken
 - Validieren Logik ohne externe API-Calls
 
-### Integration Tests (`deepl.integration.test.ts`)
+### Integration Tests (in `deepl.integration.test.ts`)
 - **Echte API-Calls** an DeepL
 - Benötigen gültigen API-Key
 - Testen tatsächliche Übersetzungsqualität
@@ -57,12 +57,12 @@ export DEEPL_PRO="false"
 
 **Mit Node.js Umgebung (empfohlen):**
 ```bash
-npm test deepl.integration.test.ts -- --environment=node
+npm run test:integration -- deepl.integration.test.ts
 ```
 
 **Standard (Tests werden übersprungen in jsdom):**
 ```bash
-npm test deepl.integration.test.ts
+npm test -- src/tests/integration/deepl.integration.test.ts
 ```
 
 ## 🧪 Was wird getestet?

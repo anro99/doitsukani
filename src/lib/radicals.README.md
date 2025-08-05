@@ -6,7 +6,7 @@ Diese Datei dokumentiert die Tests für das Lesen von Radical-Informationen aus 
 
 **Integration Tests sind standardmäßig DEAKTIVIERT (.skip) um Datenänderungen in Wanikani zu verhindern.**
 
-Siehe [INTEGRATION_TEST_SAFETY.md](./INTEGRATION_TEST_SAFETY.md) für detaillierte Sicherheitsrichtlinien.
+Siehe [SAFETY.md](../tests/integration/SAFETY.md) für detaillierte Sicherheitsrichtlinien.
 
 ## Übersicht
 

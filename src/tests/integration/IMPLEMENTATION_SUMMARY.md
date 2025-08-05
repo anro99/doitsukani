@@ -70,7 +70,7 @@ Wir haben alle Radical-Funktionen erfolgreich implementiert und umfassend getest
 #### Test-Radikale System
 - **Designierte Test-Radikale**: Rice (米), Spikes, Umbrella
 - **Zweck**: Sichere Manipulation ohne Auswirkung auf Lernfortschritt
-- **Dokumentation**: `TEST_RADICAL_INTEGRATION.md`
+- **Dokumentation**: `radicals.README.md`
 
 #### API Rate Limiting
 - **Konfiguration**: 1100ms minTime, maxConcurrent: 1
@@ -130,8 +130,8 @@ src/lib/
 ├── wanikani.ts                    # ✅ Hauptimplementierung
 ├── radicals.test.ts              # ✅ Unit Tests
 ├── radicals.integration.test.ts  # ✅ Integration Tests
-├── TEST_RADICAL_INTEGRATION.md   # ✅ Dokumentation
-└── INTEGRATION_TEST_SAFETY.md    # ✅ Sicherheitsrichtlinien
+├── radicals.README.md             # ✅ Dokumentation
+└── SAFETY.md                     # ✅ Sicherheitsrichtlinien
 ```
 
 ## Fazit

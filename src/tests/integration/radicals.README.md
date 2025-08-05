@@ -1,8 +1,8 @@
-# Test Radical Integration Tests - SICHER FÜR SCHREIBZUGRIFFE
+# Radicals Integration Tests - SICHER FÜR SCHREIBZUGRIFFE
 
-## ✅ AKTUALISIERT: Sichere Test-Radicals für Schreiboperationen
+## ✅ Test-Setup für sichere Radicals-Tests
 
-Diese Integrationstests wurden speziell für die **Test-Radicals** entwickelt, die sicher für Schreibzugriffe verwendet werden können:
+Diese Integrationstests in `radicals.integration.test.ts` wurden speziell für die **Test-Radicals** entwickelt, die sicher für Schreibzugriffe verwendet werden können.
 
 ### 🎯 **Zugelassene Test-Radicals:**
 - **"Rice" (米)** - Radical für Getreide/Reis
@@ -69,13 +69,13 @@ updateRadicalSynonyms(token, studyMaterialId, synonyms)
 
 ### **Sicherheitstests (ohne API Token):**
 ```bash
-npm test -- --run src/lib/radicals.integration.test.ts
+npm run test:integration -- radicals.integration.test.ts
 ```
 **Ergebnis:** 6 passed | 8 skipped (alle Schreibtests sicher übersprungen)
 
 ### **Vollständige Tests (mit API Token):**
 ```bash
-WANIKANI_API_TOKEN=your-token npm test -- --run src/lib/radicals.integration.test.ts
+WANIKANI_API_TOKEN=your-token npm run test:integration -- radicals.integration.test.ts
 ```
 **Ergebnis:** Alle Tests aktiv, aber nur Test-Radicals werden manipuliert
 
