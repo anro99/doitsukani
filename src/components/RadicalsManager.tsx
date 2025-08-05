@@ -96,7 +96,18 @@ export const RadicalsManager: React.FC = () => {
         }
     }, [apiToken]);
 
+    // Helper function to compare arrays for equality (case-insensitive)
+    const arraysEqual = (arr1: string[], arr2: string[]): boolean => {
+        if (arr1.length !== arr2.length) return false;
+
+        const sorted1 = arr1.map(s => s.toLowerCase().trim()).sort();
+        const sorted2 = arr2.map(s => s.toLowerCase().trim()).sort();
+
+        return sorted1.every((val, index) => val === sorted2[index]);
+    };
+
     // Convert Wanikani radicals to our internal format
+
     const convertToInternalFormat = (wkRadicals: WKRadical[], studyMaterials: WKStudyMaterial[]): Radical[] => {
         const studyMaterialsMap = new Map<number, WKStudyMaterial>();
         studyMaterials?.forEach(sm => {
@@ -420,6 +431,14 @@ export const RadicalsManager: React.FC = () => {
 
                         console.log(`🔧 DEBUG: After processing:`, cleanedSynonyms);
 
+                        // 🔧 NEW: Check if synonyms actually changed to avoid unnecessary API calls
+                        const originalSynonyms = radical.currentSynonyms || [];
+                        const synonymsChanged = !arraysEqual(originalSynonyms, cleanedSynonyms);
+
+                        console.log(`🔧 DEBUG: Synonyms changed: ${synonymsChanged}`);
+                        console.log(`🔧 DEBUG: Original:`, originalSynonyms);
+                        console.log(`🔧 DEBUG: New:`, cleanedSynonyms);
+
                         const updatedRadical: Radical = {
                             ...radical,
                             translatedSynonyms: [translation],
@@ -432,15 +451,23 @@ export const RadicalsManager: React.FC = () => {
                             message: `Übersetzt${context ? ' (mit Kontext)' : ''}: "${radical.meaning}" → "${translation}"`
                         };
 
-                        // Immediately upload to Wanikani after translation
-                        setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                        uploadStats = await uploadSingleRadical(result, uploadStats);
+                        // 🔧 NEW: Only upload if synonyms actually changed
+                        if (synonymsChanged) {
+                            // Immediately upload to Wanikani after translation
+                            setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+                            uploadStats = await uploadSingleRadical(result, uploadStats);
 
-                        if (result.status === 'error') {
-                            // Upload failed, keep error status and message from uploadSingleRadical
+                            if (result.status === 'error') {
+                                // Upload failed, keep error status and message from uploadSingleRadical
+                            } else {
+                                result.status = 'uploaded';
+                                result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
+                            }
                         } else {
-                            result.status = 'uploaded';
-                            result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
+                            // Synonyms didn't change, skip upload
+                            result.status = 'success';
+                            result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
+                            console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
                         }
 
                         processResults.push(result);
