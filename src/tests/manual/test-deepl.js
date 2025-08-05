@@ -53,7 +53,7 @@ async function testDeepL() {
         console.log('✅ Kanji result:', kanjiResult);
 
         console.log('\n🧪 Testing Wanikani radical concepts...');
-        const radicals = ["ground", "water", "fire"];
+        const radicals = ["branch", "ground", "water", "fire"];
         const batchResponse = await axios.post(baseUrl, {
             text: radicals,
             target_lang: "DE",

@@ -26,7 +26,8 @@ export const translateText = async (
     text: string,
     targetLang: string = "DE",
     isPro: boolean = false,
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    context?: string
 ): Promise<string> => {
     // Input validation
     if (!apiKey) {
@@ -48,12 +49,19 @@ export const translateText = async (
 
     const translateWithRetry = async (retryCount: number = 0): Promise<string> => {
         try {
+            const requestBody: any = {
+                text: [textToTranslate],
+                target_lang: targetLang,
+                source_lang: "EN"
+            };
+
+            // Add context if provided
+            if (context) {
+                requestBody.context = context;
+            }
+
             const response = await limiter.schedule(() =>
-                axios.post(baseUrl, {
-                    text: [textToTranslate],
-                    target_lang: targetLang,
-                    source_lang: "EN"
-                }, {
+                axios.post(baseUrl, requestBody, {
                     headers: {
                         "Authorization": `DeepL-Auth-Key ${apiKey}`,
                         "Content-Type": "application/json"
@@ -101,7 +109,8 @@ export const translateBatch = async (
     fallbackToIndividual: boolean = true,
     targetLang: string = "DE",
     isPro: boolean = false,
-    batchSize: number = 50
+    batchSize: number = 50,
+    context?: string
 ): Promise<string[]> => {
     if (texts.length === 0) {
         return [];
@@ -126,12 +135,19 @@ export const translateBatch = async (
                 ? "/api/deepl-pro/v2/translate"
                 : "/api/deepl/v2/translate";
 
+            const requestBody: any = {
+                text: lowercaseChunk,
+                target_lang: targetLang,
+                source_lang: "EN"
+            };
+
+            // Add context if provided
+            if (context) {
+                requestBody.context = context;
+            }
+
             const response = await limiter.schedule(() =>
-                axios.post(baseUrl, {
-                    text: lowercaseChunk,
-                    target_lang: targetLang,
-                    source_lang: "EN"
-                }, {
+                axios.post(baseUrl, requestBody, {
                     headers: {
                         "Authorization": `DeepL-Auth-Key ${apiKey}`,
                         "Content-Type": "application/json"
@@ -146,7 +162,7 @@ export const translateBatch = async (
                 // Fallback to individual translations
                 for (const text of chunk) {
                     try {
-                        const translation = await translateText(apiKey, text, targetLang, isPro);
+                        const translation = await translateText(apiKey, text, targetLang, isPro, 3, context);
                         results.push(translation);
                     } catch (individualError) {
                         // If individual translation also fails, use original text

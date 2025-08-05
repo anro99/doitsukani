@@ -12,7 +12,7 @@ async function testInternalFunction() {
 
     console.log('🧪 Testing with internal translateText function...');
 
-    const testWords = ["Bamboo", "Loiter", "Ground", "Water"];
+    const testWords = ["branch", "Bamboo", "Loiter", "Ground", "Water"];
 
     for (const word of testWords) {
         try {
