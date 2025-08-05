@@ -146,6 +146,18 @@ describe('Smart-Merge Optimization', () => {
                     original: [],
                     processed: [],
                     shouldSkip: true
+                },
+                {
+                    name: 'Mixed case and order - should skip',
+                    original: ['Zweig', 'Ast', 'Branch'],
+                    processed: ['AST', 'branch', 'ZWEIG'],
+                    shouldSkip: true
+                },
+                {
+                    name: 'Whitespace differences - should skip',
+                    original: [' Zweig ', 'Ast'],
+                    processed: ['zweig', ' ast '],
+                    shouldSkip: true
                 }
             ];
 
@@ -153,6 +165,49 @@ describe('Smart-Merge Optimization', () => {
                 const noChange = arraysEqual(original, processed);
                 expect(noChange).toBe(shouldSkip);
                 console.log(`${name}: Skip upload = ${noChange}`);
+            });
+        });
+
+        it('should demonstrate concrete smart-merge scenarios', () => {
+            // Real-world scenarios from RadicalsManager
+            const scenarios = [
+                {
+                    name: 'branch radical - translation already exists (case insensitive)',
+                    currentSynonyms: ['Zweig', 'Ast'],
+                    newTranslation: 'zweig', // lowercase version already exists
+                    expectSkip: true
+                },
+                {
+                    name: 'ground radical - new translation',
+                    currentSynonyms: ['Erdboden'],
+                    newTranslation: 'Boden',
+                    expectSkip: false
+                },
+                {
+                    name: 'water radical - reordered synonyms',
+                    currentSynonyms: ['Wasser', 'H2O', 'Flüssigkeit'],
+                    processedSynonyms: ['H2O', 'Flüssigkeit', 'Wasser'], // same content, different order
+                    expectSkip: true
+                }
+            ];
+
+            scenarios.forEach(({ name, currentSynonyms, newTranslation, processedSynonyms, expectSkip }) => {
+                let finalSynonyms: string[];
+
+                if (processedSynonyms) {
+                    // Direct comparison scenario
+                    finalSynonyms = processedSynonyms;
+                } else {
+                    // Smart-merge scenario
+                    const exists = currentSynonyms.some(syn =>
+                        syn.toLowerCase().trim() === newTranslation!.toLowerCase()
+                    );
+                    finalSynonyms = exists ? currentSynonyms : [...currentSynonyms, newTranslation!];
+                }
+
+                const shouldSkip = arraysEqual(currentSynonyms, finalSynonyms);
+                expect(shouldSkip).toBe(expectSkip);
+                console.log(`${name}: Should skip = ${shouldSkip}`);
             });
         });
     });
