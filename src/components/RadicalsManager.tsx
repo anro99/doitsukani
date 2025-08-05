@@ -27,7 +27,7 @@ type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 interface ProcessResult {
     radical: Radical;
-    status: 'success' | 'error' | 'processing' | 'translated' | 'uploaded';
+    status: 'success' | 'error' | 'processing' | 'translated' | 'uploaded' | 'skipped';
     message?: string;
     originalSynonyms?: string[];
     newSynonyms?: string[];
@@ -330,6 +330,25 @@ export const RadicalsManager: React.FC = () => {
                     const radical = filteredRadicals[i];
                     setTranslationStatus(`🗑️ Verarbeite ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
 
+                    // 🚀 OPTIMIZATION: Skip radicals that already have no synonyms
+                    if (!radical.currentSynonyms || radical.currentSynonyms.length === 0) {
+                        console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
+                        const result: ProcessResult = {
+                            radical: {
+                                ...radical,
+                                translatedSynonyms: [],
+                                currentSynonyms: []
+                            },
+                            status: 'skipped',
+                            message: `⏭️ Übersprungen: "${radical.meaning}" hat bereits keine Synonyme`
+                        };
+
+                        processResults.push(result);
+                        setResults([...processResults]); // Update results in real-time
+                        setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
+                        continue;
+                    }
+
                     const updatedRadical: Radical = {
                         ...radical,
                         translatedSynonyms: [],
@@ -342,7 +361,7 @@ export const RadicalsManager: React.FC = () => {
                         message: `🗑️ Synonyme gelöscht für "${radical.meaning}"`
                     };
 
-                    // Immediately upload to Wanikani
+                    // Upload to Wanikani only for radicals that actually have synonyms
                     setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
                     uploadStats = await uploadSingleRadical(result, uploadStats);
 
@@ -350,9 +369,7 @@ export const RadicalsManager: React.FC = () => {
                         // Upload failed, keep error status and message from uploadSingleRadical
                     } else {
                         result.status = 'uploaded';
-                        if (synonymMode === 'delete') {
-                            result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
-                        }
+                        result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
                     }
 
                     processResults.push(result);
@@ -490,9 +507,17 @@ export const RadicalsManager: React.FC = () => {
 
             setResults(processResults);
             const successCount = processResults.filter(r => r.status === 'uploaded').length;
+            const skippedCount = processResults.filter(r => r.status === 'skipped').length;
             const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt und hochgeladen';
-            setTranslationStatus(`✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}.`);
-            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}`);
+
+            let statusMessage = `✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}`;
+            if (skippedCount > 0) {
+                statusMessage += ` (${skippedCount} übersprungen)`;
+            }
+            statusMessage += '.';
+
+            setTranslationStatus(statusMessage);
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${skippedCount}`);
 
             // 🔧 FIX: Auto-refresh study materials after processing to ensure UI shows latest data
             if (successCount > 0) {
@@ -813,7 +838,9 @@ export const RadicalsManager: React.FC = () => {
                                         ? 'bg-green-50 border border-green-200'
                                         : result.status === 'error'
                                             ? 'bg-red-50 border border-red-200'
-                                            : 'bg-blue-50 border border-blue-200'
+                                            : result.status === 'skipped'
+                                                ? 'bg-gray-50 border border-gray-200'
+                                                : 'bg-blue-50 border border-blue-200'
                                         }`}
                                 >
                                     <div className="flex justify-between items-center">
@@ -826,7 +853,9 @@ export const RadicalsManager: React.FC = () => {
                                                     ? 'default'
                                                     : result.status === 'error'
                                                         ? 'destructive'
-                                                        : 'secondary'
+                                                        : result.status === 'skipped'
+                                                            ? 'outline'
+                                                            : 'secondary'
                                             }
                                         >
                                             {result.status}
