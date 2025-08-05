@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import dotenv from "dotenv";
-import { getRadicals, getRadicalStudyMaterials } from "./wanikani";
+import { getRadicals, getRadicalStudyMaterials } from "../../lib/wanikani";
 
 // Load environment variables
 dotenv.config();

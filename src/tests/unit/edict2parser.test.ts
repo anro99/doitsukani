@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { utfTruncate, condense, parse } from "./edict2parser";
+import { utfTruncate, condense, parse } from "../../../tools/edict2parser";
 
 describe("UTF-aware truncation", () => {
   it("should truncate a string with UTF-8 characters to fit the Wanikani limit", () => {

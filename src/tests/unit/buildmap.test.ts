@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTranslations } from "./buildmap";
+import { buildTranslations } from "../../../tools/buildmap";
 
 describe("Vocabulary translation", () => {
   it("should translate a vobulary word using the dicionary", () => {

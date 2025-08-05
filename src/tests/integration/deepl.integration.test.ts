@@ -18,7 +18,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
 
     describe("Real API Translation Tests", () => {
         testIf(!!apiKey)("should translate English to German correctly", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             const result = await translateText(apiKey!, "Hello, world!", "DE", isProTier);
 
@@ -31,7 +31,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should translate Japanese kanji to German", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             const result = await translateText(apiKey!, "水", "DE", isProTier);
 
@@ -43,7 +43,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should handle multiple kanji for radicals context", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             // Test some common radicals/concepts that might appear in Wanikani
             const tests = [
@@ -65,7 +65,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should translate batch of radical concepts", async () => {
-            const { translateBatch } = await import("./deepl");
+            const { translateBatch } = await import("../../lib/deepl");
 
             const radicalConcepts = ["ground", "water", "fire", "tree", "big"];
             const result = await translateBatch(apiKey!, radicalConcepts, true, "DE", isProTier);
@@ -83,7 +83,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should handle API usage information", async () => {
-            const { getUsage } = await import("./deepl");
+            const { getUsage } = await import("../../lib/deepl");
 
             const usage = await getUsage(apiKey!, isProTier);
 
@@ -95,7 +95,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should respect rate limiting in real API calls", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             const startTime = Date.now();
 
@@ -119,7 +119,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should handle Wanikani-style radical translations", async () => {
-            const { translateBatch } = await import("./deepl");
+            const { translateBatch } = await import("../../lib/deepl");
 
             // Test translations of actual Wanikani radical meanings
             const wanikaniRadicals = [
@@ -144,7 +144,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
         });
 
         testIf(!!apiKey)("should handle complex radical descriptions", async () => {
-            const { translateBatch } = await import("./deepl");
+            const { translateBatch } = await import("../../lib/deepl");
 
             // Test longer radical descriptions that might need translation
             const descriptions = [
@@ -178,7 +178,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
 
     describe("Error Handling with Real API", () => {
         testIf(!!apiKey)("should handle invalid target language gracefully", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             await expect(translateText(apiKey!, "test", "INVALID", isProTier))
                 .rejects.toThrow();
@@ -186,7 +186,7 @@ describe("DeepL API Integration Tests (Real API)", () => {
 
         // Skip this test if no API key available
         testIf(!!apiKey)("should fail with invalid API key", async () => {
-            const { translateText } = await import("./deepl");
+            const { translateText } = await import("../../lib/deepl");
 
             await expect(translateText("invalid-key-12345", "test", "DE", false))
                 .rejects.toThrow(/authorization|auth|forbidden/i);

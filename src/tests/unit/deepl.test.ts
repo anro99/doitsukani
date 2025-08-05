@@ -6,7 +6,7 @@ const mockTranslateBatch = vi.fn();
 const mockGetUsage = vi.fn();
 
 // Mock the entire deepl module
-vi.mock("./deepl", () => ({
+vi.mock("../../lib/deepl", () => ({
     translateText: mockTranslateText,
     translateBatch: mockTranslateBatch,
     getUsage: mockGetUsage

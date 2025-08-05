@@ -5,7 +5,7 @@ import {
   mergeSynonyms,
   newMaterialWithoutOld,
   oldMaterialRequiringUpdate,
-} from "./wanikani";
+} from "../../lib/wanikani";
 import {
   WKDatableString,
   WKStudyMaterial,
