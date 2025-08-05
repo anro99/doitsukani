@@ -97,7 +97,11 @@ export const RadicalsManager: React.FC = () => {
     // Convert Wanikani radicals to our internal format
     const convertToInternalFormat = (wkRadicals: WKRadical[], studyMaterials: WKStudyMaterial[]): Radical[] => {
         const studyMaterialsMap = new Map<number, WKStudyMaterial>();
-        studyMaterials.forEach(sm => studyMaterialsMap.set(sm.data.subject_id, sm));
+        studyMaterials?.forEach(sm => {
+            if (sm?.data?.subject_id) {
+                studyMaterialsMap.set(sm.data.subject_id, sm);
+            }
+        });
 
         return wkRadicals.map(radical => ({
             id: radical.id,
