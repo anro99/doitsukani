@@ -16,8 +16,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run src/tests/unit",
-    "test:integration": "vitest run --environment=node src/tests/integration",
-    "test:integration:watch": "vitest watch --environment=node src/tests/integration",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:watch": "vitest watch --config vitest.integration.config.ts",
     "buildmap": "vite-node tools/buildmap.ts run"
   },
   "dependencies": {
