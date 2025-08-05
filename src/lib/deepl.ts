@@ -37,6 +37,10 @@ export const translateText = async (
         throw new Error("Text cannot be empty");
     }
 
+    // Convert to lowercase to avoid DeepL treating capitalized words as proper nouns
+    // DeepL doesn't translate proper nouns, so "Bamboo" stays "Bamboo" but "bamboo" becomes "Bambus"
+    const textToTranslate = text.toLowerCase();
+
     // Use proxy URLs for development, direct URLs for testing
     const baseUrl = process.env.NODE_ENV === "test"
         ? (isPro ? "https://api.deepl.com/v2/translate" : "https://api-free.deepl.com/v2/translate")
@@ -46,7 +50,7 @@ export const translateText = async (
         try {
             const response = await limiter.schedule(() =>
                 axios.post(baseUrl, {
-                    text: [text],
+                    text: [textToTranslate],
                     target_lang: targetLang,
                     source_lang: "EN"
                 }, {
@@ -113,6 +117,9 @@ export const translateBatch = async (
 
     for (const chunk of chunks) {
         try {
+            // Convert all texts to lowercase to avoid DeepL treating capitalized words as proper nouns
+            const lowercaseChunk = chunk.map(text => text.toLowerCase());
+
             // Try batch translation first
             // Use proxy URLs for development
             const baseUrl = isPro
@@ -121,7 +128,7 @@ export const translateBatch = async (
 
             const response = await limiter.schedule(() =>
                 axios.post(baseUrl, {
-                    text: chunk,
+                    text: lowercaseChunk,
                     target_lang: targetLang,
                     source_lang: "EN"
                 }, {
