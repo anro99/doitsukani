@@ -5,12 +5,18 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
+// Set NODE_ENV for proper test configuration
+process.env.NODE_ENV = 'test';
+
 export default defineConfig({
     test: {
         globals: true,
-        environment: 'jsdom',
+        environment: 'jsdom', // Keep jsdom for unit tests that mock DOM elements
         setupFiles: ['./src/test/setup.ts'],
-        testTimeout: 30000, // Increased timeout for integration tests
+        testTimeout: 60000, // Increased timeout for rate-limited integration tests
+        // Prevent parallel execution to avoid rate limiting issues
+        maxConcurrency: 1,
+        pool: 'forks', // Use process isolation for better test separation
         coverage: {
             provider: 'v8',
             reporter: ['text', 'json', 'html'],

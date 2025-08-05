@@ -19,9 +19,11 @@ const translations: Translations = translationsJson;
 
 /*
   Kindness settings for the Wanikani server. (Hard limit is 60 requests per minute.)
+  Integration tests need very conservative limits to avoid 429 errors.
+  Each request should be at least 5 seconds apart for stable testing.
 */
 const API_LIMITS = {
-  minTime: 1100,
+  minTime: 5000, // Increased from 3000ms to 5000ms for better rate limit compliance
   maxConcurrent: 1,
 };
 

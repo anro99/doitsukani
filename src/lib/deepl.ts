@@ -37,10 +37,10 @@ export const translateText = async (
         throw new Error("Text cannot be empty");
     }
 
-    // Use proxy URLs for development
-    const baseUrl = isPro
-        ? "/api/deepl-pro/v2/translate"
-        : "/api/deepl/v2/translate";
+    // Use proxy URLs for development, direct URLs for testing
+    const baseUrl = process.env.NODE_ENV === "test"
+        ? (isPro ? "https://api.deepl.com/v2/translate" : "https://api-free.deepl.com/v2/translate")
+        : (isPro ? "/api/deepl-pro/v2/translate" : "/api/deepl/v2/translate");
 
     const translateWithRetry = async (retryCount: number = 0): Promise<string> => {
         try {

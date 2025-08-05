@@ -1,9 +1,12 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, beforeEach } from "vitest";
 import dotenv from "dotenv";
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms, deleteRadicalSynonyms } from "../../lib/wanikani";
 
 // Load environment variables
 dotenv.config();
+
+// Add delay helper function for rate limiting
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * ⚠️  UPDATED SAFETY WARNING FOR TEST RADICALS ⚠️ 
@@ -40,6 +43,13 @@ describe("Radical API Integration Tests - TEST RADICALS ONLY", () => {
 
         if (!apiToken) {
             console.warn("WANIKANI_API_TOKEN not found in environment variables. Skipping integration tests.");
+        }
+    });
+
+    // Add delay between tests to prevent rate limiting
+    beforeEach(async () => {
+        if (apiToken) {
+            await delay(8000); // Increased to 8 second delay between tests to prevent rate limiting
         }
     });
 
@@ -507,6 +517,9 @@ describe("Test Radical Data Validation", () => {
     it("should validate test radical data structure", async () => {
         if (!apiToken) return;
 
+        console.log("🔍 Starting test radical data structure validation...");
+        await delay(2000); // Additional delay for this test
+
         const radicals = await getRadicals(apiToken, undefined, {
             slugs: "rice,spikes,umbrella",
             limit: 3
@@ -543,10 +556,14 @@ describe("Test Radical Data Validation", () => {
                 console.log(`TEST: ✓ Test radical ${index + 1}: ${primaryMeaning} - Valid structure`);
             });
         }
-    }, 15000);
+        console.log("✅ Test radical data structure validation completed");
+    }, 25000);
 
     it("should validate study material operations for test radicals", async () => {
         if (!apiToken) return;
+
+        console.log("🔍 Starting study material operations validation...");
+        await delay(2000); // Additional delay for this test
 
         const radicals = await getRadicals(apiToken, undefined, {
             slugs: "rice,spikes,umbrella",
@@ -557,6 +574,9 @@ describe("Test Radical Data Validation", () => {
             for (const radical of radicals) {
                 const primaryMeaning = radical.data.meanings.find(m => m.primary)?.meaning;
                 console.log(`TEST: Checking study materials for ${primaryMeaning} (ID: ${radical.id})`);
+
+                // Add delay between each radical to prevent rate limiting
+                await delay(3000);
 
                 // Get study materials for this test radical
                 const studyMaterials = await getRadicalStudyMaterials(apiToken, undefined, {
@@ -574,7 +594,8 @@ describe("Test Radical Data Validation", () => {
                 });
             }
         }
-    }, 20000);
+        console.log("✅ Study material operations validation completed");
+    }, 30000);
 });
 
 describe("Rate Limiting with Test Radicals", () => {
