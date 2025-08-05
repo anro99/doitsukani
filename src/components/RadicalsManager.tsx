@@ -136,6 +136,22 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
+    // 🔧 FIX: Refresh study materials to show updated synonyms immediately
+    const refreshStudyMaterials = async () => {
+        if (!apiToken || wkRadicals.length === 0) return;
+
+        try {
+            const subjectIds = wkRadicals.map(r => r.id.toString()).join(',');
+            const materials = await getRadicalStudyMaterials(apiToken, undefined, {
+                subject_ids: subjectIds
+            });
+            setStudyMaterials(materials);
+            console.log('🔧 DEBUG: Study materials refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing study materials:', error);
+        }
+    };
+
     // Convert and filter radicals based on level selection
     const getFilteredRadicalsByLevel = (): Radical[] => {
         if (!apiToken || wkRadicals.length === 0) {
@@ -225,20 +241,34 @@ export const RadicalsManager: React.FC = () => {
                 if (existingStudyMaterial) {
                     // Update existing study material
                     console.log(`🔄 DEBUG: Updating existing study material ${existingStudyMaterial.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
-                    await updateRadicalSynonyms(
+                    const updatedStudyMaterial = await updateRadicalSynonyms(
                         apiToken,
                         existingStudyMaterial.id,
                         validSynonyms
                     );
+
+                    // 🔧 FIX: Update local studyMaterials state to reflect the changes immediately
+                    setStudyMaterials(prevMaterials =>
+                        prevMaterials.map(sm =>
+                            sm.id === existingStudyMaterial.id
+                                ? updatedStudyMaterial
+                                : sm
+                        )
+                    );
+
                     return { ...totalStats, updated: totalStats.updated + 1 };
                 } else {
                     // Create new study material
                     console.log(`➕ DEBUG: Creating new study material for radical ${radical.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
-                    await createRadicalSynonyms(
+                    const newStudyMaterial = await createRadicalSynonyms(
                         apiToken,
                         radical.id,
                         validSynonyms
                     );
+
+                    // 🔧 FIX: Add new study material to local state
+                    setStudyMaterials(prevMaterials => [...prevMaterials, newStudyMaterial]);
+
                     return { ...totalStats, created: totalStats.created + 1 };
                 }
             }
@@ -409,6 +439,12 @@ export const RadicalsManager: React.FC = () => {
             setTranslationStatus(`✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}.`);
             setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}`);
 
+            // 🔧 FIX: Auto-refresh study materials after processing to ensure UI shows latest data
+            if (successCount > 0) {
+                console.log('🔧 DEBUG: Auto-refreshing study materials after successful uploads');
+                await refreshStudyMaterials();
+            }
+
         } catch (error) {
             console.error('Processing error:', error);
             setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
@@ -457,8 +493,19 @@ export const RadicalsManager: React.FC = () => {
                         </div>
                     )}
                     {apiToken && wkRadicals.length > 0 && (
-                        <div className="mt-2 text-sm text-green-600">
-                            ✅ {wkRadicals.length} Radicals erfolgreich geladen
+                        <div className="mt-2 flex items-center justify-between">
+                            <div className="text-sm text-green-600">
+                                ✅ {wkRadicals.length} Radicals erfolgreich geladen
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={refreshStudyMaterials}
+                                disabled={isLoadingRadicals}
+                                className="text-xs"
+                            >
+                                🔄 Synonyme aktualisieren
+                            </Button>
                         </div>
                     )}
                 </CardContent>
