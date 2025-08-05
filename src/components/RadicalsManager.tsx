@@ -345,7 +345,7 @@ export const RadicalsManager: React.FC = () => {
                     setResults([...processResults]); // Update results in real-time
                     setUploadStats(uploadStats); // Update upload stats in real-time
 
-                    setProgress((i + 1) / filteredRadicals.length * 100);
+                    setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
                 }
             } else {
                 // Handle translation modes with immediate upload
@@ -433,7 +433,7 @@ export const RadicalsManager: React.FC = () => {
 
                     setResults([...processResults]); // Update results in real-time
                     setUploadStats(uploadStats); // Update upload stats in real-time
-                    setProgress((i + 1) / filteredRadicals.length * 100);
+                    setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
                 }
             }
 
