@@ -44,37 +44,37 @@ async function testContextualRadicalTranslation() {
         try {
             console.log(`🔍 Testing: "${radical.meanings[0].meaning}"`);
             console.log(`📝 Mnemonic: ${radical.meaning_mnemonic.substring(0, 100)}...`);
-            
+
             const result = await translateRadicalWithContext(
                 apiKey,
                 radical,
                 'DE',
                 false // not pro tier
             );
-            
+
             console.log(`📊 Results:`);
             console.log(`   Original: "${result.original}"`);
             console.log(`   Contextual: "${result.contextual}"`);
             console.log(`   Context used: ${result.context || 'none'}`);
             console.log(`   Improved: ${result.improved ? '✅ YES' : '❌ NO'}`);
-            
+
             if (result.improved) {
                 console.log(`🎯 SUCCESS: Contextual translation differs from original!`);
             } else {
                 console.log(`ℹ️ No improvement detected (context may not be needed)`);
             }
-            
+
             console.log('-'.repeat(80));
-            
+
             // Rate limiting
             await new Promise(resolve => setTimeout(resolve, 2500));
-            
+
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.log(`❌ Error testing "${radical.meanings[0].meaning}": ${errorMessage}`);
         }
     }
-    
+
     console.log('\n🎉 Contextual translation testing complete!');
 }
 

@@ -6,7 +6,7 @@ dotenv.config();
 async function testContextualTranslation() {
     const apiKey = process.env.DEEPL_API_KEY;
     const isProTier = process.env.DEEPL_PRO === "true";
-    
+
     if (!apiKey) {
         console.log('❌ No API key found');
         return;
@@ -49,7 +49,7 @@ async function testContextualTranslation() {
         try {
             console.log(`🔍 Testing: "${testCase.text}"`);
             console.log(`📝 Description: ${testCase.description}`);
-            
+
             const response = await axios.post(baseUrl, {
                 text: [testCase.text],
                 target_lang: "DE",
@@ -63,7 +63,7 @@ async function testContextualTranslation() {
 
             const result = response.data.translations[0].text;
             console.log(`✅ Result: "${result}"`);
-            
+
             // Check if it's the desired "Ast" translation
             if (result.toLowerCase().includes('ast')) {
                 console.log('🎯 SUCCESS: Contains "Ast"!');
@@ -74,12 +74,12 @@ async function testContextualTranslation() {
             } else {
                 console.log('🤔 OTHER: Different translation');
             }
-            
+
             console.log('-'.repeat(60));
-            
+
             // Rate limiting
             await new Promise(resolve => setTimeout(resolve, 1100));
-            
+
         } catch (error) {
             console.log(`❌ Error: ${error.message}`);
         }

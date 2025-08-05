@@ -6,7 +6,7 @@ dotenv.config();
 async function testDeepLContext() {
     const apiKey = process.env.DEEPL_API_KEY;
     const isProTier = process.env.DEEPL_PRO === "true";
-    
+
     if (!apiKey) {
         console.log('❌ No API key found');
         return;
@@ -50,7 +50,7 @@ async function testDeepLContext() {
         try {
             console.log(`🔍 Testing: "${testCase.text}"`);
             console.log(`📝 Description: ${testCase.description}`);
-            
+
             const requestBody = {
                 text: [testCase.text],
                 target_lang: "DE",
@@ -61,7 +61,7 @@ async function testDeepLContext() {
                 requestBody.context = testCase.context;
                 console.log(`🎯 Context: "${testCase.context.substring(0, 80)}..."`);
             }
-            
+
             const response = await axios.post(baseUrl, requestBody, {
                 headers: {
                     "Authorization": `DeepL-Auth-Key ${apiKey}`,
@@ -71,11 +71,11 @@ async function testDeepLContext() {
 
             const result = response.data.translations[0].text;
             console.log(`✅ Result: "${result}"`);
-            
+
             // Analyze the result
             const text = testCase.text.toLowerCase();
             const translation = result.toLowerCase();
-            
+
             if (text === 'branch') {
                 if (translation.includes('ast') || translation.includes('zweig')) {
                     console.log('🎯 SUCCESS: Tree branch translation!');
@@ -91,12 +91,12 @@ async function testDeepLContext() {
                     console.log('🤔 OTHER: Different translation');
                 }
             }
-            
+
             console.log('-'.repeat(80));
-            
+
             // Rate limiting
             await new Promise(resolve => setTimeout(resolve, 1100));
-            
+
         } catch (error) {
             console.log(`❌ Error: ${error.message}`);
         }

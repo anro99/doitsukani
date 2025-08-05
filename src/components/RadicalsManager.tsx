@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from '../lib/wanikani';
 import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import { translateText } from '../lib/deepl';
+import { extractContextFromMnemonic } from '../lib/contextual-translation';
 
 interface Radical {
     id: number;
@@ -19,6 +20,7 @@ interface Radical {
     currentSynonyms: string[];
     selected: boolean;
     translatedSynonyms?: string[];
+    meaningMnemonic?: string; // Add meaning_mnemonic for context
 }
 
 type SynonymMode = 'replace' | 'smart-merge' | 'delete';
@@ -110,7 +112,8 @@ export const RadicalsManager: React.FC = () => {
             level: radical.data.level,
             currentSynonyms: studyMaterialsMap.get(radical.id)?.data.meaning_synonyms || [],
             selected: true,
-            translatedSynonyms: []
+            translatedSynonyms: [],
+            meaningMnemonic: radical.data.meaning_mnemonic || undefined
         }));
     };
 
@@ -356,7 +359,28 @@ export const RadicalsManager: React.FC = () => {
                     setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
 
                     try {
-                        const translation = await translateText(deeplToken, radical.meaning, 'DE', false);
+                        // Extract context from meaning_mnemonic for better translation
+                        const context = extractContextFromMnemonic(
+                            radical.meaningMnemonic || '',
+                            radical.meaning
+                        );
+
+                        console.log(`🔧 CONTEXT DEBUG: Processing "${radical.meaning}"`);
+                        console.log(`🔧 CONTEXT DEBUG: Has mnemonic: ${!!radical.meaningMnemonic}`);
+                        console.log(`🔧 CONTEXT DEBUG: Extracted context: ${context ? 'YES' : 'NO'}`);
+                        if (context) {
+                            console.log(`🔧 CONTEXT DEBUG: Context preview: ${context.substring(0, 100)}...`);
+                        }
+
+                        // Use contextual translation with DeepL's native context parameter
+                        const translation = await translateText(
+                            deeplToken,
+                            radical.meaning,
+                            'DE',
+                            false,
+                            3, // maxRetries
+                            context || undefined // Pass context to DeepL, convert null to undefined
+                        );
 
                         // Apply synonym mode logic
                         let newSynonyms: string[] = [];
@@ -405,7 +429,7 @@ export const RadicalsManager: React.FC = () => {
                         const result: ProcessResult = {
                             radical: updatedRadical,
                             status: 'success',
-                            message: `Übersetzt: "${radical.meaning}" → "${translation}"`
+                            message: `Übersetzt${context ? ' (mit Kontext)' : ''}: "${radical.meaning}" → "${translation}"`
                         };
 
                         // Immediately upload to Wanikani after translation
