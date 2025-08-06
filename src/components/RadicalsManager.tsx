@@ -506,21 +506,37 @@ export const RadicalsManager: React.FC = () => {
             }
 
             setResults(processResults);
-            const successCount = processResults.filter(r => r.status === 'uploaded').length;
-            const skippedCount = processResults.filter(r => r.status === 'skipped').length;
+
+            // Count all different status types for accurate statistics
+            const uploadedCount = processResults.filter(r => r.status === 'uploaded').length;
+            const successCount = processResults.filter(r => r.status === 'success').length; // Smart-merge: no changes needed
+            const skippedCount = processResults.filter(r => r.status === 'skipped').length; // DELETE mode: no synonyms to delete
+            const errorCount = processResults.filter(r => r.status === 'error').length;
+
+            // Total successfully processed = uploaded + success + skipped
+            const totalSuccessful = uploadedCount + successCount + skippedCount;
+
             const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt und hochgeladen';
 
-            let statusMessage = `✅ Verarbeitung abgeschlossen! ${successCount}/${processResults.length} erfolgreich ${action}`;
-            if (skippedCount > 0) {
-                statusMessage += ` (${skippedCount} übersprungen)`;
+            let statusMessage = `✅ Verarbeitung abgeschlossen! ${totalSuccessful}/${processResults.length} erfolgreich verarbeitet`;
+
+            // Add detailed breakdown if there are multiple categories
+            const details = [];
+            if (uploadedCount > 0) details.push(`${uploadedCount} ${action}`);
+            if (successCount > 0) details.push(`${successCount} bereits korrekt`);
+            if (skippedCount > 0) details.push(`${skippedCount} übersprungen`);
+            if (errorCount > 0) details.push(`${errorCount} fehlerhaft`);
+
+            if (details.length > 1) {
+                statusMessage += ` (${details.join(', ')})`;
             }
             statusMessage += '.';
 
             setTranslationStatus(statusMessage);
-            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${skippedCount}`);
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${successCount + skippedCount}`);
 
             // 🔧 FIX: Auto-refresh study materials after processing to ensure UI shows latest data
-            if (successCount > 0) {
+            if (uploadedCount > 0) {
                 console.log('🔧 DEBUG: Auto-refreshing study materials after successful uploads');
                 await refreshStudyMaterials();
             }
