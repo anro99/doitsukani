@@ -274,7 +274,7 @@ export const RadicalsManager: React.FC = () => {
                         )
                     );
 
-                    return { ...totalStats, updated: totalStats.updated + 1 };
+                    return { ...totalStats, updated: totalStats.updated + 1, successful: totalStats.successful + 1 };
                 } else {
                     // Create new study material
                     console.log(`➕ DEBUG: Creating new study material for radical ${radical.id} with ${validSynonyms.length} synonyms (DELETE mode: ${synonymMode === 'delete'})`);
@@ -287,7 +287,7 @@ export const RadicalsManager: React.FC = () => {
                     // 🔧 FIX: Add new study material to local state
                     setStudyMaterials(prevMaterials => [...prevMaterials, newStudyMaterial]);
 
-                    return { ...totalStats, created: totalStats.created + 1 };
+                    return { ...totalStats, created: totalStats.created + 1, successful: totalStats.successful + 1 };
                 }
             }
 
@@ -471,24 +471,26 @@ export const RadicalsManager: React.FC = () => {
                             uploadStats = await uploadSingleRadical(result, uploadStats);
 
                             if (result.status === 'error') {
-                                // Upload failed, keep error status and message from uploadSingleRadical
+                                // Upload failed, error already counted in uploadSingleRadical
+                                // Don't increment failed again here!
                             } else {
                                 result.status = 'uploaded';
                                 result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
+                                // successful already incremented in uploadSingleRadical
                             }
                         } else {
                             // Synonyms didn't change, skip upload
                             result.status = 'success';
                             result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
                             console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
-                            uploadStats.successful++;
+                            uploadStats.successful++; // Count as successful processing
                         }
 
                         // REMOVED: processResults.push(result); // Memory optimization
 
                     } catch (error) {
                         console.error(`❌ Translation error for ${radical.meaning}:`, error);
-                        uploadStats.failed++;
+                        uploadStats.failed++; // Count translation errors
                     }
 
                     // REMOVED: setResults([...processResults]); // Memory optimization  
