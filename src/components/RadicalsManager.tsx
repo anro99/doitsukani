@@ -11,10 +11,32 @@ import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRad
 import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
+import Bottleneck from 'bottleneck';
 
-// 🚀 BATCH-PROCESSING Configuration
-const TRANSLATION_BATCH_SIZE = 20;
-const BATCH_DELAY_MS = 2000; // 2 seconds between batches for rate-limiting
+// 🚀 BOTTLENECK Rate-Limiting Configuration
+const waniKaniLimiter = new Bottleneck({
+    maxConcurrent: 1,
+    minTime: 800, // 75 requests/min (800ms between requests)
+    reservoir: 75,
+    reservoirRefreshAmount: 75,
+    reservoirRefreshInterval: 60 * 1000, // 60 seconds
+    retryCount: 5,
+    jitter: true
+});
+
+const deeplLimiter = new Bottleneck({
+    maxConcurrent: 2,
+    minTime: 100,
+    reservoir: 500000,
+    reservoirRefreshAmount: 500000,
+    reservoirRefreshInterval: 30 * 24 * 60 * 60 * 1000, // 30 days
+    retryCount: 3,
+    jitter: true
+});
+
+// 🚀 BATCH-PROCESSING Configuration  
+const TRANSLATION_BATCH_SIZE = 25; // Increased from 20 for better performance
+const BATCH_DELAY_MS = 1000; // Reduced from 2000ms for faster processing
 
 interface Radical {
     id: number;
@@ -311,33 +333,23 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
-    // 🔧 RATE-LIMITING: Intelligent rate limiting with retry logic
+    // � BOTTLENECK: Intelligent rate limiting with retry logic using Bottleneck
     const uploadSingleRadicalWithRetry = async (
         result: ProcessResult,
-        stats: UploadStats,
-        retryCount = 0
+        stats: UploadStats
     ): Promise<UploadStats> => {
         try {
-            return await uploadSingleRadical(result, stats);
+            return await executeWithWaniKaniLimiter(
+                () => uploadSingleRadical(result, stats),
+                'uploadSingleRadical',
+                result.radical.meaning
+            );
         } catch (error: any) {
-            // Rate-Limiting erkannt (HTTP 429)
-            if (error.response?.status === 429 && retryCount < 3) {
-                const waitTime = Math.pow(2, retryCount) * 5000; // Exponential backoff: 5s, 10s, 20s
-                const waitSeconds = waitTime / 1000;
-
-                setUploadStatus(`⏸️ Rate-Limit erreicht. Warte ${waitSeconds}s... (Versuch ${retryCount + 1}/3)`);
-                console.log(`🔄 DEBUG: Rate limit hit for ${result.radical.meaning}, waiting ${waitSeconds}s (attempt ${retryCount + 1}/3)`);
-
-                await new Promise(resolve => setTimeout(resolve, waitTime));
-
-                return uploadSingleRadicalWithRetry(result, stats, retryCount + 1);
-            }
-
-            // API-Fehler oder maximale Retries erreicht
-            console.error(`❌ DEBUG: Upload error for ${result.radical.meaning}:`, error);
+            // Final error handling (after Bottleneck retries)
+            console.error(`❌ DEBUG: Upload error for ${result.radical.meaning} after Bottleneck retries:`, error);
             result.status = 'error';
             if (error.response?.status === 429) {
-                result.message = `❌ Rate-Limit erreicht (nach 3 Versuchen): ${error.message}`;
+                result.message = `❌ Rate-Limit erreicht (nach 5 Bottleneck-Versuchen): ${error.message}`;
             } else {
                 result.message = `❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
             }
@@ -345,14 +357,40 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
-    // 🔧 RATE-LIMITING: Add delay between API calls to prevent rate limiting
-    const rateLimitDelay = async (currentIndex: number, totalCount: number) => {
-        // Don't delay after the last item
-        if (currentIndex >= totalCount - 1) return;
+    // � BOTTLENECK: Smart wrapper for WaniKani API calls with intelligent rate-limiting
+    const executeWithWaniKaniLimiter = async (
+        operation: () => Promise<any>,
+        operationName: string,
+        radicalName?: string
+    ): Promise<any> => {
+        const operationId = `${operationName}${radicalName ? ` for ${radicalName}` : ''}`;
 
-        const delayMs = 1200; // 1.2 seconds between API calls (50 requests/minute = safe)
-        setTranslationStatus(`⏸️ Warte 1.2s (Rate-Limiting-Schutz)...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        return waniKaniLimiter.schedule({ id: operationId }, async () => {
+            console.log(`🚀 BOTTLENECK: Executing ${operationId}`);
+            const startTime = Date.now();
+
+            try {
+                const result = await operation();
+                const duration = Date.now() - startTime;
+                console.log(`✅ BOTTLENECK: Completed ${operationId} in ${duration}ms`);
+                return result;
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                console.error(`❌ BOTTLENECK: Failed ${operationId} after ${duration}ms:`, error);
+                throw error;
+            }
+        });
+    };
+
+    // 🚀 BOTTLENECK: Smart wrapper for DeepL API calls
+    const executeWithDeepLLimiter = async (
+        operation: () => Promise<any>,
+        operationName: string
+    ): Promise<any> => {
+        return deeplLimiter.schedule({ id: operationName }, async () => {
+            console.log(`🚀 BOTTLENECK: Executing DeepL ${operationName}`);
+            return await operation();
+        });
     };
 
     // � BATCH-PROCESSING: Process a batch of radicals with batch progress tracking
@@ -402,10 +440,7 @@ export const RadicalsManager: React.FC = () => {
                     result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
                 }
 
-                // Rate limiting between items within batch
-                if (i < batch.length - 1) {
-                    await rateLimitDelay(overallIndex, Number.MAX_SAFE_INTEGER);
-                }
+                // 🚀 BOTTLENECK: Rate limiting now handled by Bottleneck schedulers
             } else {
                 // Translation modes
                 setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${i + 1}/${batchSize}: ${radical.meaning}...`);
@@ -418,13 +453,16 @@ export const RadicalsManager: React.FC = () => {
                         radical.meaning
                     );
 
-                    const translation = await translateText(
-                        deeplToken,
-                        radical.meaning,
-                        'DE',
-                        false,
-                        3,
-                        context || undefined
+                    const translation = await executeWithDeepLLimiter(
+                        () => translateText(
+                            deeplToken,
+                            radical.meaning,
+                            'DE',
+                            false,
+                            3,
+                            context || undefined
+                        ),
+                        `translate-${radical.meaning}`
                     );
 
                     // Apply synonym mode logic
@@ -498,10 +536,7 @@ export const RadicalsManager: React.FC = () => {
                     localUploadStats.failed++;
                 }
 
-                // Rate limiting between items within batch (only if upload was made)
-                if (needsUpload && i < batch.length - 1) {
-                    await rateLimitDelay(overallIndex, Number.MAX_SAFE_INTEGER);
-                }
+                // 🚀 BOTTLENECK: Rate limiting now handled by Bottleneck schedulers automatically
             }
         }
 
