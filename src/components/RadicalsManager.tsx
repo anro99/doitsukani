@@ -542,6 +542,7 @@ export const RadicalsManager: React.FC = () => {
                             result.status = 'success';
                             result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
                             console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
+                            uploadStats.skipped++; // Count as skipped (not uploaded)
                             uploadStats.successful++; // Count as successful processing
                         }
 
@@ -873,9 +874,9 @@ export const RadicalsManager: React.FC = () => {
                         {uploadStatus && (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                                 <p className="text-sm text-green-700">{uploadStatus}</p>
-                                {uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 ? (
+                                {uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 || uploadStats.skipped > 0 ? (
                                     <div className="text-xs text-green-600 mt-1">
-                                        Erstellt: {uploadStats.created} | Aktualisiert: {uploadStats.updated} | Fehler: {uploadStats.failed}
+                                        Erstellt: {uploadStats.created} | Aktualisiert: {uploadStats.updated} | Fehler: {uploadStats.failed} | Übersprungen: {uploadStats.skipped}
                                     </div>
                                 ) : null}
                             </div>
