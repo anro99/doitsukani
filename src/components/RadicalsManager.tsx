@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -62,6 +62,9 @@ export const RadicalsManager: React.FC = () => {
     const [translationStatus, setTranslationStatus] = useState('');
     const [uploadStatus, setUploadStatus] = useState('');
     const [uploadStats, setUploadStats] = useState({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
+
+    // 🔧 CRITICAL FIX: Use a processing session ID to prevent state accumulation between runs
+    const processingSessionRef = useRef(0);
 
     // API Integration State
     const [wkRadicals, setWkRadicals] = useState<WKRadical[]>([]);
@@ -367,11 +370,18 @@ export const RadicalsManager: React.FC = () => {
         setProgress(0);
         setTranslationStatus('🔄 Starte Verarbeitung mit Rate-Limiting-Schutz...');
         // REMOVED: setResults([]); // Memory optimization - no results list
-        setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
+
+        // 🔧 CRITICAL FIX: Start a new processing session to prevent state accumulation
+        processingSessionRef.current += 1;
+        const currentSession = processingSessionRef.current;
+        console.log(`🆔 DEBUG: Starting processing session ${currentSession}`);
+
+        // 🔧 CRITICAL FIX: Use functional update to ensure complete reset
+        setUploadStats(() => ({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 }));
 
         // REMOVED: const processResults: ProcessResult[] = []; // Memory optimization  
         const filteredRadicals = selectedRadicals.filter(r => r.selected);
-        let uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+        let localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
             // Handle delete mode without translation
@@ -387,9 +397,9 @@ export const RadicalsManager: React.FC = () => {
                         console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
 
                         // Update stats for skipped radical
-                        uploadStats.skipped++;
-                        uploadStats.successful++;
-                        setUploadStats(uploadStats);
+                        localUploadStats.skipped++;
+                        localUploadStats.successful++;
+                        setUploadStats(() => ({ ...localUploadStats })); // Functional update
 
                         setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
                         continue;
@@ -409,20 +419,20 @@ export const RadicalsManager: React.FC = () => {
 
                     // Upload to Wanikani only for radicals that actually have synonyms
                     setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                    uploadStats = await uploadSingleRadicalWithRetry(result, uploadStats);
+                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
 
                     if (result.status === 'error') {
                         // Upload failed, keep error status and message from uploadSingleRadicalWithRetry
-                        uploadStats.failed++;
+                        localUploadStats.failed++;
                     } else {
                         result.status = 'uploaded';
                         result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
-                        uploadStats.successful++;
+                        localUploadStats.successful++;
                     }
 
                     // REMOVED: processResults.push(result); // Memory optimization
                     // REMOVED: setResults([...processResults]); // Memory optimization
-                    setUploadStats(uploadStats); // Update upload stats in real-time
+                    setUploadStats(() => ({ ...localUploadStats })); // Functional update
 
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
 
@@ -527,7 +537,7 @@ export const RadicalsManager: React.FC = () => {
                             needsUpload = true;
                             // Immediately upload to Wanikani after translation
                             setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                            uploadStats = await uploadSingleRadicalWithRetry(result, uploadStats);
+                            localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
 
                             if (result.status === 'error') {
                                 // Upload failed, error already counted in uploadSingleRadicalWithRetry
@@ -542,19 +552,19 @@ export const RadicalsManager: React.FC = () => {
                             result.status = 'success';
                             result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
                             console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
-                            uploadStats.skipped++; // Count as skipped (not uploaded)
-                            uploadStats.successful++; // Count as successful processing
+                            localUploadStats.skipped++; // Count as skipped (not uploaded)
+                            localUploadStats.successful++; // Count as successful processing
                         }
 
                         // REMOVED: processResults.push(result); // Memory optimization
 
                     } catch (error) {
                         console.error(`❌ Translation error for ${radical.meaning}:`, error);
-                        uploadStats.failed++; // Count translation errors
+                        localUploadStats.failed++; // Count translation errors
                     }
 
                     // REMOVED: setResults([...processResults]); // Memory optimization  
-                    setUploadStats(uploadStats); // Update upload stats in real-time
+                    setUploadStats(() => ({ ...localUploadStats })); // Functional update
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
 
                     // 🔧 RATE-LIMITING: Add delay between API calls (only if an upload was made)
@@ -567,17 +577,17 @@ export const RadicalsManager: React.FC = () => {
             // REMOVED: setResults(processResults); // Memory optimization
 
             // Use final uploadStats instead of processResults for statistics
-            const totalSuccessful = uploadStats.successful;
+            const totalSuccessful = localUploadStats.successful;
             const totalProcessed = filteredRadicals.length;
 
             let statusMessage = `✅ Verarbeitung abgeschlossen! ${totalSuccessful}/${totalProcessed} erfolgreich verarbeitet`;
 
-            // Add detailed breakdown from uploadStats
+            // Add detailed breakdown from localUploadStats
             const details = [];
-            if (uploadStats.created > 0) details.push(`${uploadStats.created} erstellt`);
-            if (uploadStats.updated > 0) details.push(`${uploadStats.updated} aktualisiert`);
-            if (uploadStats.skipped > 0) details.push(`${uploadStats.skipped} übersprungen`);
-            if (uploadStats.failed > 0) details.push(`${uploadStats.failed} fehlerhaft`);
+            if (localUploadStats.created > 0) details.push(`${localUploadStats.created} erstellt`);
+            if (localUploadStats.updated > 0) details.push(`${localUploadStats.updated} aktualisiert`);
+            if (localUploadStats.skipped > 0) details.push(`${localUploadStats.skipped} übersprungen`);
+            if (localUploadStats.failed > 0) details.push(`${localUploadStats.failed} fehlerhaft`);
 
             if (details.length > 1) {
                 statusMessage += ` (${details.join(', ')})`;
@@ -585,10 +595,13 @@ export const RadicalsManager: React.FC = () => {
             statusMessage += '.';
 
             setTranslationStatus(statusMessage);
-            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${uploadStats.skipped}`);
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${localUploadStats.created}, Aktualisiert: ${localUploadStats.updated}, Fehler: ${localUploadStats.failed}, Übersprungen: ${localUploadStats.skipped}`);
+
+            // 🔧 FIX: Update React state with final statistics using functional update
+            setUploadStats(() => ({ ...localUploadStats }));
 
             // 🔧 FIX: Auto-refresh study materials after processing to ensure UI shows latest data
-            if (uploadStats.created > 0 || uploadStats.updated > 0) {
+            if (localUploadStats.created > 0 || localUploadStats.updated > 0) {
                 console.log('🔧 DEBUG: Auto-refreshing study materials after successful uploads');
                 await refreshStudyMaterials();
             }
@@ -598,6 +611,20 @@ export const RadicalsManager: React.FC = () => {
             setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
         } finally {
             setIsProcessing(false);
+
+            // 🔧 CRITICAL FIX: Add delay and then reset uploadStats to prevent accumulation
+            // This ensures the user sees the final results for a few seconds, then clears them
+            // for the next run
+            console.log(`🆔 DEBUG: Finishing processing session ${currentSession}`);
+            setTimeout(() => {
+                // Only reset if this is still the current session (no new processing started)
+                if (processingSessionRef.current === currentSession) {
+                    console.log(`🔄 DEBUG: Resetting stats after session ${currentSession} completed`);
+                    setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
+                } else {
+                    console.log(`⚠️ DEBUG: Skipping reset - new session ${processingSessionRef.current} already started`);
+                }
+            }, 3000); // Wait 3 seconds before clearing stats for next run
         }
     };
 
