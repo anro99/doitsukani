@@ -33,6 +33,14 @@ interface ProcessResult {
     newSynonyms?: string[];
 }
 
+interface UploadStats {
+    created: number;
+    updated: number;
+    failed: number;
+    skipped: number;
+    successful: number;
+}
+
 export const RadicalsManager: React.FC = () => {
     const [apiToken, setApiToken] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -299,7 +307,51 @@ export const RadicalsManager: React.FC = () => {
         }
     };
 
-    // 🔧 CRITICAL: Process translation with mode-specific synonym logic
+    // 🔧 RATE-LIMITING: Intelligent rate limiting with retry logic
+    const uploadSingleRadicalWithRetry = async (
+        result: ProcessResult,
+        stats: UploadStats,
+        retryCount = 0
+    ): Promise<UploadStats> => {
+        try {
+            return await uploadSingleRadical(result, stats);
+        } catch (error: any) {
+            // Rate-Limiting erkannt (HTTP 429)
+            if (error.response?.status === 429 && retryCount < 3) {
+                const waitTime = Math.pow(2, retryCount) * 5000; // Exponential backoff: 5s, 10s, 20s
+                const waitSeconds = waitTime / 1000;
+
+                setUploadStatus(`⏸️ Rate-Limit erreicht. Warte ${waitSeconds}s... (Versuch ${retryCount + 1}/3)`);
+                console.log(`🔄 DEBUG: Rate limit hit for ${result.radical.meaning}, waiting ${waitSeconds}s (attempt ${retryCount + 1}/3)`);
+
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                return uploadSingleRadicalWithRetry(result, stats, retryCount + 1);
+            }
+
+            // API-Fehler oder maximale Retries erreicht
+            console.error(`❌ DEBUG: Upload error for ${result.radical.meaning}:`, error);
+            result.status = 'error';
+            if (error.response?.status === 429) {
+                result.message = `❌ Rate-Limit erreicht (nach 3 Versuchen): ${error.message}`;
+            } else {
+                result.message = `❌ Upload-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+            }
+            return { ...stats, failed: stats.failed + 1 };
+        }
+    };
+
+    // 🔧 RATE-LIMITING: Add delay between API calls to prevent rate limiting
+    const rateLimitDelay = async (currentIndex: number, totalCount: number) => {
+        // Don't delay after the last item
+        if (currentIndex >= totalCount - 1) return;
+
+        const delayMs = 1200; // 1.2 seconds between API calls (50 requests/minute = safe)
+        setTranslationStatus(`⏸️ Warte 1.2s (Rate-Limiting-Schutz)...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+    };
+
+    // 🔧 CRITICAL: Process translation with mode-specific synonym logic and rate limiting
     const processTranslations = async (selectedRadicals: Radical[]) => {
         if (synonymMode !== 'delete' && !deeplToken) {
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
@@ -313,7 +365,7 @@ export const RadicalsManager: React.FC = () => {
 
         setIsProcessing(true);
         setProgress(0);
-        setTranslationStatus('🔄 Starte Verarbeitung...');
+        setTranslationStatus('🔄 Starte Verarbeitung mit Rate-Limiting-Schutz...');
         // REMOVED: setResults([]); // Memory optimization - no results list
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
@@ -357,10 +409,10 @@ export const RadicalsManager: React.FC = () => {
 
                     // Upload to Wanikani only for radicals that actually have synonyms
                     setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                    uploadStats = await uploadSingleRadical(result, uploadStats);
+                    uploadStats = await uploadSingleRadicalWithRetry(result, uploadStats);
 
                     if (result.status === 'error') {
-                        // Upload failed, keep error status and message from uploadSingleRadical
+                        // Upload failed, keep error status and message from uploadSingleRadicalWithRetry
                         uploadStats.failed++;
                     } else {
                         result.status = 'uploaded';
@@ -373,6 +425,9 @@ export const RadicalsManager: React.FC = () => {
                     setUploadStats(uploadStats); // Update upload stats in real-time
 
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
+
+                    // 🔧 RATE-LIMITING: Add delay between API calls
+                    await rateLimitDelay(i, filteredRadicals.length);
                 }
             } else {
                 // Handle translation modes with immediate upload
@@ -381,6 +436,9 @@ export const RadicalsManager: React.FC = () => {
                 for (let i = 0; i < filteredRadicals.length; i++) {
                     const radical = filteredRadicals[i];
                     setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+
+                    // 🔧 RATE-LIMITING: Track if upload is needed for rate limiting
+                    let needsUpload = false;
 
                     try {
                         // Extract context from meaning_mnemonic for better translation
@@ -466,12 +524,13 @@ export const RadicalsManager: React.FC = () => {
 
                         // 🔧 NEW: Only upload if synonyms actually changed
                         if (synonymsChanged) {
+                            needsUpload = true;
                             // Immediately upload to Wanikani after translation
                             setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                            uploadStats = await uploadSingleRadical(result, uploadStats);
+                            uploadStats = await uploadSingleRadicalWithRetry(result, uploadStats);
 
                             if (result.status === 'error') {
-                                // Upload failed, error already counted in uploadSingleRadical
+                                // Upload failed, error already counted in uploadSingleRadicalWithRetry
                                 // Don't increment failed again here!
                             } else {
                                 result.status = 'uploaded';
@@ -496,6 +555,11 @@ export const RadicalsManager: React.FC = () => {
                     // REMOVED: setResults([...processResults]); // Memory optimization  
                     setUploadStats(uploadStats); // Update upload stats in real-time
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
+
+                    // 🔧 RATE-LIMITING: Add delay between API calls (only if an upload was made)
+                    if (needsUpload) {
+                        await rateLimitDelay(i, filteredRadicals.length);
+                    }
                 }
             }
 
