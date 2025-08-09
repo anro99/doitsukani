@@ -10,11 +10,6 @@ describe("Statistics Accumulation Bug - Real World Scenario", () => {
             // Mock React useState behavior
             let reactState = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
-            // Standard setState (problematic)
-            const setUploadStatsStandard = (newState: typeof reactState) => {
-                reactState = { ...newState };
-            };
-
             // Functional setState (fix)
             const setUploadStatsFunctional = (updater: (prev: typeof reactState) => typeof reactState) => {
                 reactState = updater(reactState);
