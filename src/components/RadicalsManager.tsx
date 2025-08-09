@@ -12,6 +12,10 @@ import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
 
+// 🚀 BATCH-PROCESSING Configuration
+const TRANSLATION_BATCH_SIZE = 20;
+const BATCH_DELAY_MS = 2000; // 2 seconds between batches for rate-limiting
+
 interface Radical {
     id: number;
     meaning: string;
@@ -351,7 +355,160 @@ export const RadicalsManager: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, delayMs));
     };
 
-    // 🔧 CRITICAL: Process translation with mode-specific synonym logic and rate limiting
+    // � BATCH-PROCESSING: Process a batch of radicals with batch progress tracking
+    const processBatch = async (
+        batch: Radical[],
+        batchIndex: number,
+        totalBatches: number,
+        localUploadStats: UploadStats
+    ) => {
+        const batchSize = batch.length;
+        setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Radicals)...`);
+
+        for (let i = 0; i < batch.length; i++) {
+            const radical = batch[i];
+            const overallIndex = batchIndex * TRANSLATION_BATCH_SIZE + i;
+
+            if (synonymMode === 'delete') {
+                setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${i + 1}/${batchSize}: ${radical.meaning}...`);
+
+                // Skip radicals that already have no synonyms
+                if (!radical.currentSynonyms || radical.currentSynonyms.length === 0) {
+                    console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
+                    localUploadStats.skipped++;
+                    localUploadStats.successful++;
+                    continue;
+                }
+
+                const updatedRadical: Radical = {
+                    ...radical,
+                    translatedSynonyms: [],
+                    currentSynonyms: []
+                };
+
+                const result: ProcessResult = {
+                    radical: updatedRadical,
+                    status: 'success',
+                    message: `🗑️ Synonyme gelöscht für "${radical.meaning}"`
+                };
+
+                setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
+                localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
+
+                if (result.status === 'error') {
+                    result.message = result.message || `❌ Fehler beim Löschen von "${radical.meaning}"`;
+                } else {
+                    result.status = 'uploaded';
+                    result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
+                }
+
+                // Rate limiting between items within batch
+                if (i < batch.length - 1) {
+                    await rateLimitDelay(overallIndex, Number.MAX_SAFE_INTEGER);
+                }
+            } else {
+                // Translation modes
+                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${i + 1}/${batchSize}: ${radical.meaning}...`);
+
+                let needsUpload = false;
+
+                try {
+                    const context = extractContextFromMnemonic(
+                        radical.meaningMnemonic || '',
+                        radical.meaning
+                    );
+
+                    const translation = await translateText(
+                        deeplToken,
+                        radical.meaning,
+                        'DE',
+                        false,
+                        3,
+                        context || undefined
+                    );
+
+                    // Apply synonym mode logic
+                    let newSynonyms: string[] = [];
+                    const currentSynonyms = radical.currentSynonyms || [];
+                    const translatedSynonym = translation.trim();
+
+                    switch (synonymMode) {
+                        case 'replace':
+                            newSynonyms = [translatedSynonym];
+                            break;
+                        case 'smart-merge':
+                            if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym.toLowerCase())) {
+                                newSynonyms = [...currentSynonyms, translatedSynonym];
+                            } else {
+                                newSynonyms = currentSynonyms;
+                            }
+                            break;
+                    }
+
+                    // Clean synonyms preserving case
+                    const seenSynonyms = new Map<string, string>();
+                    newSynonyms
+                        .map(syn => syn.trim())
+                        .filter(syn => syn.length > 0)
+                        .forEach(syn => {
+                            const lowerKey = syn.toLowerCase();
+                            if (!seenSynonyms.has(lowerKey)) {
+                                seenSynonyms.set(lowerKey, syn);
+                            }
+                        });
+                    const cleanedSynonyms = [...seenSynonyms.values()];
+
+                    // Check if synonyms actually changed
+                    const originalSynonyms = radical.currentSynonyms || [];
+                    const synonymsChanged = !arraysEqual(originalSynonyms, cleanedSynonyms);
+
+                    const updatedRadical: Radical = {
+                        ...radical,
+                        translatedSynonyms: [translation],
+                        currentSynonyms: cleanedSynonyms
+                    };
+
+                    const result: ProcessResult = {
+                        radical: updatedRadical,
+                        status: 'success',
+                        message: `Übersetzt${context ? ' (mit Kontext)' : ''}: "${radical.meaning}" → "${translation}"`
+                    };
+
+                    // Only upload if synonyms changed
+                    if (synonymsChanged) {
+                        needsUpload = true;
+                        setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
+                        localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
+
+                        if (result.status === 'error') {
+                            // Error already counted in uploadSingleRadicalWithRetry
+                        } else {
+                            result.status = 'uploaded';
+                            result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
+                        }
+                    } else {
+                        result.status = 'success';
+                        result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
+                        localUploadStats.skipped++;
+                        localUploadStats.successful++;
+                    }
+
+                } catch (error) {
+                    console.error(`❌ Translation error for ${radical.meaning}:`, error);
+                    localUploadStats.failed++;
+                }
+
+                // Rate limiting between items within batch (only if upload was made)
+                if (needsUpload && i < batch.length - 1) {
+                    await rateLimitDelay(overallIndex, Number.MAX_SAFE_INTEGER);
+                }
+            }
+        }
+
+        return localUploadStats;
+    };
+
+    // 🔧 CRITICAL: Process translation with batch processing and rate limiting
     const processTranslations = async (selectedRadicals: Radical[]) => {
         if (synonymMode !== 'delete' && !deeplToken) {
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
@@ -365,7 +522,7 @@ export const RadicalsManager: React.FC = () => {
 
         setIsProcessing(true);
         setProgress(0);
-        setTranslationStatus('🔄 Starte Verarbeitung mit Rate-Limiting-Schutz...');
+        setTranslationStatus('🚀 Starte Batch-Verarbeitung mit Rate-Limiting-Schutz...');
 
         // Reset stats at start of processing
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
@@ -374,195 +531,33 @@ export const RadicalsManager: React.FC = () => {
         let localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
-            // Handle delete mode without translation
-            if (synonymMode === 'delete') {
-                setTranslationStatus(`🗑️ Verarbeite ${filteredRadicals.length} Radicals im DELETE-Modus...`);
+            // 🚀 BATCH-PROCESSING: Split radicals into batches
+            const batches = [];
+            for (let i = 0; i < filteredRadicals.length; i += TRANSLATION_BATCH_SIZE) {
+                batches.push(filteredRadicals.slice(i, i + TRANSLATION_BATCH_SIZE));
+            }
 
-                for (let i = 0; i < filteredRadicals.length; i++) {
-                    const radical = filteredRadicals[i];
-                    setTranslationStatus(`🗑️ Verarbeite ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
+            const totalBatches = batches.length;
+            setTranslationStatus(`📦 Verarbeite ${filteredRadicals.length} Radicals in ${totalBatches} Batches (${TRANSLATION_BATCH_SIZE} pro Batch)...`);
 
-                    // 🚀 OPTIMIZATION: Skip radicals that already have no synonyms
-                    if (!radical.currentSynonyms || radical.currentSynonyms.length === 0) {
-                        console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
+            // Process each batch
+            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                const batch = batches[batchIndex];
 
-                        // Update stats for skipped radical
-                        localUploadStats.skipped++;
-                        localUploadStats.successful++;
-                        setUploadStats({ ...localUploadStats });
+                // Process the batch
+                localUploadStats = await processBatch(batch, batchIndex, totalBatches, localUploadStats);
 
-                        setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
-                        continue;
-                    }
+                // Update progress after each batch
+                const processedItems = Math.min((batchIndex + 1) * TRANSLATION_BATCH_SIZE, filteredRadicals.length);
+                setProgress(Math.round((processedItems / filteredRadicals.length) * 100));
 
-                    const updatedRadical: Radical = {
-                        ...radical,
-                        translatedSynonyms: [],
-                        currentSynonyms: []
-                    };
+                // Update React state with current statistics
+                setUploadStats({ ...localUploadStats });
 
-                    const result: ProcessResult = {
-                        radical: updatedRadical,
-                        status: 'success',
-                        message: `🗑️ Synonyme gelöscht für "${radical.meaning}"`
-                    };
-
-                    // Upload to Wanikani only for radicals that actually have synonyms
-                    setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
-
-                    // 🔧 BUG FIX: Don't double-count! The uploadResult already contains the counts
-                    // Remove the manual increments that were causing double-counting
-                    if (result.status === 'error') {
-                        // Upload failed, error already counted in uploadResult.failed
-                        result.message = result.message || `❌ Fehler beim Löschen von "${radical.meaning}"`;
-                    } else {
-                        result.status = 'uploaded';
-                        result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
-                        // successful already counted in uploadResult.successful
-                    }
-
-                    // REMOVED: processResults.push(result); // Memory optimization
-                    // REMOVED: setResults([...processResults]); // Memory optimization
-                    setUploadStats({ ...localUploadStats });
-
-                    setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
-
-                    // 🔧 RATE-LIMITING: Add delay between API calls
-                    await rateLimitDelay(i, filteredRadicals.length);
-                }
-            } else {
-                // Handle translation modes with immediate upload
-                setTranslationStatus(`🌐 Verarbeite ${filteredRadicals.length} Radicals mit Übersetzung...`);
-
-                for (let i = 0; i < filteredRadicals.length; i++) {
-                    const radical = filteredRadicals[i];
-                    setTranslationStatus(`🌐 Übersetze ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-
-                    // 🔧 RATE-LIMITING: Track if upload is needed for rate limiting
-                    let needsUpload = false;
-
-                    try {
-                        // Extract context from meaning_mnemonic for better translation
-                        const context = extractContextFromMnemonic(
-                            radical.meaningMnemonic || '',
-                            radical.meaning
-                        );
-
-                        console.log(`🔧 CONTEXT DEBUG: Processing "${radical.meaning}"`);
-                        console.log(`🔧 CONTEXT DEBUG: Has mnemonic: ${!!radical.meaningMnemonic}`);
-                        console.log(`🔧 CONTEXT DEBUG: Extracted context: ${context ? 'YES' : 'NO'}`);
-                        if (context) {
-                            console.log(`🔧 CONTEXT DEBUG: Context preview: ${context.substring(0, 100)}...`);
-                        }
-
-                        // Use contextual translation with DeepL's native context parameter
-                        const translation = await translateText(
-                            deeplToken,
-                            radical.meaning,
-                            'DE',
-                            false,
-                            3, // maxRetries
-                            context || undefined // Pass context to DeepL, convert null to undefined
-                        );
-
-                        // Apply synonym mode logic
-                        let newSynonyms: string[] = [];
-                        const currentSynonyms = radical.currentSynonyms || [];
-                        const translatedSynonym = translation.trim(); // Keep original case
-
-                        console.log(`🔧 DEBUG: Processing synonym logic for "${radical.meaning}"`);
-                        console.log(`🔧 DEBUG: Current synonyms:`, currentSynonyms);
-                        console.log(`🔧 DEBUG: New translation:`, translatedSynonym);
-
-                        switch (synonymMode) {
-                            case 'replace':
-                                newSynonyms = [translatedSynonym];
-                                break;
-                            case 'smart-merge':
-                                // Case-insensitive comparison but preserve original case
-                                if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym.toLowerCase())) {
-                                    newSynonyms = [...currentSynonyms, translatedSynonym];
-                                } else {
-                                    newSynonyms = currentSynonyms;
-                                }
-                                break;
-                        }
-
-                        // Clean synonyms but preserve case - keep first occurrence of each case-insensitive match
-                        const seenSynonyms = new Map<string, string>();
-                        newSynonyms
-                            .map(syn => syn.trim())
-                            .filter(syn => syn.length > 0)
-                            .forEach(syn => {
-                                const lowerKey = syn.toLowerCase();
-                                if (!seenSynonyms.has(lowerKey)) {
-                                    seenSynonyms.set(lowerKey, syn); // Keep first occurrence
-                                }
-                            });
-                        const cleanedSynonyms = [...seenSynonyms.values()]; // Get unique values preserving original case
-
-                        console.log(`🔧 DEBUG: After processing:`, cleanedSynonyms);
-
-                        // 🔧 NEW: Check if synonyms actually changed to avoid unnecessary API calls
-                        const originalSynonyms = radical.currentSynonyms || [];
-                        const synonymsChanged = !arraysEqual(originalSynonyms, cleanedSynonyms);
-
-                        console.log(`🔧 DEBUG: Synonyms changed: ${synonymsChanged}`);
-                        console.log(`🔧 DEBUG: Original:`, originalSynonyms);
-                        console.log(`🔧 DEBUG: New:`, cleanedSynonyms);
-
-                        const updatedRadical: Radical = {
-                            ...radical,
-                            translatedSynonyms: [translation],
-                            currentSynonyms: cleanedSynonyms
-                        };
-
-                        const result: ProcessResult = {
-                            radical: updatedRadical,
-                            status: 'success',
-                            message: `Übersetzt${context ? ' (mit Kontext)' : ''}: "${radical.meaning}" → "${translation}"`
-                        };
-
-                        // 🔧 NEW: Only upload if synonyms actually changed
-                        if (synonymsChanged) {
-                            needsUpload = true;
-                            // Immediately upload to Wanikani after translation
-                            setUploadStatus(`📤 Lade ${i + 1}/${filteredRadicals.length}: ${radical.meaning}...`);
-                            localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
-
-                            if (result.status === 'error') {
-                                // Upload failed, error already counted in uploadSingleRadicalWithRetry
-                                // Don't increment failed again here!
-                            } else {
-                                result.status = 'uploaded';
-                                result.message = `✅ Erfolgreich hochgeladen: ${cleanedSynonyms.join(', ')}`;
-                                // successful already incremented in uploadSingleRadical
-                            }
-                        } else {
-                            // Synonyms didn't change, skip upload
-                            result.status = 'success';
-                            result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
-                            console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
-                            localUploadStats.skipped++; // Count as skipped (not uploaded)
-                            localUploadStats.successful++; // Count as successful processing
-                        }
-
-                        // REMOVED: processResults.push(result); // Memory optimization
-
-                    } catch (error) {
-                        console.error(`❌ Translation error for ${radical.meaning}:`, error);
-                        localUploadStats.failed++; // Count translation errors
-                    }
-
-                    // REMOVED: setResults([...processResults]); // Memory optimization  
-                    setUploadStats({ ...localUploadStats });
-                    setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
-
-                    // 🔧 RATE-LIMITING: Add delay between API calls (only if an upload was made)
-                    if (needsUpload) {
-                        await rateLimitDelay(i, filteredRadicals.length);
-                    }
+                // 🚀 INTER-BATCH DELAY: Wait between batches (except after the last batch)
+                if (batchIndex < batches.length - 1) {
+                    setTranslationStatus(`⏸️ Warte ${BATCH_DELAY_MS / 1000}s zwischen Batches (Rate-Limiting-Schutz)...`);
+                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
                 }
             }
 
