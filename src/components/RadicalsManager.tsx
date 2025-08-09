@@ -50,10 +50,10 @@ export const RadicalsManager: React.FC = () => {
     const [synonymMode, setSynonymMode] = useState<SynonymMode>('smart-merge');
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [results, setResults] = useState<ProcessResult[]>([]);
+    // REMOVED: const [results, setResults] = useState<ProcessResult[]>([]); // Memory optimization
     const [translationStatus, setTranslationStatus] = useState('');
     const [uploadStatus, setUploadStatus] = useState('');
-    const [uploadStats, setUploadStats] = useState({ created: 0, updated: 0, failed: 0 });
+    const [uploadStats, setUploadStats] = useState({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
     // API Integration State
     const [wkRadicals, setWkRadicals] = useState<WKRadical[]>([]);
@@ -199,7 +199,7 @@ export const RadicalsManager: React.FC = () => {
     };
 
     // 🔧 Upload single radical to Wanikani
-    const uploadSingleRadical = async (result: ProcessResult, totalStats: { created: number, updated: number, failed: number }): Promise<{ created: number, updated: number, failed: number }> => {
+    const uploadSingleRadical = async (result: ProcessResult, totalStats: { created: number, updated: number, failed: number, skipped: number, successful: number }): Promise<{ created: number, updated: number, failed: number, skipped: number, successful: number }> => {
         if (!apiToken) {
             result.status = 'error';
             result.message = '❌ Kein API Token verfügbar';
@@ -314,12 +314,12 @@ export const RadicalsManager: React.FC = () => {
         setIsProcessing(true);
         setProgress(0);
         setTranslationStatus('🔄 Starte Verarbeitung...');
-        setResults([]);
-        setUploadStats({ created: 0, updated: 0, failed: 0 });
+        // REMOVED: setResults([]); // Memory optimization - no results list
+        setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
-        const processResults: ProcessResult[] = [];
+        // REMOVED: const processResults: ProcessResult[] = []; // Memory optimization  
         const filteredRadicals = selectedRadicals.filter(r => r.selected);
-        let uploadStats = { created: 0, updated: 0, failed: 0 };
+        let uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
             // Handle delete mode without translation
@@ -333,18 +333,12 @@ export const RadicalsManager: React.FC = () => {
                     // 🚀 OPTIMIZATION: Skip radicals that already have no synonyms
                     if (!radical.currentSynonyms || radical.currentSynonyms.length === 0) {
                         console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
-                        const result: ProcessResult = {
-                            radical: {
-                                ...radical,
-                                translatedSynonyms: [],
-                                currentSynonyms: []
-                            },
-                            status: 'skipped',
-                            message: `⏭️ Übersprungen: "${radical.meaning}" hat bereits keine Synonyme`
-                        };
 
-                        processResults.push(result);
-                        setResults([...processResults]); // Update results in real-time
+                        // Update stats for skipped radical
+                        uploadStats.skipped++;
+                        uploadStats.successful++;
+                        setUploadStats(uploadStats);
+
                         setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
                         continue;
                     }
@@ -367,13 +361,15 @@ export const RadicalsManager: React.FC = () => {
 
                     if (result.status === 'error') {
                         // Upload failed, keep error status and message from uploadSingleRadical
+                        uploadStats.failed++;
                     } else {
                         result.status = 'uploaded';
                         result.message = `🗑️ Erfolgreich gelöscht: Alle Synonyme entfernt`;
+                        uploadStats.successful++;
                     }
 
-                    processResults.push(result);
-                    setResults([...processResults]); // Update results in real-time
+                    // REMOVED: processResults.push(result); // Memory optimization
+                    // REMOVED: setResults([...processResults]); // Memory optimization
                     setUploadStats(uploadStats); // Update upload stats in real-time
 
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
@@ -485,47 +481,36 @@ export const RadicalsManager: React.FC = () => {
                             result.status = 'success';
                             result.message = `⏭️ Übersprungen (keine Änderung): "${radical.meaning}" → "${translation}"`;
                             console.log(`⏭️ DEBUG: Skipping upload for ${radical.meaning} - no synonym changes`);
+                            uploadStats.successful++;
                         }
 
-                        processResults.push(result);
+                        // REMOVED: processResults.push(result); // Memory optimization
 
                     } catch (error) {
-                        const result: ProcessResult = {
-                            radical,
-                            status: 'error',
-                            message: `❌ Übersetzungsfehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
-                        };
-                        processResults.push(result);
+                        console.error(`❌ Translation error for ${radical.meaning}:`, error);
                         uploadStats.failed++;
                     }
 
-                    setResults([...processResults]); // Update results in real-time
+                    // REMOVED: setResults([...processResults]); // Memory optimization  
                     setUploadStats(uploadStats); // Update upload stats in real-time
                     setProgress(Math.round((i + 1) / filteredRadicals.length * 100));
                 }
             }
 
-            setResults(processResults);
+            // REMOVED: setResults(processResults); // Memory optimization
 
-            // Count all different status types for accurate statistics
-            const uploadedCount = processResults.filter(r => r.status === 'uploaded').length;
-            const successCount = processResults.filter(r => r.status === 'success').length; // Smart-merge: no changes needed
-            const skippedCount = processResults.filter(r => r.status === 'skipped').length; // DELETE mode: no synonyms to delete
-            const errorCount = processResults.filter(r => r.status === 'error').length;
+            // Use final uploadStats instead of processResults for statistics
+            const totalSuccessful = uploadStats.successful;
+            const totalProcessed = filteredRadicals.length;
 
-            // Total successfully processed = uploaded + success + skipped
-            const totalSuccessful = uploadedCount + successCount + skippedCount;
+            let statusMessage = `✅ Verarbeitung abgeschlossen! ${totalSuccessful}/${totalProcessed} erfolgreich verarbeitet`;
 
-            const action = synonymMode === 'delete' ? 'gelöscht' : 'übersetzt und hochgeladen';
-
-            let statusMessage = `✅ Verarbeitung abgeschlossen! ${totalSuccessful}/${processResults.length} erfolgreich verarbeitet`;
-
-            // Add detailed breakdown if there are multiple categories
+            // Add detailed breakdown from uploadStats
             const details = [];
-            if (uploadedCount > 0) details.push(`${uploadedCount} ${action}`);
-            if (successCount > 0) details.push(`${successCount} bereits korrekt`);
-            if (skippedCount > 0) details.push(`${skippedCount} übersprungen`);
-            if (errorCount > 0) details.push(`${errorCount} fehlerhaft`);
+            if (uploadStats.created > 0) details.push(`${uploadStats.created} erstellt`);
+            if (uploadStats.updated > 0) details.push(`${uploadStats.updated} aktualisiert`);
+            if (uploadStats.skipped > 0) details.push(`${uploadStats.skipped} übersprungen`);
+            if (uploadStats.failed > 0) details.push(`${uploadStats.failed} fehlerhaft`);
 
             if (details.length > 1) {
                 statusMessage += ` (${details.join(', ')})`;
@@ -533,10 +518,10 @@ export const RadicalsManager: React.FC = () => {
             statusMessage += '.';
 
             setTranslationStatus(statusMessage);
-            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${successCount + skippedCount}`);
+            setUploadStatus(`✅ Upload abgeschlossen! Erstellt: ${uploadStats.created}, Aktualisiert: ${uploadStats.updated}, Fehler: ${uploadStats.failed}, Übersprungen: ${uploadStats.skipped}`);
 
             // 🔧 FIX: Auto-refresh study materials after processing to ensure UI shows latest data
-            if (uploadedCount > 0) {
+            if (uploadStats.created > 0 || uploadStats.updated > 0) {
                 console.log('🔧 DEBUG: Auto-refreshing study materials after successful uploads');
                 await refreshStudyMaterials();
             }
@@ -839,55 +824,8 @@ export const RadicalsManager: React.FC = () => {
                 </Card>
             )}
 
-            {/* Results */}
-            {results.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>📋 Ergebnisse</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            {results.map((result, index) => (
-                                <div
-                                    key={index}
-                                    className={`p-3 rounded-lg ${result.status === 'success'
-                                        ? 'bg-green-50 border border-green-200'
-                                        : result.status === 'error'
-                                            ? 'bg-red-50 border border-red-200'
-                                            : result.status === 'skipped'
-                                                ? 'bg-gray-50 border border-gray-200'
-                                                : 'bg-blue-50 border border-blue-200'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-medium">
-                                            {result.radical.meaning}
-                                        </span>
-                                        <Badge
-                                            variant={
-                                                result.status === 'success'
-                                                    ? 'default'
-                                                    : result.status === 'error'
-                                                        ? 'destructive'
-                                                        : result.status === 'skipped'
-                                                            ? 'outline'
-                                                            : 'secondary'
-                                            }
-                                        >
-                                            {result.status}
-                                        </Badge>
-                                    </div>
-                                    {result.message && (
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {result.message}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+            {/* REMOVED: Results section for memory optimization - live updates in preview instead */}
+            {/* Results are now shown through uploadStats and live preview updates */}
 
             {/* Help text when no API token */}
             {!apiToken && (
