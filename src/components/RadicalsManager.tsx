@@ -36,7 +36,7 @@ const deeplLimiter = new Bottleneck({
 
 // 🚀 BATCH-PROCESSING Configuration  
 const TRANSLATION_BATCH_SIZE = 25; // Increased from 20 for better performance
-const BATCH_DELAY_MS = 1000; // Reduced from 2000ms for faster processing
+// REMOVED: BATCH_DELAY_MS - No longer needed with Bottleneck rate-limiting
 
 interface Radical {
     id: number;
@@ -589,11 +589,7 @@ export const RadicalsManager: React.FC = () => {
                 // Update React state with current statistics
                 setUploadStats({ ...localUploadStats });
 
-                // 🚀 INTER-BATCH DELAY: Wait between batches (except after the last batch)
-                if (batchIndex < batches.length - 1) {
-                    setTranslationStatus(`⏸️ Warte ${BATCH_DELAY_MS / 1000}s zwischen Batches (Rate-Limiting-Schutz)...`);
-                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
-                }
+                // 🚀 BOTTLENECK: No inter-batch delay needed - Bottleneck handles all rate-limiting intelligently
             }
 
             // REMOVED: setResults(processResults); // Memory optimization
