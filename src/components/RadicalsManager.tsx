@@ -405,8 +405,6 @@ export const RadicalsManager: React.FC = () => {
 
         for (let i = 0; i < batch.length; i++) {
             const radical = batch[i];
-            const overallIndex = batchIndex * TRANSLATION_BATCH_SIZE + i;
-
             if (synonymMode === 'delete') {
                 setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${i + 1}/${batchSize}: ${radical.meaning}...`);
 
@@ -444,8 +442,6 @@ export const RadicalsManager: React.FC = () => {
             } else {
                 // Translation modes
                 setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${i + 1}/${batchSize}: ${radical.meaning}...`);
-
-                let needsUpload = false;
 
                 try {
                     const context = extractContextFromMnemonic(
@@ -514,7 +510,6 @@ export const RadicalsManager: React.FC = () => {
 
                     // Only upload if synonyms changed
                     if (synonymsChanged) {
-                        needsUpload = true;
                         setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
                         localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
 
