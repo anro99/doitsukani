@@ -224,18 +224,18 @@ export function useRadicalsManager() {
                 return localUploadStats;
             }
 
-            // Check if study material already exists
-            const hasExistingSynonyms = radical.currentSynonyms.length > 0;
+            // 🔧 CRITICAL FIX: Check if study material exists in studyMaterials array
+            const existingStudyMaterial = studyMaterials.find(sm => sm.data.subject_id === radical.id);
 
-            if (hasExistingSynonyms) {
-                // Update existing study material
+            if (existingStudyMaterial) {
+                // Update existing study material using the study_material ID, not the subject ID
                 await executeWithWaniKaniLimiter(
-                    () => updateRadicalSynonyms(apiToken, radical.id, synonymsToUpload),
+                    () => updateRadicalSynonyms(apiToken, existingStudyMaterial.id, synonymsToUpload),
                     `update-${radical.id}`
                 );
                 localUploadStats.updated++;
             } else {
-                // Create new study material
+                // Create new study material using the subject ID
                 await executeWithWaniKaniLimiter(
                     () => createRadicalSynonyms(apiToken, radical.id, synonymsToUpload),
                     `create-${radical.id}`
@@ -253,9 +253,7 @@ export function useRadicalsManager() {
         }
 
         return localUploadStats;
-    };
-
-    // Process a batch of radicals with batch progress tracking
+    };    // Process a batch of radicals with batch progress tracking
     const processBatch = async (
         batch: Radical[],
         batchIndex: number,
