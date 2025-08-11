@@ -15,7 +15,7 @@ import {
 import { upload } from "./lib/wanikani";
 import { ProgressReport } from "./components/progress";
 import { writeProgressAtom } from "./lib/progressreporter";
-import { RadicalsManager } from "./components/RadicalsManager";
+import { RadicalsManagerRefactored } from "./components/RadicalsManagerRefactored";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
@@ -180,7 +180,7 @@ function App() {
           )}
 
           {activeTab === 'radicals' && (
-            <RadicalsManager />
+            <RadicalsManagerRefactored />
           )}
         </div>
       </div>
