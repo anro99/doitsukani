@@ -17,8 +17,7 @@ interface Radical {
 interface RadicalPreviewProps {
     // Use preview radicals instead of filtered ones
     previewRadicals: Radical[];
-    // selectedLevel: number | 'all'; // Not needed anymore
-    // Simplified count information - only current level
+    // Count information for preview display
     currentLevelCount?: number;
     currentLevelCountLoading?: boolean;
     maxPreviewCount?: number;
@@ -26,17 +25,18 @@ interface RadicalPreviewProps {
 
 export const RadicalPreview: React.FC<RadicalPreviewProps> = ({
     previewRadicals,
-    // selectedLevel, // Not used anymore - count is passed directly
     currentLevelCount,
     currentLevelCountLoading = false,
     maxPreviewCount = 12
 }) => {
-    // Simplified helper function to get count info
+    // Helper function to get count info for preview display
     const getCountInfo = () => {
         if (currentLevelCountLoading) return 'Lade Count...';
         if (currentLevelCount !== undefined) return `${currentLevelCount} Radikale insgesamt`;
         return 'Count nicht verfügbar';
-    }; if (previewRadicals.length === 0) {
+    };
+
+    if (previewRadicals.length === 0) {
         return (
             <Card>
                 <CardHeader>
@@ -72,57 +72,35 @@ export const RadicalPreview: React.FC<RadicalPreviewProps> = ({
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {previewRadicals.slice(0, maxPreviewCount).map((radical: Radical) => {
-                        // Check if this radical has been translated (has German synonyms)
-                        const hasGermanSynonyms = radical.currentSynonyms.some(synonym =>
-                            /[äöüß]|(\b(der|die|das|ein|eine|und|oder|mit|von|zu|auf|in|an|bei|für|durch|über|unter|nach|vor|ohne|gegen|zwischen|während|seit|bis|wegen|trotz|innerhalb|außerhalb|aufgrund|anstatt|statt|anhand|mittels|dank|laut|gemäß|entsprechend|bezüglich|hinsichtlich|zwecks)\b)/i.test(synonym)
-                        );
-
-                        return (
-                            <div key={radical.id} className={`p-4 border rounded-lg ${hasGermanSynonyms ? 'border-green-200 bg-green-50' : ''}`}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-2xl font-bold">
-                                        {radical.characters || ''}
-                                    </span>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="font-medium">{radical.meaning}</div>
-                                            {hasGermanSynonyms && (
-                                                <Badge variant="default" className="text-xs bg-green-600">
-                                                    ✅ Übersetzt
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        <Badge variant="outline" className="text-xs mt-1">
-                                            Level {radical.level}
-                                        </Badge>
-                                    </div>
+                    {previewRadicals.slice(0, maxPreviewCount).map((radical: Radical) => (
+                        <div key={radical.id} className="p-4 border rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-2xl font-bold">
+                                    {radical.characters || ''}
+                                </span>
+                                <div>
+                                    <div className="font-medium">{radical.meaning}</div>
+                                    <Badge variant="outline" className="text-xs">
+                                        Level {radical.level}
+                                    </Badge>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                    <div className="mb-1">
-                                        <span className="font-medium">Aktuelle Synonyme:</span>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {radical.currentSynonyms.length > 0 ? radical.currentSynonyms.map((synonym: string, idx: number) => {
-                                                // Highlight German synonyms
-                                                const isGerman = /[äöüß]|(\b(der|die|das|ein|eine|und|oder|mit|von|zu|auf|in|an|bei|für|durch|über|unter|nach|vor|ohne|gegen|zwischen|während|seit|bis|wegen|trotz|innerhalb|außerhalb|aufgrund|anstatt|statt|anhand|mittels|dank|laut|gemäß|entsprechend|bezüglich|hinsichtlich|zwecks)\b)/i.test(synonym);
-                                                return (
-                                                    <Badge
-                                                        key={idx}
-                                                        variant={isGerman ? "default" : "secondary"}
-                                                        className={`text-xs ${isGerman ? 'bg-green-100 text-green-800 border-green-300' : ''}`}
-                                                    >
-                                                        {synonym}
-                                                    </Badge>
-                                                );
-                                            }) : (
-                                                <span className="text-xs text-gray-400 italic">Keine Synonyme</span>
-                                            )}
-                                        </div>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <div className="mb-1">
+                                    <span className="font-medium">Aktuelle Synonyme:</span>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {radical.currentSynonyms.length > 0 ? radical.currentSynonyms.map((synonym: string, idx: number) => (
+                                            <Badge key={idx} variant="secondary" className="text-xs">
+                                                {synonym}
+                                            </Badge>
+                                        )) : (
+                                            <span className="text-xs text-gray-400 italic">Keine Synonyme</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
                 </div>
                 {(() => {
                     const showingCount = previewRadicals.length;

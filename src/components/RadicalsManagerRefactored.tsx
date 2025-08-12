@@ -72,8 +72,6 @@ export const RadicalsManagerRefactored: React.FC = () => {
                     onLevelChange={setSelectedLevel}
                     synonymMode={synonymMode}
                     onSynonymModeChange={setSynonymMode}
-                    currentLevelCount={currentLevelCount}
-                    currentLevelCountLoading={currentLevelCountLoading}
                 />
             )}
 
@@ -87,7 +85,7 @@ export const RadicalsManagerRefactored: React.FC = () => {
                 </Card>
             )}
 
-            {/* Radicals Preview - now using optimized preview data */}
+            {/* Radicals Preview - shows count info but level dropdown doesn't */}
             {apiToken && (
                 <RadicalPreview
                     previewRadicals={previewRadicals}
