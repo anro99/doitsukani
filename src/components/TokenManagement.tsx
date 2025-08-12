@@ -24,11 +24,11 @@ export const TokenManagement: React.FC<TokenManagementProps> = ({
     return (
         <Card>
             <CardHeader>
-                <CardTitle> API-Token Konfiguration</CardTitle>
+                <CardTitle>🔑 API-Token Konfiguration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="api-token">Wanikani API-Token *</Label>
+                    <Label htmlFor="api-token">🌸 Wanikani API-Token *</Label>
                     <Input
                         id="api-token"
                         type="password"
@@ -44,7 +44,7 @@ export const TokenManagement: React.FC<TokenManagementProps> = ({
 
                 <div className="space-y-2">
                     <Label htmlFor="deepl-token">
-                        DeepL API-Token {synonymMode === 'delete' ? '(optional - DELETE-Modus)' : '*'}
+                        🌐 DeepL API-Token {synonymMode === 'delete' ? '(optional - DELETE-Modus)' : '*'}
                     </Label>
                     <Input
                         id="deepl-token"
@@ -56,8 +56,8 @@ export const TokenManagement: React.FC<TokenManagementProps> = ({
                         disabled={synonymMode === 'delete'}
                     />
                     <p className="text-sm text-gray-600">
-                        {synonymMode === 'delete' 
-                            ? 'Nicht erforderlich im DELETE-Modus' 
+                        {synonymMode === 'delete'
+                            ? 'Nicht erforderlich im DELETE-Modus'
                             : 'Erforderlich für die Übersetzung von Synonymen'}
                     </p>
                 </div>

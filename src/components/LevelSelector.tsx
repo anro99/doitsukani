@@ -25,19 +25,19 @@ const synonymModeOptions: SynonymModeData[] = [
         value: 'smart-merge',
         label: 'Smart Merge',
         description: 'Fügt neue Übersetzungen zu bestehenden Synonymen hinzu (empfohlen)',
-        icon: ''
+        icon: '🤖'
     },
     {
         value: 'replace',
-        label: 'Ersetzen',
-        description: 'Ersetzt alle bestehenden Synonyme durch neue Übersetzungen',
-        icon: ''
+        label: 'Replace',
+        description: 'Ersetzt alle bestehenden Synonyme vollständig',
+        icon: '🔄'
     },
     {
         value: 'delete',
-        label: 'Löschen',
-        description: 'Löscht alle Synonyme (keine Übersetzung erforderlich)',
-        icon: ''
+        label: 'Delete All',
+        description: 'Löscht alle Synonyme (keine DeepL-API erforderlich)',
+        icon: '🗑️'
     }
 ];
 
@@ -59,7 +59,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
     return (
         <Card>
             <CardHeader>
-                <CardTitle> Verarbeitungseinstellungen</CardTitle>
+                <CardTitle>📊 Verarbeitungseinstellungen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-3">
@@ -87,13 +87,13 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                     >
                         {synonymModeOptions.map(option => (
                             <div key={option.value} className="flex items-start space-x-3">
-                                <RadioGroupItem 
-                                    value={option.value} 
+                                <RadioGroupItem
+                                    value={option.value}
                                     id={`mode-${option.value}`}
                                     className="mt-1"
                                 />
                                 <div className="flex-1 space-y-1">
-                                    <Label 
+                                    <Label
                                         htmlFor={`mode-${option.value}`}
                                         className="flex items-center gap-2 cursor-pointer"
                                     >

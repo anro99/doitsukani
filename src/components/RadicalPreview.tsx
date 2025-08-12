@@ -27,7 +27,7 @@ export const RadicalPreview: React.FC<RadicalPreviewProps> = ({
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle> Radicals Vorschau</CardTitle>
+                    <CardTitle>👀 Radicals Vorschau</CardTitle>
                     <p className="text-sm text-gray-600">
                         Zeigt die Radicals basierend auf Ihrer Level-Auswahl
                     </p>
@@ -46,7 +46,7 @@ export const RadicalPreview: React.FC<RadicalPreviewProps> = ({
     return (
         <Card>
             <CardHeader>
-                <CardTitle> Radicals Vorschau</CardTitle>
+                <CardTitle>👀 Radicals Vorschau</CardTitle>
                 <p className="text-sm text-gray-600">
                     Zeigt die Radicals basierend auf Ihrer Level-Auswahl
                 </p>

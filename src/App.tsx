@@ -90,7 +90,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  📚 Vocabulary
+                  � Vocabulary Manager
                 </button>
                 <button
                   onClick={() => setActiveTab('radicals')}
@@ -99,7 +99,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  🌸 Radicals
+                  🧩 Radicals Manager
                 </button>
               </div>
             </div>

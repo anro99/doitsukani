@@ -38,15 +38,15 @@ export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
     onStartProcessing,
     onStopProcessing
 }) => {
-    const canStart = apiToken && 
-                    (synonymMode === 'delete' || deeplToken) && 
-                    filteredRadicalsCount > 0 && 
-                    !isProcessing;
+    const canStart = apiToken &&
+        (synonymMode === 'delete' || deeplToken) &&
+        filteredRadicalsCount > 0 &&
+        !isProcessing;
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle> Verarbeitung starten</CardTitle>
+                <CardTitle>🚀 Verarbeitung starten</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex gap-4">
@@ -86,16 +86,16 @@ export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
                         <p className="text-sm text-green-700">{uploadStatus}</p>
                         {(uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 || uploadStats.skipped > 0) && (
                             <div className="text-xs text-green-600 mt-1">
-                                Erstellt: {uploadStats.created} | Aktualisiert: {uploadStats.updated} | Fehler: {uploadStats.failed} | Übersprungen: {uploadStats.skipped}
+                                ✅ Erstellt: {uploadStats.created} | 🔄 Aktualisiert: {uploadStats.updated} | ❌ Fehler: {uploadStats.failed} | ⏭️ Übersprungen: {uploadStats.skipped}
                             </div>
                         )}
                     </div>
                 )}
 
                 <div className="text-sm text-gray-600">
-                    <p> <strong>{filteredRadicalsCount}</strong> Radicals werden verarbeitet</p>
-                    <p> <strong>{synonymMode}</strong> Modus wird verwendet</p>
-                    <p> Übersetzung nach <strong>Deutsch</strong></p>
+                    <p>📊 <strong>{filteredRadicalsCount}</strong> Radicals werden verarbeitet</p>
+                    <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
+                    <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
                 </div>
             </CardContent>
         </Card>
