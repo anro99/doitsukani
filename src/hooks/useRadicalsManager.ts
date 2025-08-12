@@ -3,6 +3,7 @@ import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
+import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../lib/storage';
 import Bottleneck from 'bottleneck';
 
 // Constants
@@ -85,14 +86,14 @@ export function useRadicalsManager() {
     // Token state with localStorage persistence
     const [apiToken, setApiToken] = useState(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('wanikani-api-token') || '';
+            return loadWanikaniToken();
         }
         return '';
     });
 
     const [deeplToken, setDeeplToken] = useState(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('deepl-api-token') || '';
+            return loadDeepLToken();
         }
         return '';
     });
@@ -125,9 +126,9 @@ export function useRadicalsManager() {
         setApiToken(token);
         if (typeof window !== 'undefined') {
             if (token.trim()) {
-                localStorage.setItem('wanikani-api-token', token);
+                saveWanikaniToken(token);
             } else {
-                localStorage.removeItem('wanikani-api-token');
+                removeToken(STORAGE_KEYS.WANIKANI_TOKEN);
             }
         }
     };
@@ -136,9 +137,9 @@ export function useRadicalsManager() {
         setDeeplToken(token);
         if (typeof window !== 'undefined') {
             if (token.trim()) {
-                localStorage.setItem('deepl-api-token', token);
+                saveDeepLToken(token);
             } else {
-                localStorage.removeItem('deepl-api-token');
+                removeToken(STORAGE_KEYS.DEEPL_TOKEN);
             }
         }
     };

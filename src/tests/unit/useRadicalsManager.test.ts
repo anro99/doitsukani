@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useRadicalsManager } from '../../hooks/useRadicalsManager';
+import { STORAGE_KEYS } from '../../lib/storage';
 import * as wanikaniModule from '../../lib/wanikani';
 import * as deeplModule from '../../lib/deepl';
 
@@ -137,8 +138,8 @@ describe('useRadicalsManager Hook', () => {
 
         it('should initialize tokens from localStorage', () => {
             localStorageMock.getItem.mockImplementation((key) => {
-                if (key === 'wanikani-api-token') return 'saved-wk-token';
-                if (key === 'deepl-api-token') return 'saved-deepl-token';
+                if (key === STORAGE_KEYS.WANIKANI_TOKEN) return 'saved-wk-token';
+                if (key === STORAGE_KEYS.DEEPL_TOKEN) return 'saved-deepl-token';
                 return null;
             });
 
@@ -158,7 +159,7 @@ describe('useRadicalsManager Hook', () => {
             });
 
             expect(result.current.apiToken).toBe('new-api-token');
-            expect(localStorageMock.setItem).toHaveBeenCalledWith('wanikani-api-token', 'new-api-token');
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(STORAGE_KEYS.WANIKANI_TOKEN, 'new-api-token');
         });
 
         it('should remove token from localStorage when empty', () => {
@@ -169,7 +170,7 @@ describe('useRadicalsManager Hook', () => {
             });
 
             expect(result.current.apiToken).toBe('  ');
-            expect(localStorageMock.removeItem).toHaveBeenCalledWith('wanikani-api-token');
+            expect(localStorageMock.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.WANIKANI_TOKEN);
         });
 
         it('should update DeepL token and persist to localStorage', () => {
@@ -180,7 +181,7 @@ describe('useRadicalsManager Hook', () => {
             });
 
             expect(result.current.deeplToken).toBe('new-deepl-token');
-            expect(localStorageMock.setItem).toHaveBeenCalledWith('deepl-api-token', 'new-deepl-token');
+            expect(localStorageMock.setItem).toHaveBeenCalledWith(STORAGE_KEYS.DEEPL_TOKEN, 'new-deepl-token');
         });
     });
 
@@ -437,7 +438,7 @@ describe('useRadicalsManager Hook', () => {
             });
 
             expect(result.current.apiToken).toBe('');
-            expect(localStorageMock.removeItem).toHaveBeenCalledWith('wanikani-api-token');
+            expect(localStorageMock.removeItem).toHaveBeenCalledWith(STORAGE_KEYS.WANIKANI_TOKEN);
         });
     });
 });
