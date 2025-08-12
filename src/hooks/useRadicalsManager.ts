@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
@@ -57,11 +57,18 @@ export interface ProcessResult {
 export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export function useRadicalsManager() {
-    // Rate-limited execution helpers
+    // Stop processing flag with ref for immediate access
+    const [shouldStopProcessing, setShouldStopProcessing] = useState(false);
+    const stopRef = useRef(false);
+
+    // Rate-limited execution helpers with stop check
     const executeWithWaniKaniLimiter = async <T>(
         fn: () => Promise<T>,
         id: string
     ): Promise<T> => {
+        if (stopRef.current) {
+            throw new Error('Processing stopped by user');
+        }
         return waniKaniLimiter.schedule({ id }, fn);
     };
 
@@ -69,6 +76,9 @@ export function useRadicalsManager() {
         fn: () => Promise<T>,
         id: string
     ): Promise<T> => {
+        if (stopRef.current) {
+            throw new Error('Processing stopped by user');
+        }
         return deeplLimiter.schedule({ id }, fn);
     };
 
@@ -247,6 +257,13 @@ export function useRadicalsManager() {
 
         } catch (error) {
             console.error(`Upload failed for ${result.radical.meaning}:`, error);
+
+            // Check if error is due to stop
+            if (error instanceof Error && error.message === 'Processing stopped by user') {
+                // Don't count as failed if stopped by user
+                return localUploadStats;
+            }
+
             result.status = 'error';
             result.message = `❌ Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
             localUploadStats.failed++;
@@ -264,6 +281,12 @@ export function useRadicalsManager() {
         setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Radicals)...`);
 
         for (let i = 0; i < batch.length; i++) {
+            // Check if processing should be stopped (both state and ref)
+            if (shouldStopProcessing || stopRef.current) {
+                setTranslationStatus(`⏹️ Verarbeitung gestoppt bei Batch ${batchIndex + 1}/${totalBatches}, Item ${i + 1}/${batchSize}`);
+                return { ...localUploadStats, stopped: true };
+            }
+
             const radical = batch[i];
 
             if (synonymMode === 'delete') {
@@ -349,13 +372,14 @@ export function useRadicalsManager() {
 
                 } catch (error) {
                     console.error(`Translation failed for ${radical.meaning}:`, error);
-                    localUploadStats.failed++;
 
-                    const result: ProcessResult = {
-                        radical,
-                        status: 'error',
-                        message: `❌ Übersetzung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
-                    };
+                    // Check if error is due to stop
+                    if (error instanceof Error && error.message === 'Processing stopped by user') {
+                        setTranslationStatus(`⏹️ Übersetzung gestoppt bei ${radical.meaning}`);
+                        return { ...localUploadStats, stopped: true };
+                    }
+
+                    localUploadStats.failed++;
                 }
             }
         }
@@ -376,6 +400,8 @@ export function useRadicalsManager() {
         }
 
         setIsProcessing(true);
+        setShouldStopProcessing(false); // Reset stop flag
+        stopRef.current = false; // Reset ref flag
         setProgress(0);
         setTranslationStatus('🚀 Starte Batch-Verarbeitung mit Rate-Limiting-Schutz...');
 
@@ -397,8 +423,25 @@ export function useRadicalsManager() {
 
             // Process each batch
             for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                // Check if processing should be stopped (both state and ref)
+                if (shouldStopProcessing || stopRef.current) {
+                    setTranslationStatus(`⏹️ Verarbeitung vom Benutzer gestoppt nach ${batchIndex} von ${totalBatches} Batches`);
+                    setUploadStatus(`⏹️ Gestoppt! Teilweise abgeschlossen: Erstellt: ${localUploadStats.created}, Aktualisiert: ${localUploadStats.updated}, Fehler: ${localUploadStats.failed}, Übersprungen: ${localUploadStats.skipped}`);
+                    break;
+                }
+
                 const batch = batches[batchIndex];
-                localUploadStats = await processBatch(batch, batchIndex, totalBatches, localUploadStats);
+                const result = await processBatch(batch, batchIndex, totalBatches, localUploadStats);
+
+                // Check if processBatch was stopped
+                if ((result as any).stopped) {
+                    localUploadStats = { ...result };
+                    delete (localUploadStats as any).stopped;
+                    setUploadStatus(`⏹️ Gestoppt! Teilweise abgeschlossen: Erstellt: ${localUploadStats.created}, Aktualisiert: ${localUploadStats.updated}, Fehler: ${localUploadStats.failed}, Übersprungen: ${localUploadStats.skipped}`);
+                    break;
+                }
+
+                localUploadStats = result;
 
                 // Update progress after each batch
                 const processedItems = Math.min((batchIndex + 1) * TRANSLATION_BATCH_SIZE, filteredRadicals.length);
@@ -446,6 +489,20 @@ export function useRadicalsManager() {
         }
     };
 
+    // Stop processing function
+    const stopProcessing = () => {
+        console.log('🛑 STOP: User clicked stop button');
+        setShouldStopProcessing(true);
+        stopRef.current = true;
+        setIsProcessing(false);
+
+        // Set status messages to indicate stopping
+        setTranslationStatus('⏹️ Stoppe Verarbeitung...');
+        setUploadStatus('⏹️ Verarbeitung gestoppt');
+
+        console.log('🛑 STOP: All flags set');
+    };
+
     // Load radicals when API token changes
     useEffect(() => {
         if (apiToken.trim()) {
@@ -481,6 +538,7 @@ export function useRadicalsManager() {
         setUploadStatus,
         setUploadStats,
         processTranslations,
+        stopProcessing,
         loadRadicalsFromAPI,
         refreshStudyMaterials
     };

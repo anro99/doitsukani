@@ -28,8 +28,8 @@ export const RadicalsManagerRefactored: React.FC = () => {
         handleDeeplTokenChange,
         setSelectedLevel,
         setSynonymMode,
-        setIsProcessing,
-        processTranslations
+        processTranslations,
+        stopProcessing
     } = useRadicalsManager();
 
     const handleStartProcessing = () => {
@@ -37,7 +37,7 @@ export const RadicalsManagerRefactored: React.FC = () => {
     };
 
     const handleStopProcessing = () => {
-        setIsProcessing(false);
+        stopProcessing();
     };
 
     return (

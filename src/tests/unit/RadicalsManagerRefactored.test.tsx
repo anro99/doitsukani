@@ -93,7 +93,8 @@ describe('RadicalsManagerRefactored', () => {
         setSelectedLevel: vi.fn(),
         setSynonymMode: vi.fn(),
         setIsProcessing: vi.fn(),
-        processTranslations: vi.fn()
+        processTranslations: vi.fn(),
+        stopProcessing: vi.fn()
     };
 
     beforeEach(() => {
@@ -250,7 +251,7 @@ describe('RadicalsManagerRefactored', () => {
     });
 
     it('handles stop processing', () => {
-        const setIsProcessing = vi.fn();
+        const stopProcessing = vi.fn();
         const mockRadicals = [
             { id: 1, characters: '一', meanings: [{ meaning: 'ground' }] }
         ];
@@ -261,13 +262,13 @@ describe('RadicalsManagerRefactored', () => {
             wkRadicals: mockRadicals,
             filteredRadicals: mockRadicals,
             isProcessing: true,
-            setIsProcessing
+            stopProcessing
         });
 
         render(<RadicalsManagerRefactored />);
         fireEvent.click(screen.getByTestId('stop-processing'));
 
-        expect(setIsProcessing).toHaveBeenCalledWith(false);
+        expect(stopProcessing).toHaveBeenCalled();
     });
 
     it('passes correct props to TokenManagement', () => {
