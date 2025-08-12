@@ -270,6 +270,68 @@ export const upload = async (apiToken: string, setProgress?: SetProgress) => {
  * @param options - Optional filters for levels, limit, and slugs
  * @returns Promise<WKRadical[]>
  */
+/**
+ * Get only the count of radicals without loading the data
+ * @param token - WaniKani API token
+ * @param level - Optional specific level, if not provided returns total count
+ * @returns Promise<number> - Count of radicals
+ */
+export const getRadicalCount = async (
+  token: string,
+  level?: number
+): Promise<number> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/subjects?types=radical&limit=1";
+
+  if (level) {
+    url += `&levels=${level}`;
+  }
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  return collection.total_count;
+};
+
+/**
+ * Get a limited number of radicals for preview purposes
+ * @param token - WaniKani API token
+ * @param level - Optional specific level
+ * @param limit - Number of radicals to fetch (default: 12)
+ * @returns Promise<WKRadical[]>
+ */
+export const getRadicalsPreview = async (
+  token: string,
+  level?: number,
+  limit: number = 12
+): Promise<WKRadical[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = `https://api.wanikani.com/v2/subjects?types=radical&limit=${limit}`;
+
+  if (level) {
+    url += `&levels=${level}`;
+  }
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  return collection.data as WKRadical[];
+};
+
 export const getRadicals = async (
   token: string,
   setProgress?: SetProgress,

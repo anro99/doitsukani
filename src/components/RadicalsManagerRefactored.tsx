@@ -22,6 +22,10 @@ export const RadicalsManagerRefactored: React.FC = () => {
         isLoadingRadicals,
         apiError,
         filteredRadicals,
+        // New optimized loading state - simplified
+        currentLevelCount,
+        currentLevelCountLoading,
+        previewRadicals,
 
         // Actions
         handleApiTokenChange,
@@ -68,6 +72,8 @@ export const RadicalsManagerRefactored: React.FC = () => {
                     onLevelChange={setSelectedLevel}
                     synonymMode={synonymMode}
                     onSynonymModeChange={setSynonymMode}
+                    currentLevelCount={currentLevelCount}
+                    currentLevelCountLoading={currentLevelCountLoading}
                 />
             )}
 
@@ -81,12 +87,14 @@ export const RadicalsManagerRefactored: React.FC = () => {
                 </Card>
             )}
 
-            {/* Radicals Preview */}
-            {apiToken && wkRadicals.length > 0 && (
-                <RadicalPreview filteredRadicals={filteredRadicals} />
-            )}
-
-            {/* Processing Controls */}
+            {/* Radicals Preview - now using optimized preview data */}
+            {apiToken && (
+                <RadicalPreview
+                    previewRadicals={previewRadicals}
+                    currentLevelCount={currentLevelCount}
+                    currentLevelCountLoading={currentLevelCountLoading}
+                />
+            )}            {/* Processing Controls */}
             {apiToken && wkRadicals.length > 0 && (
                 <ProcessingControls
                     apiToken={apiToken}

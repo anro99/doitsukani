@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { WKRadical, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
-import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from '../lib/wanikani';
+import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms, getRadicalCount, getRadicalsPreview } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
 import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../lib/storage';
@@ -118,6 +118,11 @@ export function useRadicalsManager() {
     // API state
     const [wkRadicals, setWkRadicals] = useState<WKRadical[]>([]);
     const [studyMaterials, setStudyMaterials] = useState<WKStudyMaterial[]>([]);
+
+    // New state for optimized loading - simplified: only current level
+    const [currentLevelCount, setCurrentLevelCount] = useState<number | undefined>(undefined);
+    const [currentLevelCountLoading, setCurrentLevelCountLoading] = useState(false);
+    const [previewRadicals, setPreviewRadicals] = useState<Radical[]>([]); // Changed to Radical[]
     const [isLoadingRadicals, setIsLoadingRadicals] = useState(false);
     const [apiError, setApiError] = useState<string>('');
 
@@ -504,6 +509,133 @@ export function useRadicalsManager() {
         console.log('🛑 STOP: All flags set');
     };
 
+    // Load radical count when level changes (simplified - only current level)
+    useEffect(() => {
+        const loadCurrentLevelCount = async () => {
+            if (!apiToken) return;
+
+            // If we're already loading, don't start again
+            if (currentLevelCountLoading) {
+                console.log('Count already loading...');
+                return;
+            }
+
+            console.log(`Loading count for level ${selectedLevel}...`);
+            setCurrentLevelCountLoading(true);
+
+            try {
+                const count = await getRadicalCount(
+                    apiToken,
+                    selectedLevel === 'all' ? undefined : selectedLevel
+                );
+
+                setCurrentLevelCount(count);
+                console.log(`Loaded ${count} radicals for level ${selectedLevel}`);
+
+            } catch (error) {
+                console.error(`Error loading count for level ${selectedLevel}:`, error);
+                setCurrentLevelCount(undefined);
+            } finally {
+                setCurrentLevelCountLoading(false);
+            }
+        };
+
+        loadCurrentLevelCount();
+    }, [selectedLevel, apiToken]); // Simplified dependencies
+
+    // Load preview radicals when level changes
+    useEffect(() => {
+        const loadPreviewRadicals = async () => {
+            if (!apiToken) return;
+
+            console.log(`Loading preview radicals for level ${selectedLevel}...`);
+
+            try {
+                const preview = await getRadicalsPreview(
+                    apiToken,
+                    selectedLevel === 'all' ? undefined : selectedLevel,
+                    12
+                );
+
+                // Also load study materials for the preview radicals to show synonyms
+                let previewStudyMaterials: WKStudyMaterial[] = [];
+                if (preview.length > 0) {
+                    console.log('Loading study materials for preview radicals...');
+                    previewStudyMaterials = await getRadicalStudyMaterials(apiToken);
+                }
+
+                // Convert WKRadical[] to Radical[] format with actual synonyms
+                const convertedPreview: Radical[] = preview.map(wkRadical => {
+                    // Find study material for this radical
+                    const studyMaterial = previewStudyMaterials.find(
+                        sm => sm.data.subject_id === wkRadical.id
+                    );
+                    const currentSynonyms = studyMaterial?.data.meaning_synonyms || [];
+
+                    return {
+                        id: wkRadical.id,
+                        meaning: wkRadical.data.meanings[0]?.meaning || '',
+                        characters: wkRadical.data.characters || wkRadical.data.character_images?.[0]?.url,
+                        level: wkRadical.data.level,
+                        currentSynonyms: currentSynonyms, // Now has real synonyms
+                        selected: false,
+                        translatedSynonyms: [],
+                        meaningMnemonic: wkRadical.data.meaning_mnemonic
+                    };
+                });
+
+                setPreviewRadicals(convertedPreview);
+                console.log(`Loaded ${convertedPreview.length} preview radicals for level ${selectedLevel}`);
+
+            } catch (error) {
+                console.error('Error loading preview radicals:', error);
+                setPreviewRadicals([]);
+            }
+        };
+
+        loadPreviewRadicals();
+    }, [selectedLevel, apiToken]);
+
+    // Update preview radicals when study materials change (to reflect translation progress)
+    useEffect(() => {
+        const updatePreviewWithLatestSynonyms = () => {
+            if (previewRadicals.length === 0 || studyMaterials.length === 0) return;
+
+            console.log('🔄 Updating preview radicals with latest synonyms...');
+
+            // Check if any synonyms actually changed to avoid unnecessary updates
+            let hasChanges = false;
+            const updatedPreview: Radical[] = previewRadicals.map(previewRadical => {
+                // Find updated study material for this radical
+                const updatedStudyMaterial = studyMaterials.find(
+                    sm => sm.data.subject_id === previewRadical.id
+                );
+
+                if (updatedStudyMaterial) {
+                    const newSynonyms = updatedStudyMaterial.data.meaning_synonyms || [];
+                    // Check if synonyms actually changed
+                    if (JSON.stringify(newSynonyms) !== JSON.stringify(previewRadical.currentSynonyms)) {
+                        hasChanges = true;
+                        return {
+                            ...previewRadical,
+                            currentSynonyms: newSynonyms
+                        };
+                    }
+                }
+
+                return previewRadical;
+            });
+
+            // Only update if there are actual changes
+            if (hasChanges) {
+                setPreviewRadicals(updatedPreview);
+                console.log('✅ Preview radicals updated with latest synonyms');
+            }
+        };
+
+        updatePreviewWithLatestSynonyms();
+    }, [studyMaterials]); // Only depend on studyMaterials, not previewRadicals
+
     // Load radicals when API token changes
     useEffect(() => {
         if (apiToken.trim()) {
@@ -527,6 +659,10 @@ export function useRadicalsManager() {
         isLoadingRadicals,
         apiError,
         filteredRadicals,
+        // New optimized loading state - simplified
+        currentLevelCount,
+        currentLevelCountLoading,
+        previewRadicals,
 
         // Actions
         handleApiTokenChange,

@@ -18,6 +18,9 @@ interface LevelSelectorProps {
     synonymMode: SynonymMode;
     onSynonymModeChange: (mode: SynonymMode) => void;
     maxLevel?: number;
+    // Simplified props - only current level
+    currentLevelCount?: number;
+    currentLevelCountLoading?: boolean;
 }
 
 const synonymModeOptions: SynonymModeData[] = [
@@ -46,13 +49,31 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
     onLevelChange,
     synonymMode,
     onSynonymModeChange,
-    maxLevel = 60
+    maxLevel = 60,
+    currentLevelCount,
+    currentLevelCountLoading = false
 }) => {
-    const levelOptions = [
-        { value: 'all' as const, label: 'Alle Level' },
+    // Simplified helper function - only show count for selected level
+    const getLevelDisplayText = (level: number | 'all') => {
+        // Only show count for the currently selected level
+        if (level === selectedLevel) {
+            if (currentLevelCountLoading) {
+                return level === 'all' ? 'Alle Level (Loading...)' : `Level ${level} (Loading...)`;
+            }
+            if (currentLevelCount !== undefined) {
+                return level === 'all'
+                    ? `Alle Level (${currentLevelCount} Radikale)`
+                    : `Level ${level} (${currentLevelCount} Radikale)`;
+            }
+        }
+
+        // For non-selected levels, just show plain text
+        return level === 'all' ? 'Alle Level' : `Level ${level}`;
+    }; const levelOptions = [
+        { value: 'all' as const, label: getLevelDisplayText('all') },
         ...Array.from({ length: maxLevel }, (_, i) => ({
             value: i + 1,
-            label: `Level ${i + 1}`
+            label: getLevelDisplayText(i + 1)
         }))
     ];
 
