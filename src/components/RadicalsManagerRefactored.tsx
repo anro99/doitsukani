@@ -86,7 +86,7 @@ export const RadicalsManagerRefactored: React.FC = () => {
             )}
 
             {/* Radicals Preview - shows count info but level dropdown doesn't */}
-            {apiToken && (
+            {apiToken && wkRadicals.length > 0 && (
                 <RadicalPreview
                     previewRadicals={previewRadicals}
                     currentLevelCount={currentLevelCount}

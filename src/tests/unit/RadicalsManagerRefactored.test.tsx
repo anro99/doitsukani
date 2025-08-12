@@ -60,9 +60,10 @@ vi.mock('../../components/ProcessingControls', () => ({
 }));
 
 vi.mock('../../components/RadicalPreview', () => ({
-    RadicalPreview: ({ filteredRadicals }: any) => (
+    RadicalPreview: ({ previewRadicals, currentLevelCount }: any) => (
         <div data-testid="radical-preview">
-            <div data-testid="radical-count">{filteredRadicals.length} radicals</div>
+            <div data-testid="radical-count">{previewRadicals ? previewRadicals.length : 0} radicals</div>
+            <div data-testid="current-level-count">{currentLevelCount || 0} total</div>
         </div>
     )
 }));
@@ -78,23 +79,34 @@ describe('RadicalsManagerRefactored', () => {
         apiToken: '',
         deeplToken: '',
         selectedLevel: null,
-        synonymMode: 'append',
+        synonymMode: 'smart-merge',
         isProcessing: false,
-        progress: { current: 0, total: 0 },
+        progress: 0,
         translationStatus: 'idle',
         uploadStatus: 'idle',
-        uploadStats: { processed: 0, successful: 0, failed: 0 },
+        uploadStats: { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 },
         wkRadicals: [],
+        studyMaterials: [],
         isLoadingRadicals: false,
-        apiError: null,
+        apiError: '',
         filteredRadicals: [],
+        // New optimized loading properties
+        currentLevelCount: undefined,
+        currentLevelCountLoading: false,
+        previewRadicals: [],
         handleApiTokenChange: vi.fn(),
         handleDeeplTokenChange: vi.fn(),
         setSelectedLevel: vi.fn(),
         setSynonymMode: vi.fn(),
         setIsProcessing: vi.fn(),
+        setProgress: vi.fn(),
+        setTranslationStatus: vi.fn(),
+        setUploadStatus: vi.fn(),
+        setUploadStats: vi.fn(),
         processTranslations: vi.fn(),
-        stopProcessing: vi.fn()
+        stopProcessing: vi.fn(),
+        loadRadicalsFromAPI: vi.fn(),
+        refreshStudyMaterials: vi.fn()
     };
 
     beforeEach(() => {
@@ -316,11 +328,17 @@ describe('RadicalsManagerRefactored', () => {
             { id: 2, characters: '二', meanings: [{ meaning: 'two' }] }
         ];
 
+        const mockPreviewRadicals = [
+            { id: 1, meaning: 'ground', characters: '一', level: 1, currentSynonyms: [], selected: false, translatedSynonyms: [] },
+            { id: 2, meaning: 'two', characters: '二', level: 1, currentSynonyms: [], selected: false, translatedSynonyms: [] }
+        ];
+
         mockUseRadicalsManager.mockReturnValue({
             ...defaultHookReturn,
             apiToken: 'test-token',
             wkRadicals: mockRadicals,
-            filteredRadicals: mockRadicals
+            previewRadicals: mockPreviewRadicals,
+            currentLevelCount: 2
         });
 
         render(<RadicalsManagerRefactored />);
@@ -333,7 +351,8 @@ describe('RadicalsManagerRefactored', () => {
             ...defaultHookReturn,
             apiToken: 'test-token',
             wkRadicals: [],
-            filteredRadicals: []
+            previewRadicals: [],
+            currentLevelCount: 0
         });
 
         render(<RadicalsManagerRefactored />);

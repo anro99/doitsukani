@@ -227,7 +227,7 @@ export function useRadicalsManager() {
 
     // Update specific radical in preview after successful upload
     const updatePreviewRadicalSynonyms = (radicalId: number, newSynonyms: string[]) => {
-        setPreviewRadicals(prevPreview => 
+        setPreviewRadicals(prevPreview =>
             prevPreview.map(previewRadical => {
                 if (previewRadical.id === radicalId) {
                     console.log(`🔄 Updating preview for radical ${radicalId} with ${newSynonyms.length} new synonyms`);
@@ -289,7 +289,7 @@ export function useRadicalsManager() {
             } else { // 'replace'
                 finalSynonyms = synonymsToUpload;
             }
-            
+
             updatePreviewRadicalSynonyms(radical.id, finalSynonyms);
 
         } catch (error) {
