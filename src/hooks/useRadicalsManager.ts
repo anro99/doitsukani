@@ -225,6 +225,22 @@ export function useRadicalsManager() {
         }
     };
 
+    // Update specific radical in preview after successful upload
+    const updatePreviewRadicalSynonyms = (radicalId: number, newSynonyms: string[]) => {
+        setPreviewRadicals(prevPreview => 
+            prevPreview.map(previewRadical => {
+                if (previewRadical.id === radicalId) {
+                    console.log(`🔄 Updating preview for radical ${radicalId} with ${newSynonyms.length} new synonyms`);
+                    return {
+                        ...previewRadical,
+                        currentSynonyms: newSynonyms
+                    };
+                }
+                return previewRadical;
+            })
+        );
+    };
+
     // Upload a single radical with retry logic
     const uploadSingleRadicalWithRetry = async (
         result: ProcessResult,
@@ -260,6 +276,21 @@ export function useRadicalsManager() {
             }
 
             localUploadStats.successful++;
+
+            // 🚀 NEW: Immediately update preview radicals for this specific radical
+            // Calculate final synonyms based on mode
+            let finalSynonyms: string[];
+            if (synonymMode === 'delete') {
+                finalSynonyms = [];
+            } else if (synonymMode === 'smart-merge') {
+                // Merge existing synonyms with new ones
+                const existingSynonyms = existingStudyMaterial?.data.meaning_synonyms || [];
+                finalSynonyms = [...new Set([...existingSynonyms, ...synonymsToUpload])];
+            } else { // 'replace'
+                finalSynonyms = synonymsToUpload;
+            }
+            
+            updatePreviewRadicalSynonyms(radical.id, finalSynonyms);
 
         } catch (error) {
             console.error(`Upload failed for ${result.radical.meaning}:`, error);
