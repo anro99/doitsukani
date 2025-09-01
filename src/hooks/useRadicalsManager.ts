@@ -107,6 +107,11 @@ export function useRadicalsManager() {
     const [progress, setProgress] = useState(0);
     const [translationStatus, setTranslationStatus] = useState('');
     const [uploadStatus, setUploadStatus] = useState('');
+
+    // Real-time progress tracking
+    const [processedCount, setProcessedCount] = useState(0);
+    const [totalCountForProcessing, setTotalCountForProcessing] = useState(0);
+    const totalCountForProcessingRef = useRef(0); // Ref for access in async functions
     const [uploadStats, setUploadStats] = useState<UploadStats>({
         created: 0,
         updated: 0,
@@ -244,7 +249,8 @@ export function useRadicalsManager() {
     // Upload a single radical with retry logic
     const uploadSingleRadicalWithRetry = async (
         result: ProcessResult,
-        localUploadStats: UploadStats
+        localUploadStats: UploadStats,
+        radicalIndex: number
     ): Promise<UploadStats> => {
         try {
             const radical = result.radical;
@@ -253,6 +259,12 @@ export function useRadicalsManager() {
             if (synonymsToUpload.length === 0 && synonymMode !== 'delete') {
                 localUploadStats.skipped++;
                 localUploadStats.successful++;
+
+                // Update real-time progress
+                setProcessedCount(radicalIndex + 1);
+                const newProgress = totalCountForProcessingRef.current > 0 ? ((radicalIndex + 1) / totalCountForProcessingRef.current) * 100 : 0;
+                setProgress(Math.round(newProgress));
+
                 return localUploadStats;
             }
 
@@ -276,6 +288,14 @@ export function useRadicalsManager() {
             }
 
             localUploadStats.successful++;
+
+            // 🚀 Real-time progress update after successful upload
+            setProcessedCount(radicalIndex + 1);
+            const newProgress = totalCountForProcessingRef.current > 0 ? ((radicalIndex + 1) / totalCountForProcessingRef.current) * 100 : 0;
+            setProgress(Math.round(newProgress));
+
+            // Live status update
+            setUploadStatus(`✅ ${radical.characters || radical.meaning} erfolgreich aktualisiert (${radicalIndex + 1}/${totalCountForProcessingRef.current})`);
 
             // 🚀 NEW: Immediately update preview radicals for this specific radical
             // Calculate final synonyms based on mode
@@ -304,6 +324,11 @@ export function useRadicalsManager() {
             result.status = 'error';
             result.message = `❌ Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
             localUploadStats.failed++;
+
+            // Update progress even on failure
+            setProcessedCount(radicalIndex + 1);
+            const newProgress = totalCountForProcessingRef.current > 0 ? ((radicalIndex + 1) / totalCountForProcessingRef.current) * 100 : 0;
+            setProgress(Math.round(newProgress));
         }
 
         return localUploadStats;
@@ -350,7 +375,7 @@ export function useRadicalsManager() {
                 };
 
                 setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
-                localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
+                localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * batchSize) + i);
 
             } else {
                 // Translation modes
@@ -405,7 +430,7 @@ export function useRadicalsManager() {
                     };
 
                     setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
-                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats);
+                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * batchSize) + i);
 
                 } catch (error) {
                     console.error(`Translation failed for ${radical.meaning}:`, error);
@@ -446,6 +471,12 @@ export function useRadicalsManager() {
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
         const filteredRadicals = radicals.filter(r => r.selected);
+
+        // Initialize real-time progress tracking
+        setTotalCountForProcessing(filteredRadicals.length);
+        totalCountForProcessingRef.current = filteredRadicals.length; // Update ref for async access
+        setProcessedCount(0);
+
         let localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
@@ -694,6 +725,9 @@ export function useRadicalsManager() {
         currentLevelCount,
         currentLevelCountLoading,
         previewRadicals,
+        // Real-time progress tracking
+        processedCount,
+        totalCountForProcessing,
 
         // Actions
         handleApiTokenChange,
