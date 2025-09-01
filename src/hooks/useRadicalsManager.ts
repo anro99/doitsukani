@@ -375,7 +375,7 @@ export function useRadicalsManager() {
                 };
 
                 setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
-                localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * batchSize) + i);
+                localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * TRANSLATION_BATCH_SIZE) + i);
 
             } else {
                 // Translation modes
@@ -430,7 +430,7 @@ export function useRadicalsManager() {
                     };
 
                     setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${radical.meaning}...`);
-                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * batchSize) + i);
+                    localUploadStats = await uploadSingleRadicalWithRetry(result, localUploadStats, (batchIndex * TRANSLATION_BATCH_SIZE) + i);
 
                 } catch (error) {
                     console.error(`Translation failed for ${radical.meaning}:`, error);
@@ -511,9 +511,8 @@ export function useRadicalsManager() {
 
                 localUploadStats = result;
 
-                // Update progress after each batch
-                const processedItems = Math.min((batchIndex + 1) * TRANSLATION_BATCH_SIZE, filteredRadicals.length);
-                setProgress(Math.round((processedItems / filteredRadicals.length) * 100));
+                // Progress is now updated in real-time by uploadSingleRadicalWithRetry
+                // No need to update here as it would overwrite individual radical progress
 
                 // Update React state with current statistics
                 setUploadStats({ ...localUploadStats });
