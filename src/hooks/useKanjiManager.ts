@@ -4,7 +4,9 @@ import {
     getKanji,
     getKanjiStudyMaterials,
     updateKanjiSynonyms,
-    createKanjiSynonyms
+    createKanjiSynonyms,
+    getKanjiCount,
+    getKanjiPreview
 } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
@@ -127,6 +129,7 @@ export function useKanjiManager() {
     const [studyMaterials, setStudyMaterials] = useState<WKStudyMaterial[]>([]);
     const [isLoadingKanji, setIsLoadingKanji] = useState(false);
     const [apiError, setApiError] = useState<string>('');
+    const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
 
     // Handle token changes
     const handleApiTokenChange = (token: string) => {
@@ -185,37 +188,74 @@ export function useKanjiManager() {
         return internalKanji.filter(kanji => kanji.level === selectedLevel);
     }, [wkKanji, studyMaterials, selectedLevel]);
 
-    // Simplified load kanji from API (similar to radicals)
+    // Load kanji count using specialized function
+    const loadKanjiCount = async () => {
+        try {
+            const level = selectedLevel === 'all' ? undefined : selectedLevel;
+            const count = await getKanjiCount(apiToken, level);
+            setTotalKanjiCount(count);
+        } catch (error) {
+            console.error('Error loading kanji count:', error);
+            setTotalKanjiCount(0);
+        }
+    };
+
+    // Load kanji preview using specialized function (similar to radicals)
     const loadKanjiFromAPI = async () => {
         setIsLoadingKanji(true);
         setApiError('');
 
         try {
-            // Load all kanji for selected level (no limit to get correct count)
-            const options: { levels?: string } = {};
+            const level = selectedLevel === 'all' ? undefined : selectedLevel;
 
-            // Set level filter
-            if (selectedLevel !== 'all') {
-                options.levels = selectedLevel.toString();
+            // Load preview kanji (limited)
+            const previewKanji = await getKanjiPreview(apiToken, level, 15);
+            setWkKanji(previewKanji);
+
+            // Load study materials for preview kanji
+            if (previewKanji.length > 0) {
+                const subjectIds = previewKanji.map(k => k.id.toString()).join(',');
+                const studyMaterialsData = await getKanjiStudyMaterials(apiToken, undefined, {
+                    subject_ids: subjectIds
+                });
+                setStudyMaterials(studyMaterialsData);
             }
 
-            // Don't set limit - load all kanji to get correct count and allow full processing
-
-            const kanji = await getKanji(apiToken, undefined, options);
-            setWkKanji(kanji);
-
-            // Get existing study materials for these kanji only
-            const subjectIds = kanji.map(k => k.id.toString()).join(',');
-            const studyMaterialsData = await getKanjiStudyMaterials(apiToken, undefined, {
-                subject_ids: subjectIds
-            });
-            setStudyMaterials(studyMaterialsData);
+            // Load total count separately
+            await loadKanjiCount();
 
         } catch (error) {
             console.error('Error loading kanji:', error);
             setApiError('Fehler beim Laden der Kanji. Bitte überprüfen Sie Ihren API-Token.');
         } finally {
             setIsLoadingKanji(false);
+        }
+    };
+
+    // Load all kanji for processing (when user starts processing)
+    const loadAllKanjiForProcessing = async (): Promise<Kanji[]> => {
+        try {
+            const options: { levels?: string } = {};
+
+            if (selectedLevel !== 'all') {
+                options.levels = selectedLevel.toString();
+            }
+
+            // Load all kanji for the selected level
+            const allKanji = await getKanji(apiToken, undefined, options);
+
+            // Get study materials for all kanji
+            const subjectIds = allKanji.map(k => k.id.toString()).join(',');
+            const allStudyMaterials = await getKanjiStudyMaterials(apiToken, undefined, {
+                subject_ids: subjectIds
+            });
+
+            // Convert to internal format
+            return convertToInternalFormat(allKanji, allStudyMaterials);
+
+        } catch (error) {
+            console.error('Error loading all kanji for processing:', error);
+            throw error;
         }
     };
 
@@ -380,15 +420,10 @@ export function useKanjiManager() {
         return localUploadStats;
     };
 
-    // Simplified process translations (same structure as radicals)
-    const processTranslations = async (kanji: Kanji[]) => {
+    // Start processing - loads all kanji first, then processes them
+    const startProcessing = async () => {
         if (synonymMode !== 'delete' && !deeplToken) {
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
-            return;
-        }
-
-        if (kanji.length === 0) {
-            setTranslationStatus('❌ Keine Kanji ausgewählt.');
             return;
         }
 
@@ -396,6 +431,30 @@ export function useKanjiManager() {
         setShouldStopProcessing(false);
         stopRef.current = false;
         setProgress(0);
+        setTranslationStatus('📦 Lade alle Kanji für Verarbeitung...');
+
+        try {
+            // Load all kanji for the selected level
+            const allKanji = await loadAllKanjiForProcessing();
+
+            if (allKanji.length === 0) {
+                setTranslationStatus('❌ Keine Kanji gefunden.');
+                setIsProcessing(false);
+                return;
+            }
+
+            // Start processing with all kanji
+            await processTranslations(allKanji);
+
+        } catch (error) {
+            console.error('Error starting processing:', error);
+            setTranslationStatus('❌ Fehler beim Laden der Kanji für Verarbeitung.');
+            setIsProcessing(false);
+        }
+    };
+
+    // Simplified process translations (now takes kanji as parameter)
+    const processTranslations = async (kanji: Kanji[]) => {
         setTranslationStatus('🚀 Starte Batch-Verarbeitung...');
 
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
@@ -482,8 +541,8 @@ export function useKanjiManager() {
         }
     }, [apiToken, selectedLevel]);
 
-    // Kanji count for display
-    const kanjiCount = filteredKanji.length;
+    // Kanji count for display - use total count or filtered count
+    const kanjiCount = totalKanjiCount > 0 ? totalKanjiCount : filteredKanji.length;
 
     return {
         // Settings
@@ -514,7 +573,7 @@ export function useKanjiManager() {
         uploadStats,
 
         // Actions
-        processTranslations,
+        processTranslations: startProcessing, // Use startProcessing instead
         stopProcessing,
         loadKanjiFromAPI
     };

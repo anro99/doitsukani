@@ -162,8 +162,8 @@ describe('useKanjiManager Hook', () => {
             const { result } = renderHook(() => useKanjiManager());
 
             await act(async () => {
-                // processTranslations expects kanji array parameter
-                await result.current.processTranslations([]);
+                // processTranslations no longer expects parameter
+                await result.current.processTranslations();
             });
 
             // Since function doesn't return result, just check it doesn't crash
