@@ -16,6 +16,32 @@ import Bottleneck from 'bottleneck';
 // Constants
 const TRANSLATION_BATCH_SIZE = 25;
 const MAX_SYNONYMS_WANIKANI = 8; // WaniKani API limit for synonyms
+const MAX_SYNONYM_BYTES = 63; // WaniKani has 64 byte limit, using 63 for minimal safety margin
+
+/**
+ * Truncate synonym to fit WaniKani's 64-byte limit per synonym.
+ * Uses 63-byte safety margin for minimal overhead.
+ * Adds "~" indicator when truncated.
+ */
+const truncateSynonym = (str: string): string => {
+    let truncated = str.replace(/…/g, "~"); // Replace ellipsis (3 bytes) with tilde (1 byte)
+    let wasTruncated = false;
+
+    while (Buffer.byteLength(truncated, 'utf8') > MAX_SYNONYM_BYTES) {
+        truncated = truncated.slice(0, -1);
+        wasTruncated = true;
+    }
+
+    if (wasTruncated) {
+        // Make sure we have space for the "~"
+        while (Buffer.byteLength(truncated + "~", 'utf8') > MAX_SYNONYM_BYTES) {
+            truncated = truncated.slice(0, -1);
+        }
+        truncated += "~";
+    }
+
+    return truncated;
+};
 
 // Rate-Limiting Configuration (same as radicals)
 const waniKaniLimiter = new Bottleneck({
@@ -372,7 +398,7 @@ export function useKanjiManager() {
 
             const cleanedPrimary = primaryTranslation.trim();
             if (cleanedPrimary && cleanedPrimary.length > 0) {
-                translations.primary = cleanedPrimary;
+                translations.primary = truncateSynonym(cleanedPrimary);
             }
         } catch (error) {
             console.warn(`Primary translation failed for "${kanji.primaryMeaning}":`, error);
@@ -400,7 +426,7 @@ export function useKanjiManager() {
 
                 const cleanedAlt = altTranslation.trim();
                 if (cleanedAlt && cleanedAlt.length > 0) {
-                    translations.alternatives.push(cleanedAlt);
+                    translations.alternatives.push(truncateSynonym(cleanedAlt));
                 }
             } catch (error) {
                 console.warn(`Alternative translation failed for "${alternativeMeaning}":`, error);

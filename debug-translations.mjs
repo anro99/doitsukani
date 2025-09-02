@@ -50,7 +50,46 @@ const mockKanjiWithLimitTest = {
     meaningMnemonic: "Extreme situations require extreme measures"
 };
 
+// Test case for byte limit truncation
+const mockKanjiWithLongTranslation = {
+    id: 444,
+    primaryMeaning: "test-long", // Will translate to a very long German compound
+    alternativeMeanings: ["extreme", "very"],
+    characters: "長",
+    level: 1,
+    currentSynonyms: [],
+    selected: true,
+    translatedSynonyms: [],
+    meaningMnemonic: "Testing very long translations"
+};
+
 const MAX_SYNONYMS_WANIKANI = 8; // WaniKani API limit
+const MAX_SYNONYM_BYTES = 63; // WaniKani has 64 byte limit, using 63 for minimal safety margin
+
+/**
+ * Truncate synonym to fit WaniKani's 64-byte limit per synonym.
+ * Uses 63-byte safety margin for minimal overhead.
+ * Adds "~" indicator when truncated.
+ */
+const truncateSynonym = (str) => {
+    let truncated = str.replace(/…/g, "~"); // Replace ellipsis (3 bytes) with tilde (1 byte)
+    let wasTruncated = false;
+
+    while (Buffer.byteLength(truncated, 'utf8') > MAX_SYNONYM_BYTES) {
+        truncated = truncated.slice(0, -1);
+        wasTruncated = true;
+    }
+
+    if (wasTruncated) {
+        // Make sure we have space for the "~"
+        while (Buffer.byteLength(truncated + "~", 'utf8') > MAX_SYNONYM_BYTES) {
+            truncated = truncated.slice(0, -1);
+        }
+        truncated += "~";
+    }
+
+    return truncated;
+};
 
 // Mock translation function (simulates DeepL)
 const mockTranslate = (meaning) => {
@@ -76,7 +115,9 @@ const mockTranslate = (meaning) => {
         "intense": "intensiv",
         "high": "hoch",
         "peak": "Spitze",
-        "ultimate": "ultimativ"
+        "ultimate": "ultimativ",
+        // Test long German compound words
+        "test-long": "extrem lange deutsche Zusammensetzung die definitiv das Byte-Limit überschreiten würde ohne Truncation"
     };
     return translations[meaning] || `${meaning}_DE`;
 };
@@ -88,7 +129,8 @@ const translateAllMeanings = async (kanji) => {
     // Translate primary
     try {
         const primaryTranslation = mockTranslate(kanji.primaryMeaning);
-        translations.primary = primaryTranslation.trim() || null;
+        const cleaned = primaryTranslation.trim();
+        translations.primary = cleaned ? truncateSynonym(cleaned) : null;
     } catch (error) {
         console.warn(`Primary translation failed for "${kanji.primaryMeaning}":`, error);
     }
@@ -99,7 +141,7 @@ const translateAllMeanings = async (kanji) => {
             const altTranslation = mockTranslate(alternativeMeaning);
             const cleanedAlt = altTranslation.trim();
             if (cleanedAlt && cleanedAlt.length > 0) {
-                translations.alternatives.push(cleanedAlt);
+                translations.alternatives.push(truncateSynonym(cleanedAlt));
             }
         } catch (error) {
             console.warn(`Alternative translation failed for "${alternativeMeaning}":`, error);
@@ -190,6 +232,15 @@ const testTranslationLogic = async (kanji, mode) => {
     console.log('Final Synonyms:', finalSynonyms);
     console.log(`Count: ${finalSynonyms.length}/${MAX_SYNONYMS_WANIKANI} (within limit: ${finalSynonyms.length <= MAX_SYNONYMS_WANIKANI})`);
 
+    // Check byte limits for each synonym
+    console.log('Byte Analysis:');
+    finalSynonyms.forEach((syn, i) => {
+        const bytes = Buffer.byteLength(syn, 'utf8');
+        const withinByteLimit = bytes <= MAX_SYNONYM_BYTES;
+        const truncated = syn.endsWith('~');
+        console.log(`  ${i + 1}. "${syn}" - ${bytes} bytes ${withinByteLimit ? '✅' : '❌'}${truncated ? ' (truncated)' : ''}`);
+    });
+
     // Show prioritization
     const totalTranslations = (allTranslations.primary ? 1 : 0) + allTranslations.alternatives.length;
     const includedPrimary = allTranslations.primary && finalSynonyms.includes(allTranslations.primary);
@@ -205,7 +256,8 @@ const testTranslationLogic = async (kanji, mode) => {
 
 // Test various scenarios
 console.log('🧪 Testing Extended Translation Logic with Primary + Alternative Meanings');
-console.log('🎯 Correct Order: Primary FIRST, then Alternatives\n');
+console.log('🎯 Correct Order: Primary FIRST, then Alternatives');
+console.log('📏 Byte Limit: Each synonym max 63 bytes (64 official, using minimal safety margin)\n');
 
 // Test 1: Normal case with alternatives
 await testTranslationLogic(mockKanjiWithAlternatives, 'smart-merge');
@@ -224,5 +276,8 @@ await testTranslationLogic(mockKanjiWithLimitTest, 'smart-merge');
 
 // Test 6: Limit enforcement with replace mode
 await testTranslationLogic(mockKanjiWithLimitTest, 'replace');
+
+// Test 7: Byte limit truncation test
+await testTranslationLogic(mockKanjiWithLongTranslation, 'smart-merge');
 
 console.log('\n✅ Translation logic testing completed!');
