@@ -19,6 +19,13 @@ const MAX_SYNONYMS_WANIKANI = 8; // WaniKani API limit for synonyms
 const MAX_SYNONYM_BYTES = 63; // WaniKani has 64 byte limit, using 63 for minimal safety margin
 
 /**
+ * Get UTF-8 byte length of a string (browser-compatible)
+ */
+const getByteLength = (str: string): number => {
+    return new TextEncoder().encode(str).length;
+};
+
+/**
  * Truncate synonym to fit WaniKani's 64-byte limit per synonym.
  * Uses 63-byte safety margin for minimal overhead.
  * Adds "~" indicator when truncated.
@@ -27,14 +34,14 @@ const truncateSynonym = (str: string): string => {
     let truncated = str.replace(/…/g, "~"); // Replace ellipsis (3 bytes) with tilde (1 byte)
     let wasTruncated = false;
 
-    while (Buffer.byteLength(truncated, 'utf8') > MAX_SYNONYM_BYTES) {
+    while (getByteLength(truncated) > MAX_SYNONYM_BYTES) {
         truncated = truncated.slice(0, -1);
         wasTruncated = true;
     }
 
     if (wasTruncated) {
         // Make sure we have space for the "~"
-        while (Buffer.byteLength(truncated + "~", 'utf8') > MAX_SYNONYM_BYTES) {
+        while (getByteLength(truncated + "~") > MAX_SYNONYM_BYTES) {
             truncated = truncated.slice(0, -1);
         }
         truncated += "~";

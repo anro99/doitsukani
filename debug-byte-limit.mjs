@@ -3,6 +3,13 @@
 const MAX_SYNONYM_BYTES = 63; // WaniKani has 64 byte limit, using 63 for minimal safety margin
 
 /**
+ * Get UTF-8 byte length of a string (browser-compatible equivalent)
+ */
+const getByteLength = (str) => {
+    return new TextEncoder().encode(str).length;
+};
+
+/**
  * Truncate synonym to fit WaniKani's 64-byte limit per synonym.
  * Uses 63-byte safety margin for minimal overhead.
  * Adds "~" indicator when truncated.
@@ -11,14 +18,14 @@ const truncateSynonym = (str) => {
     let truncated = str.replace(/…/g, "~"); // Replace ellipsis (3 bytes) with tilde (1 byte)
     let wasTruncated = false;
 
-    while (Buffer.byteLength(truncated, 'utf8') > MAX_SYNONYM_BYTES) {
+    while (getByteLength(truncated) > MAX_SYNONYM_BYTES) {
         truncated = truncated.slice(0, -1);
         wasTruncated = true;
     }
 
     if (wasTruncated) {
         // Make sure we have space for the "~"
-        while (Buffer.byteLength(truncated + "~", 'utf8') > MAX_SYNONYM_BYTES) {
+        while (getByteLength(truncated + "~") > MAX_SYNONYM_BYTES) {
             truncated = truncated.slice(0, -1);
         }
         truncated += "~";
@@ -68,9 +75,9 @@ const testSynonyms = [
 console.log('🧪 Testing WaniKani Synonym Byte Limit (63 bytes safety margin)\n');
 
 testSynonyms.forEach((synonym, index) => {
-    const originalBytes = Buffer.byteLength(synonym, 'utf8');
+    const originalBytes = getByteLength(synonym);
     const truncated = truncateSynonym(synonym);
-    const truncatedBytes = Buffer.byteLength(truncated, 'utf8');
+    const truncatedBytes = getByteLength(truncated);
 
     const wasTruncated = synonym !== truncated;
     const status = truncatedBytes <= MAX_SYNONYM_BYTES ? '✅' : '❌';
@@ -84,9 +91,9 @@ testSynonyms.forEach((synonym, index) => {
 
 // Test edge case with all emojis
 const emojiTest = "🌐🔥⚡💧🌟🎯🚀✨🎉🌈🔮🎪";
-const emojiOriginalBytes = Buffer.byteLength(emojiTest, 'utf8');
+const emojiOriginalBytes = getByteLength(emojiTest);
 const emojiTruncated = truncateSynonym(emojiTest);
-const emojiTruncatedBytes = Buffer.byteLength(emojiTruncated, 'utf8');
+const emojiTruncatedBytes = getByteLength(emojiTruncated);
 
 console.log('🎯 Special Test - Emoji Heavy String:');
 console.log(`  Original: "${emojiTest}" (${emojiOriginalBytes} bytes)`);
