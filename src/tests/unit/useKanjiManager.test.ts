@@ -90,7 +90,7 @@ describe('useKanjiManager Hook', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Setup default mock implementations
         mockedGetKanji.mockResolvedValue(mockKanji);
         mockedGetKanjiStudyMaterials.mockResolvedValue(mockStudyMaterials);
@@ -124,7 +124,7 @@ describe('useKanjiManager Hook', () => {
 
         it('should load tokens from storage on initialization', () => {
             const { result } = renderHook(() => useKanjiManager());
-            
+
             expect(result.current.apiToken).toBe('test-api-token');
             expect(result.current.deeplToken).toBe('test-deepl-token');
             expect(mockedLoadWanikaniToken).toHaveBeenCalled();
@@ -207,7 +207,7 @@ describe('useKanjiManager Hook', () => {
             });
 
             const filteredKanji = result.current.filteredKanji;
-            
+
             expect(filteredKanji).toHaveLength(2);
             expect(filteredKanji[0]).toEqual({
                 id: 1,
@@ -484,7 +484,7 @@ describe('useKanjiManager Hook', () => {
     describe('Integration with External Libraries', () => {
         it('should properly integrate with Bottleneck rate limiting', () => {
             const { result } = renderHook(() => useKanjiManager());
-            
+
             // The hook should be created without errors, indicating proper Bottleneck setup
             expect(result.current).toBeDefined();
             expect(typeof result.current.processTranslations).toBe('function');
@@ -492,7 +492,7 @@ describe('useKanjiManager Hook', () => {
 
         it('should integrate with storage utilities', () => {
             renderHook(() => useKanjiManager());
-            
+
             expect(mockedLoadWanikaniToken).toHaveBeenCalled();
             expect(mockedLoadDeepLToken).toHaveBeenCalled();
         });

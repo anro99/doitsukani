@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { WKKanji, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
-import { 
-    getKanji, 
-    getKanjiStudyMaterials, 
-    getKanjiCount, 
+import {
+    getKanji,
+    getKanjiStudyMaterials,
+    getKanjiCount,
     getKanjiPreview,
     createStudyMaterials,
     updateSynonyms,
@@ -270,12 +270,12 @@ export function useKanjiManager() {
                 console.log(`⏭️ Skipping ${kanji.meaning} - no synonyms to upload`);
                 localUploadStats.skipped++;
                 localUploadStats.successful++;
-                
+
                 // Update progress for skipped items too
                 setProcessedCount(kanjiIndex + 1);
                 const newProgress = totalCountForProcessingRef.current > 0 ? ((kanjiIndex + 1) / totalCountForProcessingRef.current) * 100 : 0;
                 setProgress(Math.round(newProgress));
-                
+
                 return localUploadStats;
             }
 
@@ -532,7 +532,7 @@ export function useKanjiManager() {
 
             // Final status update
             let statusMessage = `🎉 Verarbeitung abgeschlossen! ${localUploadStats.successful} von ${filteredKanji.length} Kanji verarbeitet`;
-            
+
             const details: string[] = [];
             if (localUploadStats.created > 0) details.push(`${localUploadStats.created} erstellt`);
             if (localUploadStats.updated > 0) details.push(`${localUploadStats.updated} aktualisiert`);
