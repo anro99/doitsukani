@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from './ui/alert';
 
 interface Kanji {
     id: number;
-    meaning: string;
+    primaryMeaning: string; // Primary meaning from WaniKani
+    alternativeMeanings: string[]; // Alternative meanings from WaniKani
     characters: string;
     level: number;
     currentSynonyms: string[];
@@ -79,7 +80,12 @@ export const KanjiPreview: React.FC<KanjiPreviewProps> = ({
                                     {kanji.characters}
                                 </span>
                                 <div>
-                                    <div className="font-medium">{kanji.meaning}</div>
+                                    <div className="font-medium">{kanji.primaryMeaning}</div>
+                                    {kanji.alternativeMeanings && kanji.alternativeMeanings.length > 0 && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            Alt: {kanji.alternativeMeanings.join(', ')}
+                                        </div>
+                                    )}
                                     <Badge variant="outline" className="text-xs">
                                         Level {kanji.level}
                                     </Badge>

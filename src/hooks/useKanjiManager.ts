@@ -39,7 +39,8 @@ const deeplLimiter = new Bottleneck({
 
 export interface Kanji {
     id: number;
-    meaning: string;
+    primaryMeaning: string; // Primary meaning from WaniKani
+    alternativeMeanings: string[]; // Alternative meanings from WaniKani
     characters: string;
     level: number;
     currentSynonyms: string[];
@@ -169,16 +170,28 @@ export function useKanjiManager() {
             }
         });
 
-        return wkKanji.map(kanji => ({
-            id: kanji.id,
-            meaning: kanji.data.meanings[0]?.meaning || 'Unknown',
-            characters: kanji.data.characters,
-            level: kanji.data.level,
-            currentSynonyms: studyMaterialsMap.get(kanji.id)?.data.meaning_synonyms || [],
-            selected: true,
-            translatedSynonyms: [],
-            meaningMnemonic: kanji.data.meaning_mnemonic || undefined
-        }));
+        return wkKanji.map(kanji => {
+            // Get primary meaning
+            const primaryMeaningObj = kanji.data.meanings.find(m => m.primary) || kanji.data.meanings[0];
+            const primaryMeaning = primaryMeaningObj?.meaning || 'Unknown';
+
+            // Get alternative meanings (accepted answers excluding the primary meaning)
+            const alternativeMeanings = kanji.data.meanings
+                .filter(m => m.accepted_answer && m.meaning !== primaryMeaning)
+                .map(m => m.meaning);
+
+            return {
+                id: kanji.id,
+                primaryMeaning,
+                alternativeMeanings,
+                characters: kanji.data.characters,
+                level: kanji.data.level,
+                currentSynonyms: studyMaterialsMap.get(kanji.id)?.data.meaning_synonyms || [],
+                selected: true,
+                translatedSynonyms: [],
+                meaningMnemonic: kanji.data.meaning_mnemonic || undefined
+            };
+        });
     };
 
     // Simplified filter kanji by selected level (same logic as radicals)
@@ -303,7 +316,7 @@ export function useKanjiManager() {
             localUploadStats.successful++;
 
         } catch (error) {
-            console.error(`Upload failed for ${result.kanji.meaning}:`, error);
+            console.error(`Upload failed for ${result.kanji.primaryMeaning}:`, error);
 
             if (error instanceof Error && error.message === 'Processing stopped by user') {
                 return localUploadStats;
@@ -339,7 +352,7 @@ export function useKanjiManager() {
             const currentItemIndex = processedSoFar + i + 1; // Current position in total items
 
             if (synonymMode === 'delete') {
-                setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
+                setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
 
                 if (!kanji.currentSynonyms || kanji.currentSynonyms.length === 0) {
                     localUploadStats.skipped++;
@@ -356,32 +369,32 @@ export function useKanjiManager() {
                 const result: ProcessResult = {
                     kanji: updatedKanji,
                     status: 'success',
-                    message: `🗑️ Synonyme gelöscht: ${kanji.meaning}`
+                    message: `🗑️ Synonyme gelöscht: ${kanji.primaryMeaning}`
                 };
 
-                setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
+                setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
                 localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
 
             } else {
                 // Translation modes
-                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
+                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
 
                 try {
                     const context = extractContextFromMnemonic(
                         kanji.meaningMnemonic || '',
-                        kanji.meaning
+                        kanji.primaryMeaning
                     );
 
                     const translation = await executeWithDeepLLimiter(
                         () => translateText(
                             deeplToken,
-                            kanji.meaning,
+                            kanji.primaryMeaning,
                             'DE',
                             false,
                             3,
                             context || undefined
                         ),
-                        `translate-${kanji.meaning}`
+                        `translate-${kanji.primaryMeaning}`
                     );
 
                     // Apply synonym mode logic
@@ -411,17 +424,17 @@ export function useKanjiManager() {
                     const result: ProcessResult = {
                         kanji: updatedKanji,
                         status: 'success',
-                        message: `🌐 Übersetzt: "${kanji.meaning}" → "${translatedSynonym}"`
+                        message: `🌐 Übersetzt: "${kanji.primaryMeaning}" → "${translatedSynonym}"`
                     };
 
-                    setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
+                    setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
                     localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
 
                 } catch (error) {
-                    console.error(`Translation failed for ${kanji.meaning}:`, error);
+                    console.error(`Translation failed for ${kanji.primaryMeaning}:`, error);
 
                     if (error instanceof Error && error.message === 'Processing stopped by user') {
-                        setTranslationStatus(`⏹️ Übersetzung gestoppt bei ${kanji.meaning}`);
+                        setTranslationStatus(`⏹️ Übersetzung gestoppt bei ${kanji.primaryMeaning}`);
                         return { ...localUploadStats, stopped: true };
                     }
 
