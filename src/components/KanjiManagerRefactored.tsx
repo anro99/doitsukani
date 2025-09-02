@@ -60,62 +60,74 @@ export const KanjiManagerRefactored: React.FC = () => {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left column: Configuration */}
-                <div className="lg:col-span-1 space-y-6">
-                    <TokenManagement
-                        apiToken={apiToken}
-                        deeplToken={deeplToken}
-                        onApiTokenChange={handleApiTokenChange}
-                        onDeeplTokenChange={handleDeepLTokenChange}
-                        apiError={apiError}
-                        synonymMode={synonymMode}
-                    />
+            {/* Token Management */}
+            <TokenManagement
+                apiToken={apiToken}
+                deeplToken={deeplToken}
+                onApiTokenChange={handleApiTokenChange}
+                onDeeplTokenChange={handleDeepLTokenChange}
+                apiError={apiError}
+                synonymMode={synonymMode}
+            />
 
-                    <LevelSelector
-                        selectedLevel={selectedLevel}
-                        onLevelChange={setSelectedLevel}
-                        synonymMode={synonymMode}
-                        onSynonymModeChange={setSynonymMode}
-                    />
+            {/* Settings */}
+            {apiToken && (
+                <LevelSelector
+                    selectedLevel={selectedLevel}
+                    onLevelChange={setSelectedLevel}
+                    synonymMode={synonymMode}
+                    onSynonymModeChange={setSynonymMode}
+                />
+            )}
 
-                    <ProcessingControls
-                        apiToken={apiToken}
-                        deeplToken={deeplToken}
-                        synonymMode={synonymMode}
-                        filteredItemsCount={kanjiCount}
-                        isProcessing={isProcessing}
-                        progress={progress}
-                        translationStatus={translationStatus}
-                        uploadStatus={uploadStatus}
-                        uploadStats={uploadStats}
-                        onStartProcessing={handleStartProcessing}
-                        onStopProcessing={handleStopProcessing}
-                        itemType="kanji"
-                    />
-                </div>
+            {/* Kanji Preview */}
+            {apiToken && filteredKanji.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Kanji Vorschau - Level {selectedLevel}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <KanjiPreview
+                            previewKanji={filteredKanji}
+                            maxPreviewCount={100}
+                        />
+                    </CardContent>
+                </Card>
+            )}
 
-                {/* Right columns: Preview */}
-                <div className="lg:col-span-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Kanji Vorschau - Level {selectedLevel}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {apiError && (
-                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                                    <strong>Fehler:</strong> {apiError}
-                                </div>
-                            )}
+            {/* Processing Controls */}
+            {apiToken && filteredKanji.length > 0 && (
+                <ProcessingControls
+                    apiToken={apiToken}
+                    deeplToken={deeplToken}
+                    synonymMode={synonymMode}
+                    filteredItemsCount={kanjiCount}
+                    isProcessing={isProcessing}
+                    progress={progress}
+                    translationStatus={translationStatus}
+                    uploadStatus={uploadStatus}
+                    uploadStats={uploadStats}
+                    onStartProcessing={handleStartProcessing}
+                    onStopProcessing={handleStopProcessing}
+                    itemType="kanji"
+                />
+            )}
 
-                            <KanjiPreview
-                                previewKanji={filteredKanji}
-                                maxPreviewCount={100}
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+            {/* Help text when no API token */}
+            {!apiToken && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>🚀 Erste Schritte</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-center space-y-4">
+                            <p className="text-gray-600">
+                                Geben Sie Ihren WaniKani API-Token ein, um zu beginnen.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };
