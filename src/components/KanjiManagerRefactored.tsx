@@ -37,6 +37,10 @@ export const KanjiManagerRefactored: React.FC = () => {
     } = useKanjiManager();
 
     const handleStartProcessing = () => {
+        console.log('🚀 DEBUG: handleStartProcessing called');
+        console.log('🚀 DEBUG: filteredKanji.length:', filteredKanji.length);
+        console.log('🚀 DEBUG: apiToken exists:', !!apiToken);
+        console.log('🚀 DEBUG: deeplToken exists:', !!deeplToken);
         processTranslations(filteredKanji);
     };
 
@@ -100,7 +104,7 @@ export const KanjiManagerRefactored: React.FC = () => {
                     apiToken={apiToken}
                     deeplToken={deeplToken}
                     synonymMode={synonymMode}
-                    filteredRadicalsCount={filteredKanji.length}
+                    filteredItemsCount={filteredKanji.length}
                     isProcessing={isProcessing}
                     progress={progress}
                     translationStatus={translationStatus}
@@ -108,6 +112,7 @@ export const KanjiManagerRefactored: React.FC = () => {
                     uploadStats={uploadStats}
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
+                    itemType="kanji"
                 />
             )}
 

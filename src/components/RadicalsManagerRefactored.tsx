@@ -98,7 +98,7 @@ export const RadicalsManagerRefactored: React.FC = () => {
                     apiToken={apiToken}
                     deeplToken={deeplToken}
                     synonymMode={synonymMode}
-                    filteredRadicalsCount={filteredRadicals.length}
+                    filteredItemsCount={filteredRadicals.length}
                     isProcessing={isProcessing}
                     progress={progress}
                     translationStatus={translationStatus}
@@ -106,6 +106,7 @@ export const RadicalsManagerRefactored: React.FC = () => {
                     uploadStats={uploadStats}
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
+                    itemType="radicals"
                 />
             )}
 

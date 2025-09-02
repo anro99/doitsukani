@@ -15,7 +15,7 @@ interface ProcessingControlsProps {
     apiToken: string;
     deeplToken: string;
     synonymMode: 'replace' | 'smart-merge' | 'delete';
-    filteredRadicalsCount: number;
+    filteredItemsCount: number;
     isProcessing: boolean;
     progress: number;
     translationStatus?: string;
@@ -23,24 +23,26 @@ interface ProcessingControlsProps {
     uploadStats: UploadStats;
     onStartProcessing: () => void;
     onStopProcessing: () => void;
+    itemType?: 'radicals' | 'kanji'; // Optional prop to specify the type
 }
 
 export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
     apiToken,
     deeplToken,
     synonymMode,
-    filteredRadicalsCount,
+    filteredItemsCount,
     isProcessing,
     progress,
     translationStatus,
     uploadStatus,
     uploadStats,
     onStartProcessing,
-    onStopProcessing
+    onStopProcessing,
+    itemType = 'radicals' // Default to radicals for backward compatibility
 }) => {
     const canStart = apiToken &&
         (synonymMode === 'delete' || deeplToken) &&
-        filteredRadicalsCount > 0 &&
+        filteredItemsCount > 0 &&
         !isProcessing;
 
     return (
@@ -93,7 +95,7 @@ export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
                 )}
 
                 <div className="text-sm text-gray-600">
-                    <p>📊 <strong>{filteredRadicalsCount}</strong> Radicals werden verarbeitet</p>
+                    <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : 'Radicals'} werden verarbeitet</p>
                     <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
                     <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
                 </div>

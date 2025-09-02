@@ -11,22 +11,37 @@ export default defineConfig({
     },
   },
   base: process.env.NODE_ENV === "production" ? "/doitsukani/" : "/",
+  build: {
+    sourcemap: true, // Enable source maps explicitly
+  },
   server: {
     proxy: {
       '/api/deepl': {
         target: 'https://api-free.deepl.com',
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/deepl/, ''),
         headers: {
-          'Origin': 'https://api-free.deepl.com'
+          'Origin': 'localhost:5173'
+        },
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('DeepL proxy error:', err);
+          });
         }
       },
       '/api/deepl-pro': {
         target: 'https://api.deepl.com',
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/deepl-pro/, ''),
         headers: {
-          'Origin': 'https://api.deepl.com'
+          'Origin': 'localhost:5173'
+        },
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('DeepL Pro proxy error:', err);
+          });
         }
       }
     }

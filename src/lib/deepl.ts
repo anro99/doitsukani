@@ -47,6 +47,8 @@ export const translateText = async (
         ? (isPro ? "https://api.deepl.com/v2/translate" : "https://api-free.deepl.com/v2/translate")
         : (isPro ? "/api/deepl-pro/v2/translate" : "/api/deepl/v2/translate");
 
+    console.log('🌐 DEBUG: DeepL URL:', baseUrl, 'isPro:', isPro);
+
     const translateWithRetry = async (retryCount: number = 0): Promise<string> => {
         try {
             const requestBody: any = {

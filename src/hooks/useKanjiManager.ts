@@ -172,7 +172,7 @@ export function useKanjiManager() {
             }
         });
 
-        return wkKanji.map(kanji => ({
+        const converted = wkKanji.map(kanji => ({
             id: kanji.id,
             meaning: kanji.data.meanings[0]?.meaning || 'Unknown',
             characters: kanji.data.characters,
@@ -182,20 +182,19 @@ export function useKanjiManager() {
             translatedSynonyms: [],
             meaningMnemonic: kanji.data.meaning_mnemonic || undefined
         }));
+
+        return converted;
     };
 
     // Filter kanji by selected level
     const filteredKanji = useMemo(() => {
         if (wkKanji.length === 0) return [];
 
+        // Since we now load kanji level-specifically, no additional filtering needed
         const internalKanji = convertToInternalFormat(wkKanji, studyMaterials);
 
-        if (selectedLevel === 'all') {
-            return internalKanji;
-        }
-
-        return internalKanji.filter(kanji => kanji.level === selectedLevel);
-    }, [wkKanji, studyMaterials, selectedLevel]);
+        return internalKanji;
+    }, [wkKanji, studyMaterials]); // Removed selectedLevel from dependencies since filtering is done at load time
 
     // Load kanji from Wanikani API
     const loadKanjiFromAPI = async () => {
@@ -203,8 +202,15 @@ export function useKanjiManager() {
         setApiError('');
 
         try {
-            // Get kanji from Wanikani
-            const kanji = await getKanji(apiToken);
+            // Get kanji from Wanikani - load level-specifically for efficiency
+            console.log('🔍 DEBUG: loadKanjiFromAPI called for level:', selectedLevel);
+
+            const kanji = selectedLevel === 'all'
+                ? await getKanji(apiToken) // Load all if "all" is selected
+                : await getKanji(apiToken, undefined, { levels: selectedLevel.toString() }); // Load specific level
+
+            console.log('🔍 DEBUG: getKanji returned', kanji.length, 'kanji for level', selectedLevel);
+            setWkKanji(kanji);
 
             // Get existing study materials for these kanji
             const subjectIds = kanji.map(k => k.id.toString()).join(',');
@@ -471,16 +477,23 @@ export function useKanjiManager() {
 
     // Process translations (enhanced implementation with DeepL)
     const processTranslations = async (kanji: Kanji[]) => {
+        console.log('🚀 DEBUG: processTranslations called with kanji count:', kanji.length);
+        console.log('🚀 DEBUG: synonymMode:', synonymMode);
+        console.log('🚀 DEBUG: deeplToken exists:', !!deeplToken);
+
         if (synonymMode !== 'delete' && !deeplToken) {
+            console.log('❌ DEBUG: Missing DeepL token');
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
             return;
         }
 
         if (kanji.length === 0) {
+            console.log('❌ DEBUG: No kanji provided');
             setTranslationStatus('❌ Keine Kanji ausgewählt.');
             return;
         }
 
+        console.log('✅ DEBUG: Starting processing...');
         setIsProcessing(true);
         setShouldStopProcessing(false); // Reset stop flag
         stopRef.current = false; // Reset ref flag
@@ -491,6 +504,16 @@ export function useKanjiManager() {
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
         const filteredKanji = kanji.filter(k => k.selected);
+        console.log('🚀 DEBUG: Filtered kanji count:', filteredKanji.length);
+        console.log('🚀 DEBUG: Original kanji count:', kanji.length);
+        console.log('🚀 DEBUG: Filtered out kanji:', kanji.filter(k => !k.selected).map(k => `${k.characters} (${k.meaning})`));
+
+        if (filteredKanji.length === 0) {
+            console.log('❌ DEBUG: No selected kanji after filtering');
+            setTranslationStatus('❌ Keine ausgewählten Kanji gefunden.');
+            setIsProcessing(false);
+            return;
+        }
 
         // Initialize real-time progress tracking
         setTotalCountForProcessing(filteredKanji.length);
@@ -625,6 +648,7 @@ export function useKanjiManager() {
                     selectedLevel === 'all' ? undefined : selectedLevel,
                     12
                 );
+                console.log('🔍 DEBUG: Preview API returned', preview.length, 'kanji, IDs:', preview.map(k => k.id).sort());
 
                 // Also load study materials for the preview kanji to show synonyms
                 let previewStudyMaterials: WKStudyMaterial[] = [];
@@ -654,7 +678,7 @@ export function useKanjiManager() {
                 });
 
                 setPreviewKanji(convertedPreview);
-                console.log(`Loaded ${convertedPreview.length} preview kanji for level ${selectedLevel}`);
+                console.log(`✅ Loaded ${convertedPreview.length} preview kanji for level ${selectedLevel}`);
 
             } catch (error) {
                 console.error('Error loading preview kanji:', error);
@@ -705,12 +729,12 @@ export function useKanjiManager() {
         updatePreviewWithLatestSynonyms();
     }, [studyMaterials]); // Only depend on studyMaterials, not previewKanji
 
-    // Load kanji when API token changes
+    // Load kanji when API token OR level changes
     useEffect(() => {
         if (apiToken.trim()) {
             loadKanjiFromAPI();
         }
-    }, [apiToken]);
+    }, [apiToken, selectedLevel]); // Added selectedLevel dependency
 
     return {
         // State
