@@ -15,6 +15,7 @@ import Bottleneck from 'bottleneck';
 
 // Constants
 const TRANSLATION_BATCH_SIZE = 25;
+const MAX_SYNONYMS_WANIKANI = 8; // WaniKani API limit for synonyms
 
 // Rate-Limiting Configuration (same as radicals)
 const waniKaniLimiter = new Bottleneck({
@@ -346,6 +347,133 @@ export function useKanjiManager() {
         return localUploadStats;
     };
 
+    // Helper function to translate all meanings (primary + alternatives) with smart synonym management
+    const translateAllMeanings = async (kanji: Kanji): Promise<{ primary: string | null, alternatives: string[] }> => {
+        const translations = { primary: null as string | null, alternatives: [] as string[] };
+
+        // First, translate the primary meaning
+        try {
+            const context = extractContextFromMnemonic(
+                kanji.meaningMnemonic || '',
+                kanji.primaryMeaning
+            );
+
+            const primaryTranslation = await executeWithDeepLLimiter(
+                () => translateText(
+                    deeplToken,
+                    kanji.primaryMeaning,
+                    'DE',
+                    false,
+                    3,
+                    context || undefined
+                ),
+                `translate-primary-${kanji.primaryMeaning}-${kanji.id}`
+            );
+
+            const cleanedPrimary = primaryTranslation.trim();
+            if (cleanedPrimary && cleanedPrimary.length > 0) {
+                translations.primary = cleanedPrimary;
+            }
+        } catch (error) {
+            console.warn(`Primary translation failed for "${kanji.primaryMeaning}":`, error);
+        }
+
+        // Then translate alternative meanings
+        for (const alternativeMeaning of kanji.alternativeMeanings) {
+            try {
+                const context = extractContextFromMnemonic(
+                    kanji.meaningMnemonic || '',
+                    alternativeMeaning
+                );
+
+                const altTranslation = await executeWithDeepLLimiter(
+                    () => translateText(
+                        deeplToken,
+                        alternativeMeaning,
+                        'DE',
+                        false,
+                        3,
+                        context || undefined
+                    ),
+                    `translate-alt-${alternativeMeaning}-${kanji.id}`
+                );
+
+                const cleanedAlt = altTranslation.trim();
+                if (cleanedAlt && cleanedAlt.length > 0) {
+                    translations.alternatives.push(cleanedAlt);
+                }
+            } catch (error) {
+                console.warn(`Alternative translation failed for "${alternativeMeaning}":`, error);
+                // Continue with next alternative
+            }
+        }
+
+        return translations;
+    };
+
+    // Helper function to merge translations with existing synonyms (Primary drops last)
+    const mergeTranslationsWithSynonyms = (
+        translations: { primary: string | null, alternatives: string[] },
+        currentSynonyms: string[],
+        synonymMode: string
+    ): string[] => {
+        switch (synonymMode) {
+            case 'replace': {
+                // In replace mode: Primary first, then alternatives, respect limit
+                const allNewTranslations = [];
+
+                // Add primary first
+                if (translations.primary) {
+                    allNewTranslations.push(translations.primary);
+                }
+
+                // Add alternatives after primary
+                for (const alt of translations.alternatives) {
+                    if (allNewTranslations.length < MAX_SYNONYMS_WANIKANI) {
+                        allNewTranslations.push(alt);
+                    }
+                }
+
+                return allNewTranslations;
+            }
+
+            case 'smart-merge': {
+                // Start with existing synonyms
+                const existing = currentSynonyms || [];
+                const merged = [...existing];
+
+                // Add primary translation first (if not duplicate and space available)
+                if (translations.primary && merged.length < MAX_SYNONYMS_WANIKANI) {
+                    const isPrimaryExists = merged.some(syn =>
+                        syn.toLowerCase().trim() === translations.primary!.toLowerCase().trim()
+                    );
+
+                    if (!isPrimaryExists) {
+                        merged.push(translations.primary);
+                    }
+                }
+
+                // Add alternatives after primary (only if space available)
+                for (const alt of translations.alternatives) {
+                    if (merged.length >= MAX_SYNONYMS_WANIKANI) break;
+
+                    const isAlreadyExists = merged.some(syn =>
+                        syn.toLowerCase().trim() === alt.toLowerCase().trim()
+                    );
+
+                    if (!isAlreadyExists) {
+                        merged.push(alt);
+                    }
+                }
+
+                return merged;
+            }
+
+            default:
+                return currentSynonyms || [];
+        }
+    };
+
     // Simplified process batch (same structure as radicals)
     const processBatch = async (
         batch: Kanji[],
@@ -392,44 +520,25 @@ export function useKanjiManager() {
                 localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
 
             } else {
-                // Translation modes
-                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
+                // Translation modes - now handles Primary + Alternative meanings
+                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning} + ${kanji.alternativeMeanings.length} Alternative...`);
 
                 try {
-                    const context = extractContextFromMnemonic(
-                        kanji.meaningMnemonic || '',
-                        kanji.primaryMeaning
-                    );
+                    // Translate all meanings (primary + alternatives)
+                    const allTranslations = await translateAllMeanings(kanji);
 
-                    const translation = await executeWithDeepLLimiter(
-                        () => translateText(
-                            deeplToken,
-                            kanji.primaryMeaning,
-                            'DE',
-                            false,
-                            3,
-                            context || undefined
-                        ),
-                        `translate-${kanji.primaryMeaning}`
-                    );
-
-                    // Apply synonym mode logic
-                    let newSynonyms: string[] = [];
-                    const currentSynonyms = kanji.currentSynonyms || [];
-                    const translatedSynonym = translation.trim();
-
-                    switch (synonymMode) {
-                        case 'replace':
-                            newSynonyms = [translatedSynonym];
-                            break;
-                        case 'smart-merge':
-                            if (!currentSynonyms.some(syn => syn.toLowerCase().trim() === translatedSynonym.toLowerCase())) {
-                                newSynonyms = [...currentSynonyms, translatedSynonym];
-                            } else {
-                                newSynonyms = currentSynonyms;
-                            }
-                            break;
+                    if (!allTranslations.primary && allTranslations.alternatives.length === 0) {
+                        console.warn(`No translations found for kanji: ${kanji.primaryMeaning}`);
+                        localUploadStats.failed++;
+                        continue;
                     }
+
+                    // Merge translations with existing synonyms based on mode
+                    const newSynonyms = mergeTranslationsWithSynonyms(
+                        allTranslations,
+                        kanji.currentSynonyms || [],
+                        synonymMode
+                    );
 
                     const updatedKanji: Kanji = {
                         ...kanji,
@@ -437,10 +546,17 @@ export function useKanjiManager() {
                         currentSynonyms: newSynonyms
                     };
 
+                    const totalTranslations = (allTranslations.primary ? 1 : 0) + allTranslations.alternatives.length;
+                    const translationSummary = totalTranslations > 1
+                        ? `${totalTranslations} Bedeutungen übersetzt (${allTranslations.primary ? 'Primary' : ''}${allTranslations.primary && allTranslations.alternatives.length > 0 ? ' + ' : ''}${allTranslations.alternatives.length > 0 ? allTranslations.alternatives.length + ' Alt' : ''})`
+                        : allTranslations.primary
+                            ? `"${kanji.primaryMeaning}" → "${allTranslations.primary}"`
+                            : `${allTranslations.alternatives.length} Alternative übersetzt`;
+
                     const result: ProcessResult = {
                         kanji: updatedKanji,
                         status: 'success',
-                        message: `🌐 Übersetzt: "${kanji.primaryMeaning}" → "${translatedSynonym}"`
+                        message: `🌐 ${translationSummary} (${newSynonyms.length}/${MAX_SYNONYMS_WANIKANI} Synonyme)`
                     };
 
                     setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
