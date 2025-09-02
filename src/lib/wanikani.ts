@@ -1,6 +1,7 @@
 import {
   WKAssignment,
   WKCollection,
+  WKKanji,
   WKRadical,
   WKStudyMaterial,
   WKSubject,
@@ -524,4 +525,173 @@ export const deleteRadicalSynonyms = async (
   );
 
   return response.data;
+};
+
+// =========================
+// KANJI API FUNCTIONS
+// =========================
+
+/**
+ * Get count of kanji from Wanikani API
+ * @param token - WaniKani API token
+ * @param level - Optional specific level, if not provided returns total count
+ * @returns Promise<number> - Count of kanji
+ */
+export const getKanjiCount = async (
+  token: string,
+  level?: number
+): Promise<number> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/subjects?types=kanji&limit=1";
+
+  if (level) {
+    url += `&levels=${level}`;
+  }
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  return collection.total_count;
+};
+
+/**
+ * Get a limited number of kanji for preview purposes
+ * @param token - WaniKani API token
+ * @param level - Optional specific level
+ * @param limit - Number of kanji to fetch (default: 12)
+ * @returns Promise<WKKanji[]>
+ */
+export const getKanjiPreview = async (
+  token: string,
+  level?: number,
+  limit: number = 12
+): Promise<WKKanji[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = `https://api.wanikani.com/v2/subjects?types=kanji&limit=${limit}`;
+
+  if (level) {
+    url += `&levels=${level}`;
+  }
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  return collection.data as WKKanji[];
+};
+
+/**
+ * Get kanji from Wanikani API with optional filtering
+ * @param token - WaniKani API token
+ * @param setProgress - Optional progress callback
+ * @param options - Optional filters for levels, limit, and slugs
+ * @returns Promise<WKKanji[]>
+ */
+export const getKanji = async (
+  token: string,
+  setProgress?: SetProgress,
+  options?: { levels?: string; limit?: number; slugs?: string }
+): Promise<WKKanji[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/subjects?types=kanji";
+
+  // Add query parameters if provided
+  const params = new URLSearchParams();
+  if (options?.levels) params.append("levels", options.levels);
+  if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.slugs) params.append("slugs", options.slugs);
+
+  if (params.toString()) {
+    url += "&" + params.toString();
+  }
+
+  const progress = {
+    text: "Fetching kanji from Wanikani...",
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(progress);
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  const finalProgress = {
+    text: `Found ${collection.data.length} kanji`,
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(finalProgress);
+
+  return collection.data as WKKanji[];
+};
+
+/**
+ * Get study materials for kanji from Wanikani API
+ * @param token - Wanikani API token
+ * @param setProgress - Optional progress callback
+ * @param options - Optional filters for subject_ids and limit
+ * @returns Promise<WKStudyMaterial[]>
+ */
+export const getKanjiStudyMaterials = async (
+  token: string,
+  setProgress?: SetProgress,
+  options?: { subject_ids?: string; limit?: number }
+): Promise<WKStudyMaterial[]> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  let url = "https://api.wanikani.com/v2/study_materials?subject_types=kanji";
+
+  // Add query parameters if provided
+  const params = new URLSearchParams();
+  if (options?.subject_ids) params.append("subject_ids", options.subject_ids);
+  if (options?.limit) params.append("limit", options.limit.toString());
+
+  if (params.toString()) {
+    url += "&" + params.toString();
+  }
+
+  const progress = {
+    text: "Fetching kanji study materials...",
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(progress);
+
+  const response = await limiter.schedule(() =>
+    axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  );
+
+  const collection = response.data as WKCollection;
+  const finalProgress = {
+    text: `Found ${collection.data.length} kanji study materials`,
+    currentStep: 1,
+    lastStep: 1,
+  };
+  setProgress?.(finalProgress);
+
+  return collection.data as WKStudyMaterial[];
 };
