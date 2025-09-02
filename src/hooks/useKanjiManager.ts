@@ -321,7 +321,9 @@ export function useKanjiManager() {
         batch: Kanji[],
         batchIndex: number,
         totalBatches: number,
-        localUploadStats: UploadStats
+        localUploadStats: UploadStats,
+        totalKanjiCount: number,
+        processedSoFar: number
     ) => {
         const batchSize = batch.length;
         setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Kanji)...`);
@@ -333,9 +335,10 @@ export function useKanjiManager() {
             }
 
             const kanji = batch[i];
+            const currentItemIndex = processedSoFar + i + 1; // Current position in total items
 
             if (synonymMode === 'delete') {
-                setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${i + 1}/${batchSize}: ${kanji.meaning}...`);
+                setTranslationStatus(`🗑️ Batch ${batchIndex + 1}/${totalBatches}: Verarbeite ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
 
                 if (!kanji.currentSynonyms || kanji.currentSynonyms.length === 0) {
                     localUploadStats.skipped++;
@@ -355,12 +358,12 @@ export function useKanjiManager() {
                     message: `🗑️ Synonyme gelöscht: ${kanji.meaning}`
                 };
 
-                setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${kanji.meaning}...`);
+                setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
                 localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
 
             } else {
                 // Translation modes
-                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${i + 1}/${batchSize}: ${kanji.meaning}...`);
+                setTranslationStatus(`🌐 Batch ${batchIndex + 1}/${totalBatches}: Übersetze ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
 
                 try {
                     const context = extractContextFromMnemonic(
@@ -410,7 +413,7 @@ export function useKanjiManager() {
                         message: `🌐 Übersetzt: "${kanji.meaning}" → "${translatedSynonym}"`
                     };
 
-                    setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${kanji.meaning}...`);
+                    setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.meaning}...`);
                     localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
 
                 } catch (error) {
@@ -424,6 +427,10 @@ export function useKanjiManager() {
                     localUploadStats.failed++;
                 }
             }
+
+            // Update progress after each kanji (whether successful or failed)
+            const progressPercent = (currentItemIndex / totalKanjiCount) * 100;
+            setProgress(Math.round(progressPercent));
         }
 
         return localUploadStats;
@@ -486,6 +493,7 @@ export function useKanjiManager() {
             }
 
             const totalBatches = batches.length;
+            let processedItems = 0; // Track individual processed items
 
             for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
                 if (shouldStopProcessing || stopRef.current) {
@@ -494,7 +502,14 @@ export function useKanjiManager() {
                 }
 
                 const batch = batches[batchIndex];
-                const result = await processBatch(batch, batchIndex, totalBatches, localUploadStats);
+                const result = await processBatch(
+                    batch,
+                    batchIndex,
+                    totalBatches,
+                    localUploadStats,
+                    filteredKanjiData.length,
+                    processedItems
+                );
 
                 if ((result as any).stopped) {
                     localUploadStats = { ...result };
@@ -503,10 +518,10 @@ export function useKanjiManager() {
                 }
 
                 localUploadStats = result;
+                processedItems += batch.length; // Update processed items count
 
-                // Update progress
-                const progressPercent = ((batchIndex + 1) / totalBatches) * 100;
-                setProgress(Math.round(progressPercent));
+                // Progress is already updated in processBatch for each individual kanji
+                // No need to update it here again
             }
 
             // Final status
