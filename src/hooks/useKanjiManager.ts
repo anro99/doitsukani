@@ -300,17 +300,33 @@ export function useKanjiManager() {
             const existingStudyMaterial = studyMaterials.find(sm => sm.data.subject_id === kanji.id);
 
             if (existingStudyMaterial) {
-                await executeWithWaniKaniLimiter(
+                const updatedStudyMaterial = await executeWithWaniKaniLimiter(
                     () => updateKanjiSynonyms(apiToken, existingStudyMaterial.id, synonymsToUpload),
                     `update-${kanji.id}`
                 );
                 localUploadStats.updated++;
+
+                // Update local study materials to reflect the new synonyms
+                if (updatedStudyMaterial) {
+                    setStudyMaterials(prevStudyMaterials =>
+                        prevStudyMaterials.map(sm =>
+                            sm.id === existingStudyMaterial.id
+                                ? updatedStudyMaterial
+                                : sm
+                        )
+                    );
+                }
             } else {
-                await executeWithWaniKaniLimiter(
+                const newStudyMaterial = await executeWithWaniKaniLimiter(
                     () => createKanjiSynonyms(apiToken, kanji.id, synonymsToUpload),
                     `create-${kanji.id}`
                 );
                 localUploadStats.created++;
+
+                // Add new study material to local state
+                if (newStudyMaterial) {
+                    setStudyMaterials(prevStudyMaterials => [...prevStudyMaterials, newStudyMaterial]);
+                }
             }
 
             localUploadStats.successful++;
