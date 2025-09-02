@@ -191,10 +191,24 @@ export function useKanjiManager() {
         setApiError('');
 
         try {
-            const kanji = await getKanji(apiToken);
+            // Load all kanji for selected level (no limit to get correct count)
+            const options: { levels?: string } = {};
+
+            // Set level filter
+            if (selectedLevel !== 'all') {
+                options.levels = selectedLevel.toString();
+            }
+
+            // Don't set limit - load all kanji to get correct count and allow full processing
+
+            const kanji = await getKanji(apiToken, undefined, options);
             setWkKanji(kanji);
 
-            const studyMaterialsData = await getKanjiStudyMaterials(apiToken);
+            // Get existing study materials for these kanji only
+            const subjectIds = kanji.map(k => k.id.toString()).join(',');
+            const studyMaterialsData = await getKanjiStudyMaterials(apiToken, undefined, {
+                subject_ids: subjectIds
+            });
             setStudyMaterials(studyMaterialsData);
 
         } catch (error) {

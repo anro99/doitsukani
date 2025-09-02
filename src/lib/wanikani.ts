@@ -670,7 +670,6 @@ export const getKanji = async (
   setProgress?: SetProgress,
   options?: { levels?: string; limit?: number; slugs?: string }
 ): Promise<WKKanji[]> => {
-  console.log('🔍 DEBUG: getKanji called with options:', options);
 
   // Use getDataPages for paginated loading with level filtering
   let api = "subjects?types=kanji";
@@ -685,8 +684,6 @@ export const getKanji = async (
     api += "&" + params.toString();
   }
 
-  console.log('🔍 DEBUG: getKanji API URL:', api);
-
   const progress = {
     text: `Fetching kanji${options?.levels ? ` for level ${options.levels}` : ''} from Wanikani...`,
     currentStep: 1,
@@ -694,7 +691,23 @@ export const getKanji = async (
   };
   setProgress?.(progress);
 
-  // Use getDataPages to get all pages for the specified level(s)
+  // If limit is specified, use single page request instead of getDataPages
+  if (options?.limit) {
+    const limiter = new Bottleneck(API_LIMITS);
+    const response = await limiter.schedule(() =>
+      axios.get(`https://api.wanikani.com/v2/${api}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    );
+    const collection = response.data as WKCollection;
+    const limitedKanji = collection.data.slice(0, options.limit);
+
+    return limitedKanji as WKKanji[];
+  }
+
+  // Use getDataPages to get all pages for the specified level(s) (when no limit)
   const allKanji = await getDataPages(token, api, progress.text, setProgress);
 
   console.log('🔍 DEBUG: getKanji loaded', allKanji.length, `kanji${options?.levels ? ` for level ${options.levels}` : ''}`);

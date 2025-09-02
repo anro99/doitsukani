@@ -26,6 +26,7 @@ export const KanjiManagerRefactored: React.FC = () => {
 
         // States
         apiError,
+        isLoadingKanji,
         isProcessing,
         progress,
         translationStatus,
@@ -80,6 +81,16 @@ export const KanjiManagerRefactored: React.FC = () => {
                 />
             )}
 
+            {/* Loading State */}
+            {isLoadingKanji && (
+                <Card>
+                    <CardContent className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Lade Kanji von WaniKani...</p>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Kanji Preview */}
             {apiToken && filteredKanji.length > 0 && (
                 <Card>
@@ -88,8 +99,9 @@ export const KanjiManagerRefactored: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                         <KanjiPreview
-                            previewKanji={filteredKanji}
-                            maxPreviewCount={100}
+                            previewKanji={filteredKanji.slice(0, 12)}
+                            currentLevelCount={filteredKanji.length}
+                            maxPreviewCount={12}
                         />
                     </CardContent>
                 </Card>
