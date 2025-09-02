@@ -497,6 +497,71 @@ export const updateRadicalSynonyms = async (
 };
 
 /**
+ * Create synonyms for a kanji by creating a new study material
+ * @param token - Wanikani API token
+ * @param subjectId - ID of the kanji subject
+ * @param synonyms - Array of synonym strings to set
+ * @returns Promise<WKStudyMaterial>
+ */
+export const createKanjiSynonyms = async (
+  token: string,
+  subjectId: number,
+  synonyms: string[]
+): Promise<WKStudyMaterial> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  const payload = {
+    study_material: {
+      subject_id: subjectId,
+      meaning_synonyms: synonyms
+    }
+  };
+
+  const response = await limiter.schedule(() =>
+    axios.post("https://api.wanikani.com/v2/study_materials", payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
+  return response.data;
+};
+
+/**
+ * Update synonyms for a kanji study material
+ * @param token - Wanikani API token
+ * @param studyMaterialId - ID of the study material to update
+ * @param synonyms - Array of synonym strings to set
+ * @returns Promise<WKStudyMaterial>
+ */
+export const updateKanjiSynonyms = async (
+  token: string,
+  studyMaterialId: number,
+  synonyms: string[]
+): Promise<WKStudyMaterial> => {
+  const limiter = new Bottleneck(API_LIMITS);
+
+  const payload = {
+    study_material: {
+      meaning_synonyms: synonyms
+    }
+  };
+
+  const response = await limiter.schedule(() =>
+    axios.put(`https://api.wanikani.com/v2/study_materials/${studyMaterialId}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
+  return response.data;
+};
+
+/**
  * Delete all user synonyms for a radical (removes all meaning_synonyms)
  * ⚠️ SAFE ONLY for test radicals: Rice, Spikes, Umbrella
  * @param token - Wanikani API token

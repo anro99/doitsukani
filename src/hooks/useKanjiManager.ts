@@ -5,10 +5,8 @@ import {
     getKanjiStudyMaterials,
     getKanjiCount,
     getKanjiPreview,
-    createStudyMaterials,
-    updateSynonyms,
-    WKStudyMaterialCreate,
-    WKStudyMaterialUpdate
+    updateKanjiSynonyms,
+    createKanjiSynonyms
 } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
@@ -289,23 +287,15 @@ export function useKanjiManager() {
 
             if (existingStudyMaterial) {
                 // Update existing study material using the study_material ID, not the subject ID
-                const updateData: WKStudyMaterialUpdate = {
-                    id: existingStudyMaterial.id,
-                    synonyms: synonymsToUpload
-                };
                 await executeWithWaniKaniLimiter(
-                    () => updateSynonyms(apiToken, waniKaniLimiter, updateData),
+                    () => updateKanjiSynonyms(apiToken, existingStudyMaterial.id, synonymsToUpload),
                     `update-${kanji.id}`
                 );
                 localUploadStats.updated++;
             } else {
                 // Create new study material using the subject ID
-                const createData: WKStudyMaterialCreate = {
-                    subject: kanji.id,
-                    synonyms: synonymsToUpload
-                };
                 await executeWithWaniKaniLimiter(
-                    () => createStudyMaterials(apiToken, waniKaniLimiter, createData),
+                    () => createKanjiSynonyms(apiToken, kanji.id, synonymsToUpload),
                     `create-${kanji.id}`
                 );
                 localUploadStats.created++;

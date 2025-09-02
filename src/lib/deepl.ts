@@ -62,21 +62,31 @@ export const translateText = async (
                 requestBody.context = context;
             }
 
+            console.log('🌐 DEBUG: Sending DeepL request:', { baseUrl, textToTranslate, targetLang });
+
             const response = await limiter.schedule(() =>
                 axios.post(baseUrl, requestBody, {
                     headers: {
                         "Authorization": `DeepL-Auth-Key ${apiKey}`,
                         "Content-Type": "application/json"
-                    }
+                    },
+                    timeout: 30000 // Add 30 second timeout
                 })
             );
+
+            console.log('🌐 DEBUG: DeepL response received:', response.status);
+
+            console.log('🌐 DEBUG: DeepL response received:', response.status);
 
             const data = response.data as DeepLResponse;
             return data.translations[0].text;
         } catch (error: any) {
+            console.log('🌐 DEBUG: DeepL error occurred:', error.message);
+
             // Handle specific DeepL errors
             if (error.response) {
                 const { status, data } = error.response;
+                console.log('🌐 DEBUG: DeepL error response:', { status, data });
 
                 switch (status) {
                     case 403:
@@ -90,8 +100,15 @@ export const translateText = async (
                 }
             }
 
+            // Handle network errors
+            if (error.code === 'ECONNABORTED') {
+                console.log('🌐 DEBUG: DeepL request timed out');
+                throw new Error('Request timed out');
+            }
+
             // Retry on network errors
             if (retryCount < maxRetries - 1) {
+                console.log('🌐 DEBUG: Retrying DeepL request, attempt:', retryCount + 1);
                 return translateWithRetry(retryCount + 1);
             }
 
@@ -153,7 +170,8 @@ export const translateBatch = async (
                     headers: {
                         "Authorization": `DeepL-Auth-Key ${apiKey}`,
                         "Content-Type": "application/json"
-                    }
+                    },
+                    timeout: 30000 // Add 30 second timeout
                 })
             );
 

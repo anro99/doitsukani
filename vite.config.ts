@@ -21,9 +21,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api\/deepl/, ''),
-        headers: {
-          'Origin': 'localhost:5173'
-        },
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('DeepL proxy error:', err);
@@ -35,9 +32,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api\/deepl-pro/, ''),
-        headers: {
-          'Origin': 'localhost:5173'
-        },
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('DeepL Pro proxy error:', err);
