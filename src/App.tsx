@@ -16,12 +16,13 @@ import { upload } from "./lib/wanikani";
 import { ProgressReport } from "./components/progress";
 import { writeProgressAtom } from "./lib/progressreporter";
 import { RadicalsManagerRefactored } from "./components/RadicalsManagerRefactored";
+import { KanjiManagerRefactored } from "./components/KanjiManagerRefactored";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals'>('vocabulary');
+  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji'>('vocabulary');
   const [, setProgress] = useAtom(writeProgressAtom);
 
   const handleUpload = async () => {
@@ -90,7 +91,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  � Vocabulary Manager
+                  📚 Vocabulary Manager
                 </button>
                 <button
                   onClick={() => setActiveTab('radicals')}
@@ -100,6 +101,15 @@ function App() {
                     }`}
                 >
                   🧩 Radicals Manager
+                </button>
+                <button
+                  onClick={() => setActiveTab('kanji')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'kanji'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  🎌 Kanji Manager
                 </button>
               </div>
             </div>
@@ -181,6 +191,10 @@ function App() {
 
           {activeTab === 'radicals' && (
             <RadicalsManagerRefactored />
+          )}
+
+          {activeTab === 'kanji' && (
+            <KanjiManagerRefactored />
           )}
         </div>
       </div>
