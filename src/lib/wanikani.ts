@@ -693,7 +693,7 @@ export const getKanjiPreview = async (
 export const getKanji = async (
   token: string,
   setProgress?: SetProgress,
-  options?: { levels?: string; limit?: number; slugs?: string }
+  options?: { levels?: string; limit?: number; offset?: number; slugs?: string }
 ): Promise<WKKanji[]> => {
 
   // Use getDataPages for paginated loading with level filtering
@@ -703,6 +703,7 @@ export const getKanji = async (
   const params = new URLSearchParams();
   if (options?.levels) params.append("levels", options.levels);
   if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.offset) params.append("offset", options.offset.toString());
   if (options?.slugs) params.append("slugs", options.slugs);
 
   if (params.toString()) {

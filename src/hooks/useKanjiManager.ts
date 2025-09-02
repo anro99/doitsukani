@@ -130,6 +130,7 @@ export function useKanjiManager() {
     const [isLoadingKanji, setIsLoadingKanji] = useState(false);
     const [apiError, setApiError] = useState<string>('');
     const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
+    const [selectedKanjiCount, setSelectedKanjiCount] = useState<number>(0); // Count of selected kanji for processing
 
     // Debug: Log every change to totalKanjiCount
     useEffect(() => {
@@ -483,6 +484,9 @@ export function useKanjiManager() {
             return;
         }
 
+        setSelectedKanjiCount(filteredKanjiData.length); // Update the count for UI display
+        setTranslationStatus(`📊 ${filteredKanjiData.length} ausgewählte Kanji gefunden. Starte Verarbeitung...`);
+
         let localUploadStats: UploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
@@ -547,6 +551,7 @@ export function useKanjiManager() {
         } finally {
             setIsProcessing(false);
             setProgress(0);
+            setSelectedKanjiCount(0); // Reset selected count after processing
         }
 
         setUploadStats(localUploadStats);
@@ -565,11 +570,12 @@ export function useKanjiManager() {
         }
     }, [apiToken, selectedLevel]);
 
-    // Kanji count for display - use total count or filtered count
-    const kanjiCount = totalKanjiCount > 0 ? totalKanjiCount : filteredKanji.length;
+    // Kanji count for display - use selected count during processing, otherwise total count
+    const kanjiCount = selectedKanjiCount > 0 ? selectedKanjiCount : (totalKanjiCount > 0 ? totalKanjiCount : filteredKanji.length);
 
     console.log('🔢 Kanji count calculation:', {
         totalKanjiCount,
+        selectedKanjiCount,
         filteredKanjiLength: filteredKanji.length,
         selectedLevel,
         finalKanjiCount: kanjiCount
