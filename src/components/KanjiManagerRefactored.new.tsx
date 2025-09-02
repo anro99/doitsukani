@@ -25,6 +25,7 @@ export const KanjiManagerRefactored: React.FC = () => {
         kanjiCount,
 
         // States
+        isLoadingKanji,
         apiError,
         isProcessing,
         progress,

@@ -3,6 +3,7 @@ import { WKKanji, WKStudyMaterial } from '@bachmacintosh/wanikani-api-types';
 import {
     getKanji,
     getKanjiStudyMaterials,
+    getKanjiCount,
     updateKanjiSynonyms,
     createKanjiSynonyms
 } from '../lib/wanikani';
@@ -208,7 +209,8 @@ export function useKanjiManager() {
     // Simplified upload single kanji (same as radicals)
     const uploadSingleKanjiWithRetry = async (
         result: ProcessResult,
-        localUploadStats: UploadStats
+        localUploadStats: UploadStats,
+        kanjiIndex: number
     ): Promise<UploadStats> => {
         try {
             const kanji = result.kanji;
@@ -293,7 +295,7 @@ export function useKanjiManager() {
                 };
 
                 setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${kanji.meaning}...`);
-                localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
+                localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats, (batchIndex * TRANSLATION_BATCH_SIZE) + i);
 
             } else {
                 // Translation modes
@@ -348,7 +350,7 @@ export function useKanjiManager() {
                     };
 
                     setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${i + 1}/${batchSize}: ${kanji.meaning}...`);
-                    localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
+                    localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats, (batchIndex * TRANSLATION_BATCH_SIZE) + i);
 
                 } catch (error) {
                     console.error(`Translation failed for ${kanji.meaning}:`, error);
