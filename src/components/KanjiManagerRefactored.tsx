@@ -100,7 +100,7 @@ export const KanjiManagerRefactored: React.FC = () => {
                     <CardContent>
                         <KanjiPreview
                             previewKanji={filteredKanji.slice(0, 12)}
-                            currentLevelCount={filteredKanji.length}
+                            currentLevelCount={kanjiCount}
                             maxPreviewCount={12}
                         />
                     </CardContent>

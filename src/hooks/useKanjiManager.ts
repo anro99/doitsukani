@@ -131,6 +131,11 @@ export function useKanjiManager() {
     const [apiError, setApiError] = useState<string>('');
     const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
 
+    // Debug: Log every change to totalKanjiCount
+    useEffect(() => {
+        console.log('🔄 totalKanjiCount changed to:', totalKanjiCount);
+    }, [totalKanjiCount]);
+
     // Handle token changes
     const handleApiTokenChange = (token: string) => {
         setApiToken(token);
@@ -192,8 +197,12 @@ export function useKanjiManager() {
     const loadKanjiCount = async () => {
         try {
             const level = selectedLevel === 'all' ? undefined : selectedLevel;
+            console.log('🔍 Loading kanji count for level:', level);
             const count = await getKanjiCount(apiToken, level);
+            console.log('📊 Received kanji count:', count, 'for level:', level);
+            console.log('🔄 Setting totalKanjiCount to:', count);
             setTotalKanjiCount(count);
+            console.log('✅ totalKanjiCount should now be:', count);
         } catch (error) {
             console.error('Error loading kanji count:', error);
             setTotalKanjiCount(0);
@@ -543,6 +552,13 @@ export function useKanjiManager() {
 
     // Kanji count for display - use total count or filtered count
     const kanjiCount = totalKanjiCount > 0 ? totalKanjiCount : filteredKanji.length;
+
+    console.log('🔢 Kanji count calculation:', {
+        totalKanjiCount,
+        filteredKanjiLength: filteredKanji.length,
+        selectedLevel,
+        finalKanjiCount: kanjiCount
+    });
 
     return {
         // Settings
