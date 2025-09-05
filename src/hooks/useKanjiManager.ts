@@ -289,29 +289,53 @@ export function useKanjiManager() {
         }
     };
 
-    // Load all kanji for processing (when user starts processing)
-    const loadAllKanjiForProcessing = async (): Promise<Kanji[]> => {
+    // Load kanji in batches for processing (no longer loads all at once)
+    const loadKanjiBatch = async (offset: number = 0, limit: number = TRANSLATION_BATCH_SIZE): Promise<{ kanji: Kanji[], hasMore: boolean, totalCount: number }> => {
         try {
-            const options: { levels?: string } = {};
+            const options: { levels?: string; limit: number; offset: number } = {
+                limit,
+                offset
+            };
 
             if (selectedLevel !== 'all') {
                 options.levels = selectedLevel.toString();
             }
 
-            // Load all kanji for the selected level
-            const allKanji = await getKanji(apiToken, undefined, options);
+            console.log(`Loading kanji batch: offset=${offset}, limit=${limit}, level=${selectedLevel}`);
 
-            // Get study materials for all kanji
-            const subjectIds = allKanji.map(k => k.id.toString()).join(',');
-            const allStudyMaterials = await getKanjiStudyMaterials(apiToken, undefined, {
+            // Load kanji batch
+            const kanjiResponse = await getKanji(apiToken, undefined, options);
+            console.log(`API returned ${kanjiResponse.length} kanji for offset=${offset}`);
+
+            // If we got fewer kanji than requested, there are no more
+            const hasMore = kanjiResponse.length === limit;
+
+            // Early return if no kanji found
+            if (kanjiResponse.length === 0) {
+                return {
+                    kanji: [],
+                    hasMore: false,
+                    totalCount: totalKanjiCount || 0
+                };
+            }
+
+            // Get study materials only for this batch
+            const subjectIds = kanjiResponse.map(k => k.id.toString()).join(',');
+            const studyMaterials = await getKanjiStudyMaterials(apiToken, undefined, {
                 subject_ids: subjectIds
             });
 
             // Convert to internal format
-            return convertToInternalFormat(allKanji, allStudyMaterials);
+            const convertedKanji = convertToInternalFormat(kanjiResponse, studyMaterials);
+
+            return {
+                kanji: convertedKanji,
+                hasMore,
+                totalCount: totalKanjiCount || 0
+            };
 
         } catch (error) {
-            console.error('Error loading all kanji for processing:', error);
+            console.error('Error loading kanji batch:', error);
             throw error;
         }
     };
@@ -615,7 +639,7 @@ export function useKanjiManager() {
         return localUploadStats;
     };
 
-    // Start processing - loads all kanji first, then processes them
+    // Start processing - processes kanji in batches to avoid loading all at once
     const startProcessing = async () => {
         if (synonymMode !== 'delete' && !deeplToken) {
             setTranslationStatus('❌ DeepL Token fehlt für Übersetzung.');
@@ -626,26 +650,93 @@ export function useKanjiManager() {
         setShouldStopProcessing(false);
         stopRef.current = false;
         setProgress(0);
-        setTranslationStatus('📦 Lade alle Kanji für Verarbeitung...');
+        setTranslationStatus('� Starte Batch-Verarbeitung...');
 
         try {
-            // Load all kanji for the selected level
-            const allKanji = await loadAllKanjiForProcessing();
-
-            if (allKanji.length === 0) {
-                setTranslationStatus('❌ Keine Kanji gefunden.');
-                setIsProcessing(false);
-                return;
-            }
-
-            // Start processing with all kanji
-            await processTranslations(allKanji);
+            // Process kanji in batches to avoid loading all at once
+            await processBatchesSequentially();
 
         } catch (error) {
             console.error('Error starting processing:', error);
-            setTranslationStatus('❌ Fehler beim Laden der Kanji für Verarbeitung.');
+            setTranslationStatus('❌ Fehler beim Verarbeiten der Kanji.');
             setIsProcessing(false);
         }
+    };
+
+    // Process kanji in sequential batches
+    const processBatchesSequentially = async () => {
+        setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
+
+        let offset = 0;
+        let processedCount = 0;
+        let hasMore = true;
+        let batchNumber = 1;
+        const batchSize = TRANSLATION_BATCH_SIZE;
+
+        while (hasMore && !stopRef.current) {
+            try {
+                // Load next batch
+                setTranslationStatus(`📦 Lade Batch ${batchNumber} (Kanji ${offset + 1}-${offset + batchSize})...`);
+                const batchResult = await loadKanjiBatch(offset, batchSize);
+
+                // If no kanji in this batch, we're done
+                if (batchResult.kanji.length === 0) {
+                    console.log('No more kanji found, ending batch processing');
+                    break;
+                }
+
+                console.log(`Loaded batch ${batchNumber}: ${batchResult.kanji.length} kanji`);
+
+                // Filter selected kanji from this batch
+                const selectedKanji = batchResult.kanji.filter(k => k.selected);
+                console.log(`Selected kanji in batch ${batchNumber}: ${selectedKanji.length}`);
+
+                if (selectedKanji.length > 0) {
+                    // Process this batch
+                    await processTranslations(selectedKanji);
+                }
+
+                processedCount += batchResult.kanji.length;
+                offset += batchSize;
+                batchNumber++;
+
+                // Check if we have more based on actual returned data
+                hasMore = batchResult.kanji.length === batchSize && batchResult.hasMore;
+
+                // Update progress based on total count
+                if (batchResult.totalCount > 0) {
+                    const progressPercent = Math.min((processedCount / batchResult.totalCount) * 100, 100);
+                    setProgress(progressPercent);
+                }
+
+                // Add small delay between batches to avoid rate limiting
+                if (hasMore) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+            } catch (error) {
+                console.error('Error processing batch:', error);
+
+                // Check if it's a rate limit error (429)
+                if (error && typeof error === 'object' && 'response' in error &&
+                    error.response && typeof error.response === 'object' &&
+                    'status' in error.response && error.response.status === 429) {
+                    setTranslationStatus('⏳ Rate limit erreicht, warte 60 Sekunden...');
+                    await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+                    // Don't increment offset or batch number, try the same batch again
+                    continue;
+                } else {
+                    setTranslationStatus('❌ Fehler bei Batch-Verarbeitung.');
+                    break;
+                }
+            }
+        }
+
+        if (!stopRef.current) {
+            setTranslationStatus('✅ Alle Batches verarbeitet.');
+        }
+
+        setIsProcessing(false);
     };
 
     // Simplified process translations (now takes kanji as parameter)
