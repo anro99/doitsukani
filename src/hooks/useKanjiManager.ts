@@ -165,7 +165,7 @@ export function useKanjiManager() {
     const [isLoadingKanji, setIsLoadingKanji] = useState(false);
     const [apiError, setApiError] = useState<string>('');
     const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
-    const [selectedKanjiCount, setSelectedKanjiCount] = useState<number>(0); // Count of selected kanji for processing
+    const [selectedKanjiCount] = useState<number>(0); // Count of selected kanji for processing
 
     // Debug: Log every change to totalKanjiCount
     useEffect(() => {
@@ -667,16 +667,43 @@ export function useKanjiManager() {
     const processBatchesSequentially = async () => {
         setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
 
+        // Get the actual count of kanji for this level to calculate precise batch count
+        const batchSize = TRANSLATION_BATCH_SIZE;
+        let actualKanjiCount: number;
+        let actualTotalBatches: number;
+
+        try {
+            console.log(`🔍 Attempting to get kanji count for level: ${selectedLevel}`);
+            if (selectedLevel === 'all') {
+                actualKanjiCount = await getKanjiCount(apiToken);
+            } else {
+                actualKanjiCount = await getKanjiCount(apiToken, selectedLevel);
+            }
+
+            actualTotalBatches = Math.ceil(actualKanjiCount / batchSize);
+            console.log(`✅ Successfully got kanji count: ${actualKanjiCount}, calculated ${actualTotalBatches} total batches for level ${selectedLevel}`);
+
+        } catch (error) {
+            console.error('❌ Error getting kanji count, falling back to estimate:', error);
+            // Fallback: Use a reasonable estimate based on totalKanjiCount or a default
+            actualKanjiCount = totalKanjiCount || selectedKanjiCount || 100; // Use at least 100 as fallback
+            actualTotalBatches = Math.ceil(actualKanjiCount / batchSize);
+            console.log(`🔄 Using fallback: ${actualTotalBatches} estimated batches for ${actualKanjiCount} kanji (selectedKanjiCount: ${selectedKanjiCount}, totalKanjiCount: ${totalKanjiCount})`);
+        }
+
         let offset = 0;
-        let processedCount = 0;
+        let processedSelectedCount = 0; // Track processed selected kanji specifically
+        let totalSelectedFoundSoFar = 0; // Track total selected kanji found during processing
         let hasMore = true;
         let batchNumber = 1;
-        const batchSize = TRANSLATION_BATCH_SIZE;
+        let completedBatches = 0; // Track completed batches
+        let localUploadStats: UploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         while (hasMore && !stopRef.current) {
             try {
-                // Load next batch
-                setTranslationStatus(`📦 Lade Batch ${batchNumber} (Kanji ${offset + 1}-${offset + batchSize})...`);
+                // Show batch progress - use "?" if total batches is still unknown
+                const batchDisplay = actualTotalBatches > 0 ? `${batchNumber}/${actualTotalBatches}` : `${batchNumber}/?`;
+                setTranslationStatus(`📦 Lade Batch ${batchDisplay} (Kanji ${offset + 1}-${offset + batchSize})...`);
                 const batchResult = await loadKanjiBatch(offset, batchSize);
 
                 // If no kanji in this batch, we're done
@@ -685,31 +712,46 @@ export function useKanjiManager() {
                     break;
                 }
 
-                console.log(`Loaded batch ${batchNumber}: ${batchResult.kanji.length} kanji`);
+                console.log(`Loaded batch ${batchDisplay}: ${batchResult.kanji.length} kanji`);
 
                 // Filter selected kanji from this batch
                 const selectedKanji = batchResult.kanji.filter(k => k.selected);
-                console.log(`Selected kanji in batch ${batchNumber}: ${selectedKanji.length}`);
+                totalSelectedFoundSoFar += selectedKanji.length;
+                console.log(`Selected kanji in batch ${batchDisplay}: ${selectedKanji.length} (total selected so far: ${totalSelectedFoundSoFar})`);
 
                 if (selectedKanji.length > 0) {
-                    // Process this batch
-                    await processTranslations(selectedKanji);
+                    // Process this batch directly without calling the old processTranslations system
+                    const batchResult = await processBatch(
+                        selectedKanji,
+                        batchNumber - 1, // Convert to 0-based index
+                        actualTotalBatches,
+                        localUploadStats, // Use our local stats
+                        selectedKanji.length,
+                        processedSelectedCount
+                    );
+                    
+                    // Update local stats
+                    localUploadStats.created += batchResult.created;
+                    localUploadStats.updated += batchResult.updated;
+                    localUploadStats.failed += batchResult.failed;
+                    localUploadStats.skipped += batchResult.skipped;
+                    localUploadStats.successful += batchResult.successful;
+                    
+                    processedSelectedCount += selectedKanji.length;
                 }
 
-                processedCount += batchResult.kanji.length;
                 offset += batchSize;
+                completedBatches = batchNumber;
                 batchNumber++;
 
                 // Check if we have more based on actual returned data
                 hasMore = batchResult.kanji.length === batchSize && batchResult.hasMore;
 
-                // Update progress based on total count
-                if (batchResult.totalCount > 0) {
-                    const progressPercent = Math.min((processedCount / batchResult.totalCount) * 100, 100);
-                    setProgress(progressPercent);
-                }
-
-                // Add small delay between batches to avoid rate limiting
+                // Update progress based on total selected found so far (more accurate)
+                if (totalSelectedFoundSoFar > 0) {
+                    const progressPercent = Math.round((processedSelectedCount / totalSelectedFoundSoFar) * 100);
+                    setProgress(Math.min(progressPercent, 100));
+                }                // Add small delay between batches to avoid rate limiting
                 if (hasMore) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
@@ -721,109 +763,39 @@ export function useKanjiManager() {
                 if (error && typeof error === 'object' && 'response' in error &&
                     error.response && typeof error.response === 'object' &&
                     'status' in error.response && error.response.status === 429) {
-                    setTranslationStatus('⏳ Rate limit erreicht, warte 60 Sekunden...');
+                    setTranslationStatus(`⏳ Rate limit erreicht bei Batch ${batchNumber}, warte 60 Sekunden...`);
                     await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
                     // Don't increment offset or batch number, try the same batch again
                     continue;
                 } else {
-                    setTranslationStatus('❌ Fehler bei Batch-Verarbeitung.');
+                    setTranslationStatus(`❌ Fehler bei Batch ${batchNumber}.`);
                     break;
                 }
             }
         }
 
         if (!stopRef.current) {
-            setTranslationStatus('✅ Alle Batches verarbeitet.');
-        }
-
-        setIsProcessing(false);
-    };
-
-    // Simplified process translations (now takes kanji as parameter)
-    const processTranslations = async (kanji: Kanji[]) => {
-        setTranslationStatus('🚀 Starte Batch-Verarbeitung...');
-
-        setUploadStats({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });
-
-        const filteredKanjiData = kanji.filter(k => k.selected);
-
-        if (filteredKanjiData.length === 0) {
-            setTranslationStatus('❌ Keine ausgewählten Kanji gefunden.');
-            setIsProcessing(false);
-            return;
-        }
-
-        setSelectedKanjiCount(filteredKanjiData.length); // Update the count for UI display
-        setTranslationStatus(`📊 ${filteredKanjiData.length} ausgewählte Kanji gefunden. Starte Verarbeitung...`);
-
-        let localUploadStats: UploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
-
-        try {
-            // Create batches
-            const batches: Kanji[][] = [];
-            for (let i = 0; i < filteredKanjiData.length; i += TRANSLATION_BATCH_SIZE) {
-                batches.push(filteredKanjiData.slice(i, i + TRANSLATION_BATCH_SIZE));
-            }
-
-            const totalBatches = batches.length;
-            let processedItems = 0; // Track individual processed items
-
-            for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-                if (shouldStopProcessing || stopRef.current) {
-                    setTranslationStatus(`⏹️ Verarbeitung vom Benutzer gestoppt nach ${batchIndex} von ${totalBatches} Batches`);
-                    break;
-                }
-
-                const batch = batches[batchIndex];
-                const result = await processBatch(
-                    batch,
-                    batchIndex,
-                    totalBatches,
-                    localUploadStats,
-                    filteredKanjiData.length,
-                    processedItems
-                );
-
-                if ((result as any).stopped) {
-                    localUploadStats = { ...result };
-                    delete (localUploadStats as any).stopped;
-                    break;
-                }
-
-                localUploadStats = result;
-                processedItems += batch.length; // Update processed items count
-
-                // Progress is already updated in processBatch for each individual kanji
-                // No need to update it here again
-            }
-
-            // Final status
-            let statusMessage = `🎉 Verarbeitung abgeschlossen! ${localUploadStats.successful} von ${filteredKanjiData.length} Kanji verarbeitet`;
-
+            // Final status with summary
             const details: string[] = [];
             if (localUploadStats.created > 0) details.push(`${localUploadStats.created} erstellt`);
             if (localUploadStats.updated > 0) details.push(`${localUploadStats.updated} aktualisiert`);
             if (localUploadStats.failed > 0) details.push(`${localUploadStats.failed} fehlgeschlagen`);
             if (localUploadStats.skipped > 0) details.push(`${localUploadStats.skipped} übersprungen`);
 
+            let statusMessage = `🎉 Alle ${completedBatches} Batches erfolgreich verarbeitet! ${totalSelectedFoundSoFar} Kanji gefunden`;
             if (details.length > 0) {
                 statusMessage += ` (${details.join(', ')})`;
             }
-
             setTranslationStatus(statusMessage);
-            setUploadStatus(`✅ Abgeschlossen: ${details.join(', ')}`);
-
-        } catch (error) {
-            console.error('Error during batch processing:', error);
-            setTranslationStatus('❌ Fehler bei der Verarbeitung.');
-            setUploadStatus('❌ Verarbeitung abgebrochen.');
-        } finally {
-            setIsProcessing(false);
-            setProgress(0);
-            setSelectedKanjiCount(0); // Reset selected count after processing
+            setUploadStatus(`✅ Abgeschlossen: ${processedSelectedCount} von ${totalSelectedFoundSoFar} Kanji verarbeitet`);
+        } else {
+            setTranslationStatus(`⏹️ Verarbeitung vom Benutzer gestoppt bei Batch ${batchNumber}. ${totalSelectedFoundSoFar} Kanji verarbeitet.`);
         }
 
+        // Update final upload stats
         setUploadStats(localUploadStats);
+
+        setIsProcessing(false);
     };
 
     // Stop processing
@@ -839,8 +811,8 @@ export function useKanjiManager() {
         }
     }, [apiToken, selectedLevel]);
 
-    // Kanji count for display - use selected count during processing, otherwise total count
-    const kanjiCount = selectedKanjiCount > 0 ? selectedKanjiCount : (totalKanjiCount > 0 ? totalKanjiCount : filteredKanji.length);
+    // Kanji count for display - prioritize totalKanjiCount if available, it's more accurate
+    const kanjiCount = totalKanjiCount > 0 ? totalKanjiCount : (selectedKanjiCount > 0 ? selectedKanjiCount : filteredKanji.length);
 
     console.log('🔢 Kanji count calculation:', {
         totalKanjiCount,
