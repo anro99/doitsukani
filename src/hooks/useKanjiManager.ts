@@ -631,9 +631,8 @@ export function useKanjiManager() {
                 }
             }
 
-            // Update progress after each kanji (whether successful or failed)
-            const progressPercent = (currentItemIndex / totalKanjiCount) * 100;
-            setProgress(Math.round(progressPercent));
+            // Progress will be updated at batch level, not individual kanji level
+            // This prevents reaching 100% after first batch
         }
 
         return localUploadStats;
@@ -729,14 +728,16 @@ export function useKanjiManager() {
                         selectedKanji.length,
                         processedSelectedCount
                     );
-                    
-                    // Update local stats
-                    localUploadStats.created += batchResult.created;
-                    localUploadStats.updated += batchResult.updated;
-                    localUploadStats.failed += batchResult.failed;
-                    localUploadStats.skipped += batchResult.skipped;
-                    localUploadStats.successful += batchResult.successful;
-                    
+
+                    // Update local stats if batch processing successful
+                    if ('created' in batchResult) {
+                        localUploadStats.created += batchResult.created;
+                        localUploadStats.updated += batchResult.updated;
+                        localUploadStats.failed += batchResult.failed;
+                        localUploadStats.skipped += batchResult.skipped;
+                        localUploadStats.successful += batchResult.successful;
+                    }
+
                     processedSelectedCount += selectedKanji.length;
                 }
 
@@ -747,11 +748,11 @@ export function useKanjiManager() {
                 // Check if we have more based on actual returned data
                 hasMore = batchResult.kanji.length === batchSize && batchResult.hasMore;
 
-                // Update progress based on total selected found so far (more accurate)
-                if (totalSelectedFoundSoFar > 0) {
-                    const progressPercent = Math.round((processedSelectedCount / totalSelectedFoundSoFar) * 100);
-                    setProgress(Math.min(progressPercent, 100));
-                }                // Add small delay between batches to avoid rate limiting
+                // Update progress based on batch completion vs total expected batches
+                const batchProgress = Math.round((completedBatches / actualTotalBatches) * 100);
+                setProgress(Math.min(batchProgress, 100));
+
+                console.log(`📊 Progress update: Batch ${completedBatches}/${actualTotalBatches} = ${batchProgress}%`);                // Add small delay between batches to avoid rate limiting
                 if (hasMore) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
@@ -775,6 +776,9 @@ export function useKanjiManager() {
         }
 
         if (!stopRef.current) {
+            // Set final progress to 100%
+            setProgress(100);
+
             // Final status with summary
             const details: string[] = [];
             if (localUploadStats.created > 0) details.push(`${localUploadStats.created} erstellt`);
