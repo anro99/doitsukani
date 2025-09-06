@@ -46,7 +46,8 @@ describe("DeepL Capitalization Fix", () => {
                 headers: {
                     "Authorization": "DeepL-Auth-Key test-key",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 30000
             }
         );
     });
@@ -75,7 +76,8 @@ describe("DeepL Capitalization Fix", () => {
                 headers: {
                     "Authorization": "DeepL-Auth-Key test-key",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 30000
             }
         );
     });
@@ -104,7 +106,8 @@ describe("DeepL Capitalization Fix", () => {
                 headers: {
                     "Authorization": "DeepL-Auth-Key test-key",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 30000
             }
         );
     });
@@ -139,7 +142,8 @@ describe("DeepL Capitalization Fix", () => {
                 headers: {
                     "Authorization": "DeepL-Auth-Key test-key",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 30000
             }
         );
 
@@ -154,7 +158,8 @@ describe("DeepL Capitalization Fix", () => {
                 headers: {
                     "Authorization": "DeepL-Auth-Key test-key",
                     "Content-Type": "application/json"
-                }
+                },
+                timeout: 30000
             }
         );
     });

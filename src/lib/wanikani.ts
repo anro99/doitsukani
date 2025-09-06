@@ -720,6 +720,9 @@ export const getKanji = async (
   // If limit is specified, use single page request instead of getDataPages
   if (options?.limit) {
     const limiter = new Bottleneck(API_LIMITS);
+
+    console.log(`🌐 getKanji making API call with URL: https://api.wanikani.com/v2/${api}`);
+
     const response = await limiter.schedule(() =>
       axios.get(`https://api.wanikani.com/v2/${api}`, {
         headers: {
@@ -728,7 +731,17 @@ export const getKanji = async (
       })
     );
     const collection = response.data as WKCollection;
+
+    console.log(`🔍 API response: ${collection.data.length} kanji returned, limit was ${options.limit}`);
+    console.log(`🔍 Collection metadata:`, {
+      total_count: collection.total_count,
+      pages: collection.pages,
+      data_length: collection.data.length
+    });
+
     const limitedKanji = collection.data.slice(0, options.limit);
+
+    console.log(`🔍 After limiting: returning ${limitedKanji.length} kanji`);
 
     return limitedKanji as WKKanji[];
   }
