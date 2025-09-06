@@ -291,7 +291,7 @@ export function useKanjiManager() {
 
     // Load kanji in batches using WaniKani's dynamic batch sizing
     const loadKanjiBatch = async (
-        nextUrl: string | null = null
+        nextUrl: string | null = nullt
     ): Promise<{ kanji: Kanji[], hasMore: boolean, totalCount: number, nextUrl: string | null, actualBatchSize?: number }> => {
         try {
             const currentLevel = selectedLevel === 'all' ? null : selectedLevel.toString();
@@ -582,8 +582,7 @@ export function useKanjiManager() {
         totalBatches: number,
         localUploadStats: UploadStats,
         totalKanjiCount: number,
-        processedSoFar: number,
-        updateProgress?: (processedCount: number, totalCount: number) => void
+        processedSoFar: number
     ) => {
         const batchSize = batch.length;
         setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Kanji)...`);
@@ -620,11 +619,6 @@ export function useKanjiManager() {
 
                 setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
                 localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
-
-                // Update progress after each kanji is processed
-                if (updateProgress) {
-                    updateProgress(currentItemIndex, totalKanjiCount);
-                }
 
             } else {
                 // Translation modes - now handles Primary + Alternative meanings
@@ -668,11 +662,6 @@ export function useKanjiManager() {
 
                     setUploadStatus(`📤 Batch ${batchIndex + 1}: Lade ${currentItemIndex}/${totalKanjiCount}: ${kanji.primaryMeaning}...`);
                     localUploadStats = await uploadSingleKanjiWithRetry(result, localUploadStats);
-
-                    // Update progress after each kanji is processed
-                    if (updateProgress) {
-                        updateProgress(currentItemIndex, totalKanjiCount);
-                    }
 
                 } catch (error) {
                     console.error(`Translation failed for ${kanji.primaryMeaning}:`, error);
@@ -785,24 +774,17 @@ export function useKanjiManager() {
                 console.log(`Selected kanji in batch ${batchDisplay}: ${selectedKanji.length} (total selected so far: ${totalSelectedFoundSoFar})`);
 
                 if (selectedKanji.length > 0) {
-                    // totalSelectedFoundSoFar already includes the current batch (updated on line 769)
-                    // so we use it directly without adding selectedKanji.length again
-
                     // Process this batch directly
                     const batchResult = await processBatch(
                         selectedKanji,
                         batchNumber - 1, // Convert to 0-based index
                         estimatedTotalBatches,
                         localUploadStats, // Use our local stats
-                        totalSelectedFoundSoFar, // Use the already updated total
-                        processedSelectedCount,
-                        (processedCount: number, totalCount: number) => {
-                            // Calculate progress based on processed vs total selected kanji
-                            const progressPct = Math.round((processedCount / totalCount) * 100);
-                            setProgress(Math.min(progressPct, 99)); // Cap at 99% until all batches complete
-                            console.log(`📊 Kanji Progress: ${processedCount}/${totalCount} selected kanji (${progressPct}%)`);
-                        }
-                    );                    // Update local stats if batch processing successful
+                        selectedKanji.length,
+                        processedSelectedCount
+                    );
+
+                    // Update local stats if batch processing successful
                     if ('created' in batchResult) {
                         localUploadStats.created += batchResult.created;
                         localUploadStats.updated += batchResult.updated;
@@ -830,8 +812,13 @@ export function useKanjiManager() {
                     finalHasMore: hasMore
                 });
 
-                // Progress is now updated per-kanji, not per-batch
-                console.log(`📊 Batch ${completedBatches}/${estimatedTotalBatches} completed (progress tracked per-kanji)`);
+                // Update progress based on batch completion vs estimated total batches
+                const batchProgress = hasMore ?
+                    Math.round((completedBatches / estimatedTotalBatches) * 100) :
+                    100; // 100% if no more batches
+                setProgress(Math.min(batchProgress, 100));
+
+                console.log(`📊 Progress update: Batch ${completedBatches}/${estimatedTotalBatches} completed, estimated progress: ${batchProgress}%`);
 
                 // Add small delay between batches to avoid rate limiting
                 if (hasMore) {
@@ -888,10 +875,10 @@ export function useKanjiManager() {
                 }
             }
 
-            // Final status with summary - use correct counts (not double-counted values)
+            // Final status with summary
             const details: string[] = [];
             if (localUploadStats.created > 0) details.push(`${localUploadStats.created} erstellt`);
-            if (processedSelectedCount > 0) details.push(`${processedSelectedCount} aktualisiert`);
+            if (localUploadStats.updated > 0) details.push(`${localUploadStats.updated} aktualisiert`);
             if (localUploadStats.failed > 0) details.push(`${localUploadStats.failed} fehlgeschlagen`);
             if (localUploadStats.skipped > 0) details.push(`${localUploadStats.skipped} übersprungen`);
 
@@ -908,12 +895,8 @@ export function useKanjiManager() {
             setTranslationStatus(`⏹️ Verarbeitung vom Benutzer gestoppt bei Batch ${batchNumber}. ${totalSelectedFoundSoFar} Kanji verarbeitet.`);
         }
 
-        // Update final upload stats with corrected values
-        const correctedUploadStats = {
-            ...localUploadStats,
-            updated: processedSelectedCount // Use correct count instead of double-counted value
-        };
-        setUploadStats(correctedUploadStats);
+        // Update final upload stats
+        setUploadStats(localUploadStats);
 
         setIsProcessing(false);
     };
