@@ -15,7 +15,7 @@ import axios from 'axios';
 
 // Constants
 const TRANSLATION_BATCH_SIZE = 25;
-const MAX_SYNONYMS_WANIKANI = 8; // WaniKani API limit for synonyms
+const MAX_SYNONYMS_WANIKANI = 8; // WaniKani limit for synonyms
 const MAX_SYNONYM_BYTES = 63; // WaniKani has 64 byte limit, using 63 for minimal safety margin
 
 /**
@@ -167,11 +167,6 @@ export function useKanjiManager() {
     const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
     const [selectedKanjiCount] = useState<number>(0); // Count of selected kanji for processing
 
-    // Debug: Log every change to totalKanjiCount
-    useEffect(() => {
-        console.log('🔄 totalKanjiCount changed to:', totalKanjiCount);
-    }, [totalKanjiCount]);
-
     // Handle token changes
     const handleApiTokenChange = (token: string) => {
         setApiToken(token);
@@ -245,12 +240,8 @@ export function useKanjiManager() {
     const loadKanjiCount = async () => {
         try {
             const level = selectedLevel === 'all' ? undefined : selectedLevel;
-            console.log('🔍 Loading kanji count for level:', level);
             const count = await getKanjiCount(apiToken, level);
-            console.log('📊 Received kanji count:', count, 'for level:', level);
-            console.log('🔄 Setting totalKanjiCount to:', count);
             setTotalKanjiCount(count);
-            console.log('✅ totalKanjiCount should now be:', count);
         } catch (error) {
             console.error('Error loading kanji count:', error);
             setTotalKanjiCount(0);
@@ -296,12 +287,8 @@ export function useKanjiManager() {
         try {
             const currentLevel = selectedLevel === 'all' ? null : selectedLevel.toString();
 
-            console.log(`🚀 [BATCH] Loading batch for level: ${currentLevel || 'all'}`);
-
             // If we have a next URL, follow WaniKani's pagination
             if (nextUrl) {
-                console.log(`🔗 [PAGINATION] Using WaniKani pagination: ${nextUrl.substring(0, 100)}...`);
-
                 const response = await axios.get(nextUrl, {
                     headers: { Authorization: `Bearer ${apiToken}` }
                 });
@@ -310,10 +297,6 @@ export function useKanjiManager() {
 
                 // Use WaniKani's dynamic batch size from per_page
                 const actualBatchSize = collection.pages.per_page;
-                console.log(`📊 [DYNAMIC BATCH] WaniKani per_page: ${actualBatchSize}, Got: ${collection.data.length} kanji`);
-                console.log(`📄 [PAGINATION] Total: ${collection.total_count}, Has next: ${!!collection.pages.next_url}`);
-
-                // Get study materials for this batch
                 const subjectIds = collection.data.map((k: any) => k.id.toString()).join(',');
                 const studyMaterialsData = subjectIds ? await getKanjiStudyMaterials(apiToken, undefined, {
                     subject_ids: subjectIds
@@ -331,8 +314,6 @@ export function useKanjiManager() {
             }
 
             // First batch - make initial request and use WaniKani's batch size
-            console.log(`🌐 [FIRST BATCH] Making initial request for level: ${currentLevel || 'all'}`);
-
             const params = new URLSearchParams();
             params.append('types', 'kanji');
 
@@ -341,7 +322,6 @@ export function useKanjiManager() {
             }
 
             const url = `https://api.wanikani.com/v2/subjects?${params.toString()}`;
-            console.log(`🌐 [INITIAL REQUEST] ${url}`);
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${apiToken}` }
@@ -351,13 +331,6 @@ export function useKanjiManager() {
 
             // Use WaniKani's dynamic batch size
             const actualBatchSize = collection.pages.per_page;
-            console.log(`📊 [DYNAMIC BATCH] WaniKani batch size (per_page): ${actualBatchSize}`);
-            console.log(`📄 [FIRST BATCH] Got: ${collection.data.length} kanji, Total: ${collection.total_count}`);
-            console.log(`🔗 [PAGINATION] Has next: ${!!collection.pages.next_url}`);
-
-            // Calculate how many batches we'll have based on WaniKani's batch size
-            const totalBatches = Math.ceil(collection.total_count / actualBatchSize);
-            console.log(`🧮 [BATCH CALCULATION] Estimated batches: ${totalBatches} (based on per_page: ${actualBatchSize})`);
 
             // Get study materials for this first batch
             const subjectIds = collection.data.map((k: any) => k.id.toString()).join(',');
@@ -367,8 +340,6 @@ export function useKanjiManager() {
 
             // Convert to internal format
             const convertedKanji = convertToInternalFormat(collection.data as WKKanji[], studyMaterialsData);
-
-            console.log(`✅ [FIRST BATCH SUCCESS] Processed ${convertedKanji.length} kanji`);
 
             return {
                 kanji: convertedKanji,
@@ -750,7 +721,6 @@ export function useKanjiManager() {
                     lastActualBatchSize = batchResult.actualBatchSize;
                     // Update estimated total batches based on WaniKani's actual batch size
                     estimatedTotalBatches = Math.ceil(batchResult.totalCount / lastActualBatchSize);
-                    console.log(`📊 [DYNAMIC UPDATE] WaniKani batch size: ${lastActualBatchSize}, Revised total batches: ${estimatedTotalBatches}`);
                 }
 
                 // Update nextUrl for next iteration
@@ -758,11 +728,8 @@ export function useKanjiManager() {
 
                 // If no kanji in this batch, we're done
                 if (batchResult.kanji.length === 0) {
-                    console.log('No more kanji found, ending batch processing');
                     break;
                 }
-
-                console.log(`Loaded dynamic batch ${batchDisplay}: ${batchResult.kanji.length} kanji`);
 
                 // Filter selected kanji from this batch
                 const selectedKanji = batchResult.kanji.filter(k => k.selected);
@@ -781,9 +748,6 @@ export function useKanjiManager() {
                 // Add current batch IDs to our tracking set
                 currentBatchIds.forEach(id => allProcessedIds.add(id));
 
-                console.log(`📊 Total unique IDs so far: ${allProcessedIds.size}, Total kanji processed: ${allProcessedKanji.length}`);
-                console.log(`Selected kanji in batch ${batchDisplay}: ${selectedKanji.length} (total selected so far: ${totalSelectedFoundSoFar})`);
-
                 if (selectedKanji.length > 0) {
                     // totalSelectedFoundSoFar already includes the current batch (updated on line 769)
                     // so we use it directly without adding selectedKanji.length again
@@ -800,7 +764,6 @@ export function useKanjiManager() {
                             // Calculate progress based on processed vs total selected kanji
                             const progressPct = Math.round((processedCount / totalCount) * 100);
                             setProgress(Math.min(progressPct, 99)); // Cap at 99% until all batches complete
-                            console.log(`📊 Kanji Progress: ${processedCount}/${totalCount} selected kanji (${progressPct}%)`);
                         }
                     );                    // Update local stats if batch processing successful
                     if ('created' in batchResult) {
@@ -820,18 +783,6 @@ export function useKanjiManager() {
 
                 // Check if we have more based on WaniKani's response
                 hasMore = batchResult.hasMore;
-
-                console.log(`🔍 Batch ${completedBatches} complete. hasMore check:`, {
-                    kanjiLength: batchResult.kanji.length,
-                    actualBatchSize: lastActualBatchSize,
-                    apiHasMore: batchResult.hasMore,
-                    completedBatches,
-                    estimatedTotalBatches,
-                    finalHasMore: hasMore
-                });
-
-                // Progress is now updated per-kanji, not per-batch
-                console.log(`📊 Batch ${completedBatches}/${estimatedTotalBatches} completed (progress tracked per-kanji)`);
 
                 // Add small delay between batches to avoid rate limiting
                 if (hasMore) {
@@ -860,18 +811,6 @@ export function useKanjiManager() {
             // Set final progress to 100%
             setProgress(100);
 
-            // Analyze all processed kanji by level
-            const levelAnalysis = allProcessedKanji.reduce((acc, kanji) => {
-                acc[kanji.level] = (acc[kanji.level] || 0) + 1;
-                return acc;
-            }, {} as Record<number, number>);
-
-            console.log(`📊 FINAL ANALYSIS: Processed ${allProcessedKanji.length} total kanji across ${completedBatches} dynamic batches`);
-            console.log(`🔍 Level distribution of ALL processed kanji:`, levelAnalysis);
-            if (lastActualBatchSize) {
-                console.log(`📏 WaniKani verwendet dynamische Batch-Größe: ${lastActualBatchSize} Elemente pro Seite`);
-            }
-
             if (selectedLevel !== 'all') {
                 const expectedLevel = selectedLevel;
                 const wrongLevelKanji = allProcessedKanji.filter(k => k.level !== expectedLevel);
@@ -883,8 +822,6 @@ export function useKanjiManager() {
                         level: k.level,
                         expected: expectedLevel
                     })));
-                } else {
-                    console.log(`✅ All processed kanji are from the correct level (${expectedLevel})`);
                 }
             }
 
@@ -933,14 +870,6 @@ export function useKanjiManager() {
 
     // Kanji count for display - prioritize totalKanjiCount if available, it's more accurate
     const kanjiCount = totalKanjiCount > 0 ? totalKanjiCount : (selectedKanjiCount > 0 ? selectedKanjiCount : filteredKanji.length);
-
-    console.log('🔢 Kanji count calculation:', {
-        totalKanjiCount,
-        selectedKanjiCount,
-        filteredKanjiLength: filteredKanji.length,
-        selectedLevel,
-        finalKanjiCount: kanjiCount
-    });
 
     return {
         // Settings

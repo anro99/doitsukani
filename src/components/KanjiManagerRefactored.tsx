@@ -39,10 +39,6 @@ export const KanjiManagerRefactored: React.FC = () => {
     } = useKanjiManager();
 
     const handleStartProcessing = () => {
-        console.log('🚀 DEBUG: handleStartProcessing called');
-        console.log('🚀 DEBUG: filteredKanji.length:', filteredKanji.length);
-        console.log('🚀 DEBUG: apiToken exists:', !!apiToken);
-        console.log('🚀 DEBUG: deeplToken exists:', !!deeplToken);
         processTranslations(); // No parameter needed - loads all kanji internally
     };
 

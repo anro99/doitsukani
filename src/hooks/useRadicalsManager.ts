@@ -224,7 +224,6 @@ export function useRadicalsManager() {
                 subject_ids: subjectIds
             });
             setStudyMaterials(materials);
-            console.log('🔧 DEBUG: Study materials refreshed successfully');
         } catch (error) {
             console.error('Error refreshing study materials:', error);
         }
@@ -235,7 +234,6 @@ export function useRadicalsManager() {
         setPreviewRadicals(prevPreview =>
             prevPreview.map(previewRadical => {
                 if (previewRadical.id === radicalId) {
-                    console.log(`🔄 Updating preview for radical ${radicalId} with ${newSynonyms.length} new synonyms`);
                     return {
                         ...previewRadical,
                         currentSynonyms: newSynonyms
@@ -356,7 +354,6 @@ export function useRadicalsManager() {
 
                 // Skip radicals that already have no synonyms
                 if (!radical.currentSynonyms || radical.currentSynonyms.length === 0) {
-                    console.log(`⏭️ DEBUG: Skipping ${radical.meaning} - already has no synonyms`);
                     localUploadStats.skipped++;
                     localUploadStats.successful++;
                     continue;
@@ -544,7 +541,6 @@ export function useRadicalsManager() {
 
             // Auto-refresh study materials after processing
             if (localUploadStats.created > 0 || localUploadStats.updated > 0) {
-                console.log('🔧 DEBUG: Auto-refreshing study materials after successful uploads');
                 await refreshStudyMaterials();
             }
 
@@ -558,7 +554,6 @@ export function useRadicalsManager() {
 
     // Stop processing function
     const stopProcessing = () => {
-        console.log('🛑 STOP: User clicked stop button');
         setShouldStopProcessing(true);
         stopRef.current = true;
         setIsProcessing(false);
@@ -566,8 +561,6 @@ export function useRadicalsManager() {
         // Set status messages to indicate stopping
         setTranslationStatus('⏹️ Stoppe Verarbeitung...');
         setUploadStatus('⏹️ Verarbeitung gestoppt');
-
-        console.log('🛑 STOP: All flags set');
     };
 
     // Load radical count when level changes (simplified - only current level)
@@ -577,11 +570,9 @@ export function useRadicalsManager() {
 
             // If we're already loading, don't start again
             if (currentLevelCountLoading) {
-                console.log('Count already loading...');
                 return;
             }
 
-            console.log(`Loading count for level ${selectedLevel}...`);
             setCurrentLevelCountLoading(true);
 
             try {
@@ -591,7 +582,6 @@ export function useRadicalsManager() {
                 );
 
                 setCurrentLevelCount(count);
-                console.log(`Loaded ${count} radicals for level ${selectedLevel}`);
 
             } catch (error) {
                 console.error(`Error loading count for level ${selectedLevel}:`, error);
@@ -609,8 +599,6 @@ export function useRadicalsManager() {
         const loadPreviewRadicals = async () => {
             if (!apiToken) return;
 
-            console.log(`Loading preview radicals for level ${selectedLevel}...`);
-
             try {
                 const preview = await getRadicalsPreview(
                     apiToken,
@@ -621,7 +609,6 @@ export function useRadicalsManager() {
                 // Also load study materials for the preview radicals to show synonyms
                 let previewStudyMaterials: WKStudyMaterial[] = [];
                 if (preview.length > 0) {
-                    console.log('Loading study materials for preview radicals...');
                     previewStudyMaterials = await getRadicalStudyMaterials(apiToken);
                 }
 
@@ -646,7 +633,6 @@ export function useRadicalsManager() {
                 });
 
                 setPreviewRadicals(convertedPreview);
-                console.log(`Loaded ${convertedPreview.length} preview radicals for level ${selectedLevel}`);
 
             } catch (error) {
                 console.error('Error loading preview radicals:', error);
@@ -661,8 +647,6 @@ export function useRadicalsManager() {
     useEffect(() => {
         const updatePreviewWithLatestSynonyms = () => {
             if (previewRadicals.length === 0 || studyMaterials.length === 0) return;
-
-            console.log('🔄 Updating preview radicals with latest synonyms...');
 
             // Check if any synonyms actually changed to avoid unnecessary updates
             let hasChanges = false;
@@ -690,7 +674,6 @@ export function useRadicalsManager() {
             // Only update if there are actual changes
             if (hasChanges) {
                 setPreviewRadicals(updatedPreview);
-                console.log('✅ Preview radicals updated with latest synonyms');
             }
         };
 
