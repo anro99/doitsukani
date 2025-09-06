@@ -67,28 +67,28 @@ describe('Progress Statistics Integration Tests', () => {
             // Specific test for exactly 2 batches scenario
             const totalKanji = 30;
             const batchSize = 16; // This will create exactly 2 batches: 16 + 14
-            
-            const progressUpdates: Array<{ 
-                batchNumber: number; 
-                kanjiProcessed: number; 
-                totalSoFar: number; 
+
+            const progressUpdates: Array<{
+                batchNumber: number;
+                kanjiProcessed: number;
+                totalSoFar: number;
                 percentage: number;
                 displayText: string;
             }> = [];
-            
+
             let totalProcessed = 0;
             const numberOfBatches = Math.ceil(totalKanji / batchSize);
-            
+
             // Simulate processing exactly 2 batches
             for (let batchIndex = 0; batchIndex < numberOfBatches; batchIndex++) {
                 const kanjiInThisBatch = Math.min(batchSize, totalKanji - totalProcessed);
-                
+
                 // Process each kanji in this batch individually
                 for (let kanjiInBatch = 1; kanjiInBatch <= kanjiInThisBatch; kanjiInBatch++) {
                     totalProcessed++;
                     const percentage = Math.round((totalProcessed / totalKanji) * 100);
                     const displayText = `${totalProcessed}/${totalKanji}`;
-                    
+
                     progressUpdates.push({
                         batchNumber: batchIndex + 1,
                         kanjiProcessed: kanjiInBatch,
@@ -98,10 +98,10 @@ describe('Progress Statistics Integration Tests', () => {
                     });
                 }
             }
-            
+
             // Verify we have exactly 2 batches
             expect(numberOfBatches).toBe(2);
-            
+
             // Verify first batch (16 kanji)
             const firstBatchUpdates = progressUpdates.filter(u => u.batchNumber === 1);
             expect(firstBatchUpdates).toHaveLength(16);
@@ -119,7 +119,7 @@ describe('Progress Statistics Integration Tests', () => {
                 percentage: 53, // 16/30 = 53.33% → 53%
                 displayText: '16/30'
             });
-            
+
             // Verify second batch (14 kanji)
             const secondBatchUpdates = progressUpdates.filter(u => u.batchNumber === 2);
             expect(secondBatchUpdates).toHaveLength(14);
@@ -137,12 +137,12 @@ describe('Progress Statistics Integration Tests', () => {
                 percentage: 100, // 30/30 = 100%
                 displayText: '30/30'
             });
-            
+
             // Final verification
             expect(totalProcessed).toBe(30);
             expect(totalProcessed).not.toBe(60); // No double counting
             expect(progressUpdates).toHaveLength(30); // One update per kanji
-            
+
             // Final statistics should be correct
             const finalStats = {
                 created: 0,
@@ -151,11 +151,11 @@ describe('Progress Statistics Integration Tests', () => {
                 skipped: 0,
                 successful: totalProcessed
             };
-            
+
             expect(finalStats.updated).toBe(30);
             expect(finalStats.updated).not.toBe(60);
             expect(finalStats.successful).toBe(30);
-            
+
             // Verify no display text shows doubled values
             progressUpdates.forEach(update => {
                 expect(update.displayText).not.toContain('/60');
