@@ -1,17 +1,23 @@
 import {
-  WKAssignment,
-  WKCollection,
-  WKKanji,
-  WKRadical,
-  WKStudyMaterial,
-  WKSubject,
-  WKVocabulary,
-} from "../types/wanikani-legacy";
+  Assignment,
+  Subject,
+  StudyMaterial,
+  SubjectCollection,
+} from "@bachman-dev/wanikani-api-types";
 import axios from "axios";
 import Bottleneck from "bottleneck";
 import { SetProgress } from "./progressreporter";
 
 import translationsJson from "../translations.json";
+
+// Type aliases for compatibility with existing code
+type WKAssignment = Assignment;
+type WKCollection = SubjectCollection;
+type WKKanji = Subject & { object: 'kanji' };
+type WKRadical = Subject & { object: 'radical' };
+type WKVocabulary = Subject & { object: 'vocabulary' };
+type WKSubject = Subject;
+type WKStudyMaterial = StudyMaterial;
 
 type Translations = {
   [key: string]: string[];

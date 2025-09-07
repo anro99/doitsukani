@@ -7,11 +7,14 @@ import {
   oldMaterialRequiringUpdate,
 } from "../../lib/wanikani";
 import {
-  WKDatableString,
-  WKStudyMaterial,
-} from "../../types/wanikani-legacy";
+  DatableString,
+  StudyMaterial,
+} from "@bachman-dev/wanikani-api-types";
 
-const createMaterial = (id: number, synonyms: string[]): WKStudyMaterial => {
+// Type aliases for compatibility
+type WKDatableString = DatableString;
+
+const createMaterial = (id: number, synonyms: string[]): StudyMaterial => {
   return {
     object: "study_material",
     id: 4711,
@@ -23,8 +26,8 @@ const createMaterial = (id: number, synonyms: string[]): WKStudyMaterial => {
       created_at: "" as WKDatableString,
       hidden: false,
       subject_type: "kana_vocabulary",
-      meaning_note: null,
-      reading_note: null,
+      meaning_note: "",
+      reading_note: "",
     },
   };
 };
@@ -56,7 +59,7 @@ describe("Material synchronsation", () => {
   });
 
   it("should determine new materials with empty existing materials", () => {
-    const oldM: WKStudyMaterial[] = [];
+    const oldM: StudyMaterial[] = [];
     const newM = [
       { subject: 1, synonyms: [] },
       { subject: 2, synonyms: [] },

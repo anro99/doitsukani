@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { WKKanji, WKStudyMaterial, WKCollection } from '../types/wanikani-legacy';
+import { Subject, StudyMaterial, SubjectCollection } from '@bachman-dev/wanikani-api-types';
 import {
     getKanjiStudyMaterials,
     updateKanjiSynonyms,
@@ -9,6 +9,11 @@ import {
 } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
+
+// Type aliases for better readability
+type KanjiSubject = Subject & { object: 'kanji' };
+type StudyMaterialsCollection = SubjectCollection;
+type WKCollection = SubjectCollection; // Compatibility alias
 import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../lib/storage';
 import Bottleneck from 'bottleneck';
 import axios from 'axios';
@@ -160,8 +165,8 @@ export function useKanjiManager() {
     });
 
     // Simplified API state (same as radicals)
-    const [wkKanji, setWkKanji] = useState<WKKanji[]>([]);
-    const [studyMaterials, setStudyMaterials] = useState<WKStudyMaterial[]>([]);
+    const [wkKanji, setWkKanji] = useState<KanjiSubject[]>([]);
+    const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([]);
     const [isLoadingKanji, setIsLoadingKanji] = useState(false);
     const [apiError, setApiError] = useState<string>('');
     const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
@@ -191,8 +196,8 @@ export function useKanjiManager() {
     };
 
     // Convert Wanikani kanji to internal format (simplified)
-    const convertToInternalFormat = (wkKanji: WKKanji[], studyMaterials: WKStudyMaterial[]): Kanji[] => {
-        const studyMaterialsMap = new Map<number, WKStudyMaterial>();
+    const convertToInternalFormat = (wkKanji: KanjiSubject[], studyMaterials: StudyMaterial[]): Kanji[] => {
+        const studyMaterialsMap = new Map<number, StudyMaterial>();
         studyMaterials?.forEach(sm => {
             if (sm?.data?.subject_id) {
                 studyMaterialsMap.set(sm.data.subject_id, sm);
@@ -293,7 +298,7 @@ export function useKanjiManager() {
                     headers: { Authorization: `Bearer ${apiToken}` }
                 });
 
-                const collection = response.data as WKCollection;
+                const collection = response.data as StudyMaterialsCollection;
 
                 // Use WaniKani's dynamic batch size from per_page
                 const actualBatchSize = collection.pages.per_page;
@@ -302,7 +307,7 @@ export function useKanjiManager() {
                     subject_ids: subjectIds
                 }) : [];
 
-                const convertedKanji = convertToInternalFormat(collection.data as WKKanji[], studyMaterialsData);
+                const convertedKanji = convertToInternalFormat(collection.data as KanjiSubject[], studyMaterialsData);
 
                 return {
                     kanji: convertedKanji,
@@ -339,7 +344,7 @@ export function useKanjiManager() {
             }) : [];
 
             // Convert to internal format
-            const convertedKanji = convertToInternalFormat(collection.data as WKKanji[], studyMaterialsData);
+            const convertedKanji = convertToInternalFormat(collection.data as KanjiSubject[], studyMaterialsData);
 
             return {
                 kanji: convertedKanji,

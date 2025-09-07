@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { WKRadical, WKStudyMaterial } from '../types/wanikani-legacy';
+import { Subject, StudyMaterial } from '@bachman-dev/wanikani-api-types';
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms, getRadicalCount, getRadicalsPreview } from '../lib/wanikani';
+
+// Type alias for better readability
+type RadicalSubject = Subject & { object: 'radical' };
+type WKStudyMaterial = StudyMaterial; // Compatibility alias
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';
 import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../lib/storage';
@@ -121,8 +125,8 @@ export function useRadicalsManager() {
     });
 
     // API state
-    const [wkRadicals, setWkRadicals] = useState<WKRadical[]>([]);
-    const [studyMaterials, setStudyMaterials] = useState<WKStudyMaterial[]>([]);
+    const [wkRadicals, setWkRadicals] = useState<RadicalSubject[]>([]);
+    const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([]);
 
     // New state for optimized loading - simplified: only current level
     const [currentLevelCount, setCurrentLevelCount] = useState<number | undefined>(undefined);
@@ -155,8 +159,8 @@ export function useRadicalsManager() {
     };
 
     // Convert Wanikani radicals to internal format
-    const convertToInternalFormat = (wkRadicals: WKRadical[], studyMaterials: WKStudyMaterial[]): Radical[] => {
-        const studyMaterialsMap = new Map<number, WKStudyMaterial>();
+    const convertToInternalFormat = (wkRadicals: RadicalSubject[], studyMaterials: StudyMaterial[]): Radical[] => {
+        const studyMaterialsMap = new Map<number, StudyMaterial>();
         studyMaterials?.forEach(sm => {
             if (sm?.data?.subject_id) {
                 studyMaterialsMap.set(sm.data.subject_id, sm);

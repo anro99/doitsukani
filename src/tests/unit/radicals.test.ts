@@ -1,12 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import axios from "axios";
 import {
-    WKRadical,
-    WKStudyMaterial,
-    WKCollection,
-    WKDatableString,
-    WKLevel,
-} from "../../types/wanikani-legacy";
+    Subject,
+    StudyMaterial,
+    SubjectCollection,
+    DatableString,
+    Level,
+} from "@bachman-dev/wanikani-api-types";
+
+// Type aliases for compatibility  
+type WKRadical = Subject & { object: 'radical' };
+type WKStudyMaterial = Omit<StudyMaterial, 'data'> & {
+    data: Omit<StudyMaterial['data'], 'meaning_note' | 'reading_note'> & {
+        meaning_note: string | null;
+        reading_note: string | null;
+    };
+};
+type WKCollection = SubjectCollection;
+type WKDatableString = DatableString;
+type WKLevel = Level;
 
 // For now we'll create mock functions that we'll implement later
 const getRadicals = vi.fn();
