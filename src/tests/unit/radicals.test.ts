@@ -6,7 +6,7 @@ import {
     WKCollection,
     WKDatableString,
     WKLevel,
-} from "@bachmacintosh/wanikani-api-types";
+} from "@bachman-dev/wanikani-api-types";
 
 // For now we'll create mock functions that we'll implement later
 const getRadicals = vi.fn();

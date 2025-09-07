@@ -6,7 +6,7 @@ import {
   WKStudyMaterial,
   WKSubject,
   WKVocabulary,
-} from "@bachmacintosh/wanikani-api-types";
+} from "@bachman-dev/wanikani-api-types";
 import axios from "axios";
 import Bottleneck from "bottleneck";
 import { SetProgress } from "./progressreporter";

@@ -21,7 +21,7 @@
     "buildmap": "vite-node tools/buildmap.ts run"
   },
   "dependencies": {
-    "@bachmacintosh/wanikani-api-types": "^1.5.0",
+    "@bachman-dev/wanikani-api-types": "^2.0.0",
     "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.0.3",
