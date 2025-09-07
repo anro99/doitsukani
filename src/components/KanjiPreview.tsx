@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
@@ -24,12 +23,12 @@ interface KanjiPreviewProps {
     maxPreviewCount?: number;
 }
 
-export const KanjiPreview: React.FC<KanjiPreviewProps> = ({
+export const KanjiPreview = ({
     previewKanji,
     currentLevelCount,
     currentLevelCountLoading = false,
     maxPreviewCount = 12
-}) => {
+}: KanjiPreviewProps) => {
     // Helper function to get count info for preview display
     const getCountInfo = () => {
         if (currentLevelCountLoading) return 'Lade Count...';

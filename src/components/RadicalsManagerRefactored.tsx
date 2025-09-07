@@ -1,12 +1,11 @@
-﻿import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TokenManagement } from './TokenManagement';
 import { LevelSelector } from './LevelSelector';
 import { ProcessingControls } from './ProcessingControls';
 import { RadicalPreview } from './RadicalPreview';
 import { useRadicalsManager } from '../hooks/useRadicalsManager';
 
-export const RadicalsManagerRefactored: React.FC = () => {
+export const RadicalsManagerRefactored = () => {
     const {
         // State
         apiToken,

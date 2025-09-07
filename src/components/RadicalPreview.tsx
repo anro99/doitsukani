@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 
@@ -23,12 +22,12 @@ interface RadicalPreviewProps {
     maxPreviewCount?: number;
 }
 
-export const RadicalPreview: React.FC<RadicalPreviewProps> = ({
+export const RadicalPreview = ({
     previewRadicals,
     currentLevelCount,
     currentLevelCountLoading = false,
     maxPreviewCount = 12
-}) => {
+}: RadicalPreviewProps) => {
     // Helper function to get count info for preview display
     const getCountInfo = () => {
         if (currentLevelCountLoading) return 'Lade Count...';

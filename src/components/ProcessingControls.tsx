@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 
@@ -26,7 +25,7 @@ interface ProcessingControlsProps {
     itemType?: 'radicals' | 'kanji'; // Optional prop to specify the type
 }
 
-export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
+export const ProcessingControls = ({
     apiToken,
     deeplToken,
     synonymMode,
@@ -39,7 +38,7 @@ export const ProcessingControls: React.FC<ProcessingControlsProps> = ({
     onStartProcessing,
     onStopProcessing,
     itemType = 'radicals' // Default to radicals for backward compatibility
-}) => {
+}: ProcessingControlsProps) => {
     const canStart = apiToken &&
         (synonymMode === 'delete' || deeplToken) &&
         filteredItemsCount > 0 &&

@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
@@ -13,14 +12,14 @@ interface TokenManagementProps {
     synonymMode: 'replace' | 'smart-merge' | 'delete';
 }
 
-export const TokenManagement: React.FC<TokenManagementProps> = ({
+export const TokenManagement = ({
     apiToken,
     deeplToken,
     onApiTokenChange,
     onDeeplTokenChange,
     apiError,
     synonymMode
-}) => {
+}: TokenManagementProps) => {
     return (
         <Card>
             <CardHeader>

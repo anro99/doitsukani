@@ -55,18 +55,26 @@ describe('Enhanced Stop Processing', () => {
         expect(result.current.translationStatus).toContain('DeepL Token fehlt');
     });
 
-    it('should handle stop processing with console logging', () => {
-        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+    it('should handle stop processing functionality', () => {
         const { result } = renderHook(() => useRadicalsManager());
+
+        // Initially not processing
+        expect(result.current.isProcessing).toBe(false);
+
+        // Simulate some processing state
+        act(() => {
+            result.current.handleApiTokenChange('test-token');
+        });
 
         act(() => {
             result.current.stopProcessing();
         });
 
-        expect(consoleSpy).toHaveBeenCalledWith('🛑 STOP: User clicked stop button');
-        expect(consoleSpy).toHaveBeenCalledWith('🛑 STOP: All flags set');
-
-        consoleSpy.mockRestore();
+        // Should ensure processing is stopped
+        expect(result.current.isProcessing).toBe(false);
+        // Should have stopped status messages
+        expect(result.current.translationStatus).toContain('Stoppe');
+        expect(result.current.uploadStatus).toContain('gestoppt');
     });
 
     it('should handle processing without DeepL token for delete mode', async () => {

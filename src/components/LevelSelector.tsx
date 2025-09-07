@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
@@ -42,13 +41,13 @@ const synonymModeOptions: SynonymModeData[] = [
     }
 ];
 
-export const LevelSelector: React.FC<LevelSelectorProps> = ({
+export const LevelSelector = ({
     selectedLevel,
     onLevelChange,
     synonymMode,
     onSynonymModeChange,
     maxLevel = 60
-}) => {
+}: LevelSelectorProps) => {
     // Simplified - no count logic needed
     const levelOptions = [
         { value: 'all' as const, label: 'Alle Level' },

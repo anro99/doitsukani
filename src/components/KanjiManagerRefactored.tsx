@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TokenManagement } from './TokenManagement';
 import { LevelSelector } from './LevelSelector';
@@ -6,7 +5,7 @@ import { ProcessingControls } from './ProcessingControls';
 import { KanjiPreview } from './KanjiPreview';
 import { useKanjiManager } from '../hooks/useKanjiManager';
 
-export const KanjiManagerRefactored: React.FC = () => {
+export const KanjiManagerRefactored = () => {
     const {
         // Settings
         selectedLevel,
