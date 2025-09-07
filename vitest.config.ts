@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'test';
 export default defineConfig({
     test: {
         globals: true,
-        environment: 'jsdom', // Keep jsdom for unit tests that mock DOM elements
+        environment: 'jsdom', // Default for unit tests
         setupFiles: ['./src/test/setup.ts'],
         testTimeout: 60000, // Increased timeout for rate-limited integration tests
         // Prevent parallel execution to avoid rate limiting issues

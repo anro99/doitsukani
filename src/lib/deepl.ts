@@ -81,7 +81,13 @@ export const translateText = async (
             const data = response.data as DeepLResponse;
             return data.translations[0].text;
         } catch (error: unknown) {
-            const err = error as Error & { response?: { status: number; data: unknown } };
+            const err = error as Error & {
+                response?: {
+                    status: number;
+                    data: { message?: string }
+                };
+                code?: string;
+            };
             console.log('🌐 DEBUG: DeepL error occurred:', err.message);
 
             // Handle specific DeepL errors
@@ -91,18 +97,18 @@ export const translateText = async (
 
                 switch (status) {
                     case 403:
-                        throw new Error(data.message || "Authorization failure");
+                        throw new Error(data?.message || "Authorization failure");
                     case 456:
-                        throw new Error(data.message || "Quota exceeded");
+                        throw new Error(data?.message || "Quota exceeded");
                     case 429:
-                        throw new Error(data.message || "Too many requests");
+                        throw new Error(data?.message || "Too many requests");
                     default:
-                        throw new Error(data.message || `API error: ${status}`);
+                        throw new Error(data?.message || `API error: ${status}`);
                 }
             }
 
             // Handle network errors
-            if (error.code === 'ECONNABORTED') {
+            if (err.code === 'ECONNABORTED') {
                 console.log('🌐 DEBUG: DeepL request timed out');
                 throw new Error('Request timed out');
             }
@@ -155,7 +161,14 @@ export const translateBatch = async (
                 ? "/api/deepl-pro/v2/translate"
                 : "/api/deepl/v2/translate";
 
-            const requestBody: any = {
+            const requestBody: {
+                text: string | string[];
+                target_lang: string;
+                source_lang: string;
+                context?: string;
+                tag_handling?: string;
+                preserve_formatting?: string;
+            } = {
                 text: lowercaseChunk,
                 target_lang: targetLang,
                 source_lang: "EN"
@@ -202,7 +215,10 @@ export const translateBatch = async (
 /**
  * Get usage information from DeepL API
  */
-export const getUsage = async (apiKey: string, isPro: boolean = false): Promise<any> => {
+export const getUsage = async (apiKey: string, isPro: boolean = false): Promise<{
+    character_count: number;
+    character_limit: number;
+}> => {
     const baseUrl = isPro
         ? "https://api.deepl.com/v2/usage"
         : "https://api-free.deepl.com/v2/usage";
