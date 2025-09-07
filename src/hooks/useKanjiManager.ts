@@ -302,7 +302,7 @@ export function useKanjiManager() {
 
                 // Use WaniKani's dynamic batch size from per_page
                 const actualBatchSize = collection.pages.per_page;
-                const subjectIds = collection.data.map((k: any) => k.id.toString()).join(',');
+                const subjectIds = collection.data.map((k: Subject) => k.id.toString()).join(',');
                 const studyMaterialsData = subjectIds ? await getKanjiStudyMaterials(apiToken, undefined, {
                     subject_ids: subjectIds
                 }) : [];
@@ -338,7 +338,7 @@ export function useKanjiManager() {
             const actualBatchSize = collection.pages.per_page;
 
             // Get study materials for this first batch
-            const subjectIds = collection.data.map((k: any) => k.id.toString()).join(',');
+            const subjectIds = collection.data.map((k: Subject) => k.id.toString()).join(',');
             const studyMaterialsData = subjectIds ? await getKanjiStudyMaterials(apiToken, undefined, {
                 subject_ids: subjectIds
             }) : [];
@@ -702,9 +702,9 @@ export function useKanjiManager() {
         let hasMore = true;
         let batchNumber = 1;
         let completedBatches = 0; // Track completed batches
-        let localUploadStats: UploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
-        let allProcessedKanji: Kanji[] = []; // Track all processed kanji for final analysis
-        let allProcessedIds = new Set<number>(); // Track all processed IDs to detect duplicates
+        const localUploadStats: UploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+        const allProcessedKanji: Kanji[] = []; // Track all processed kanji for final analysis
+        const allProcessedIds = new Set<number>(); // Track all processed IDs to detect duplicates
         let nextUrl: string | null = null; // For proper WaniKani pagination
         let lastActualBatchSize: number | undefined; // Track WaniKani's actual batch size
 

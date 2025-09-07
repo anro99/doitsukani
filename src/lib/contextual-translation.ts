@@ -71,7 +71,7 @@ export const translateTextWithContext = async (
         : "https://api-free.deepl.com/v2/translate";
 
     return limiter.schedule(async () => {
-        const requestBody: any = {
+        const requestBody: Record<string, unknown> = {
             text: [text.toLowerCase()], // Use lowercase for consistency with our fix
             target_lang: targetLang,
             source_lang: "EN"
@@ -134,7 +134,7 @@ export const translateBatchWithContext = async (
         const indices = itemIndexMap.get(contextKey)!;
 
         const translations = await limiter.schedule(async () => {
-            const requestBody: any = {
+            const requestBody: Record<string, unknown> = {
                 text: texts,
                 target_lang: targetLang,
                 source_lang: "EN"
@@ -151,7 +151,7 @@ export const translateBatchWithContext = async (
                 },
             });
 
-            return response.data.translations.map((t: any) => t.text);
+            return response.data.translations.map((t: { text: string }) => t.text);
         });
 
         // Map results back to original positions

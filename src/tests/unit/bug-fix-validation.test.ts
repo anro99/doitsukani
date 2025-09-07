@@ -92,7 +92,7 @@ describe('Statistics Accumulation Bug - Final Fix Validation', () => {
 
         // Smart-Merge Run
         sessionId = 1;
-        let pendingStateUpdate = () => ({ successful: 35 }); // Some async operation
+        const pendingStateUpdate = () => ({ successful: 35 }); // Some async operation
 
         // User waits 4+ seconds
         // Delete Run starts
@@ -118,7 +118,7 @@ describe('Statistics Accumulation Bug - Final Fix Validation', () => {
         let reactState = { successful: 0 };
 
         // Smart-Merge Run
-        let pendingStateUpdate = () => ({ successful: 35 });
+        const pendingStateUpdate = () => ({ successful: 35 });
 
         // User waits 4+ seconds
         // Delete Run starts
@@ -134,7 +134,7 @@ describe('Statistics Accumulation Bug - Final Fix Validation', () => {
         console.log('Contaminated value would be:', contaminatedValue);
 
         // But we don't use it! We process fresh:
-        let localStats = { successful: 0 };
+        const localStats = { successful: 0 };
         localStats.successful = 36; // Process current radicals
 
         reactState = { ...localStats };

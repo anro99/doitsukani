@@ -12,7 +12,7 @@ describe("Smart-Merge Statistics Fix", () => {
             }));
 
             // Simuliere Smart-Merge-Verarbeitung
-            let uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             radicals.forEach((radical, index) => {
                 const newTranslation = `Übersetzung ${index + 1}`;
@@ -55,7 +55,7 @@ describe("Smart-Merge Statistics Fix", () => {
                 { name: "New Upload 2", needsUpload: true, hasError: false },
             ];
 
-            let uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const uploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             scenarios.forEach(scenario => {
                 if (scenario.hasError) {
@@ -94,8 +94,8 @@ describe("Smart-Merge Statistics Fix", () => {
             console.log(`   Expected Skips: ${expectedSkips}`);
 
             // OLD BUGGY LOGIC
-            let oldStats = { created: 0, updated: actualUploads, failed: 0, skipped: 0, successful: totalRadicals };
-            let oldTotal = oldStats.created + oldStats.updated + oldStats.failed + oldStats.skipped;
+            const oldStats = { created: 0, updated: actualUploads, failed: 0, skipped: 0, successful: totalRadicals };
+            const oldTotal = oldStats.created + oldStats.updated + oldStats.failed + oldStats.skipped;
 
             console.log(`\n❌ OLD (BUGGY) STATS:`);
             console.log(`   Updated: ${oldStats.updated}`);
@@ -104,8 +104,8 @@ describe("Smart-Merge Statistics Fix", () => {
             console.log(`   Math Check: ${oldTotal} counted vs ${totalRadicals} processed → ${totalRadicals - oldTotal} missing!`);
 
             // NEW FIXED LOGIC
-            let newStats = { created: 0, updated: actualUploads, failed: 0, skipped: expectedSkips, successful: totalRadicals };
-            let newTotal = newStats.created + newStats.updated + newStats.failed + newStats.skipped;
+            const newStats = { created: 0, updated: actualUploads, failed: 0, skipped: expectedSkips, successful: totalRadicals };
+            const newTotal = newStats.created + newStats.updated + newStats.failed + newStats.skipped;
 
             console.log(`\n✅ NEW (FIXED) STATS:`);
             console.log(`   Updated: ${newStats.updated}`);

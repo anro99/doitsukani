@@ -43,7 +43,7 @@ function useRadicalsManagerState() {
         // 🔧 CRITICAL FIX: Use functional update to ensure complete reset
         setUploadStats(() => ({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 }));
 
-        let localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+        const localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         try {
             // Simulate processing each radical

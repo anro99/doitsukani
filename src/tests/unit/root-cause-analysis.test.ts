@@ -25,7 +25,7 @@ describe('Root Cause Analysis - React State Update Pattern Bug', () => {
         reactState = { created: 2, updated: 15, failed: 1, skipped: 18, successful: 35 }; // From Smart-Merge
 
         // Start new processing (Delete mode)
-        let localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+        const localUploadStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
         // During processing, we update local stats
         localUploadStats.updated = 36;
@@ -48,7 +48,7 @@ describe('Root Cause Analysis - React State Update Pattern Bug', () => {
         console.log('\\n🤔 Wait, let me check what happens if we accumulate during processing...');
 
         // ACTUAL BUG SCENARIO: If setUploadStats is called with accumulated values
-        let accumulatedLocalStats = { ...localUploadStats };
+        const accumulatedLocalStats = { ...localUploadStats };
 
         // Simulate what happens if previous run stats somehow leak into localUploadStats
         // This could happen if the React state reset didn't work properly
@@ -83,7 +83,7 @@ describe('Root Cause Analysis - React State Update Pattern Bug', () => {
         // The React state reset at the beginning doesn't actually reset
 
         let reactState = { successful: 35 }; // Previous run
-        let localUploadStats = { successful: 0 };
+        const localUploadStats = { successful: 0 };
 
         // Start of new processing - this should reset React state
         const resetUpdate = () => ({ created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 });

@@ -25,7 +25,7 @@ describe("Statistics Bug Fix", () => {
         });
 
         it("should handle translation errors without double-counting", () => {
-            let stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             // Simulate translation error (in processTranslations catch block)
             try {
@@ -39,7 +39,7 @@ describe("Statistics Bug Fix", () => {
         });
 
         it("should handle upload errors correctly", () => {
-            let stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             // Simulate upload error (in uploadSingleRadical)
             const uploadResult = {
@@ -53,7 +53,7 @@ describe("Statistics Bug Fix", () => {
         });
 
         it("should count smart-merge skips as successful", () => {
-            let stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const stats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             // Simulate smart-merge: synonyms didn't change
             const synonymsChanged = false;
@@ -78,7 +78,7 @@ describe("Statistics Bug Fix", () => {
             ];
 
             // OLD (buggy) counting logic
-            let oldStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const oldStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             processedRadicals.forEach(radical => {
                 switch (radical.result) {
@@ -100,7 +100,7 @@ describe("Statistics Bug Fix", () => {
             });
 
             // NEW (fixed) counting logic
-            let newStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const newStats = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             processedRadicals.forEach(radical => {
                 switch (radical.result) {

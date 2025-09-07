@@ -61,7 +61,7 @@ describe("Statistics Accumulation Bug Fix", () => {
 
         it("should demonstrate the accumulation bug scenario", () => {
             // Simulate BUGGY behavior (what was happening before fix)
-            let buggyReactState = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
+            const buggyReactState = { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 };
 
             const setBuggyUploadStats = (newStats: typeof buggyReactState) => {
                 // BUG: Don't actually reset, accumulate instead!
@@ -101,7 +101,7 @@ describe("Statistics Accumulation Bug Fix", () => {
 
             const processRadicals = () => {
                 // PROBLEM: Local variable shadows React state variable!
-                let uploadStats = { successful: 0 }; // Local variable (same name!)
+                const uploadStats = { successful: 0 }; // Local variable (same name!)
 
                 // Process radicals
                 uploadStats.successful = 36;

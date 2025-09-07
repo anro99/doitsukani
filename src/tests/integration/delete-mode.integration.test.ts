@@ -39,7 +39,7 @@ const TEST_RADICALS = {
 
 describe("DELETE Mode Integration Tests - RadicalsManager", () => {
     let apiToken: string;
-    let testRadicalsData: Array<{
+    const testRadicalsData: Array<{
         radical: WKRadical;
         originalSynonyms: string[];
         studyMaterialId: number | null;

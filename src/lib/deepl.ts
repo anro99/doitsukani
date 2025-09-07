@@ -51,7 +51,7 @@ export const translateText = async (
 
     const translateWithRetry = async (retryCount: number = 0): Promise<string> => {
         try {
-            const requestBody: any = {
+            const requestBody: Record<string, unknown> = {
                 text: [textToTranslate],
                 target_lang: targetLang,
                 source_lang: "EN"
@@ -80,12 +80,13 @@ export const translateText = async (
 
             const data = response.data as DeepLResponse;
             return data.translations[0].text;
-        } catch (error: any) {
-            console.log('🌐 DEBUG: DeepL error occurred:', error.message);
+        } catch (error: unknown) {
+            const err = error as Error & { response?: { status: number; data: unknown } };
+            console.log('🌐 DEBUG: DeepL error occurred:', err.message);
 
             // Handle specific DeepL errors
-            if (error.response) {
-                const { status, data } = error.response;
+            if (err.response) {
+                const { status, data } = err.response;
                 console.log('🌐 DEBUG: DeepL error response:', { status, data });
 
                 switch (status) {

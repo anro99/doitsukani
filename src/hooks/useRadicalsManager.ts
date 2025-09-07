@@ -503,7 +503,7 @@ export function useRadicalsManager() {
                 const result = await processBatch(batch, batchIndex, totalBatches, localUploadStats);
 
                 // Check if processBatch was stopped
-                if ((result as any).stopped) {
+                if ('stopped' in result && (result as any).stopped) {
                     localUploadStats = { ...result };
                     delete (localUploadStats as any).stopped;
                     setUploadStatus(`⏹️ Gestoppt! Teilweise abgeschlossen: Erstellt: ${localUploadStats.created}, Aktualisiert: ${localUploadStats.updated}, Fehler: ${localUploadStats.failed}, Übersprungen: ${localUploadStats.skipped}`);

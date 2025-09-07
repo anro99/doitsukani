@@ -25,7 +25,7 @@ describe("Statistics Accumulation Bug - Real World Scenario", () => {
             console.log(`   After reset: successful=${reactState.successful}`);
 
             // Process radicals: 13 uploaded, 23 skipped
-            let localUploadStats1 = { created: 0, updated: 13, failed: 0, skipped: 23, successful: 36 };
+            const localUploadStats1 = { created: 0, updated: 13, failed: 0, skipped: 23, successful: 36 };
 
             // Update React state with functional update
             setUploadStatsFunctional(() => ({ ...localUploadStats1 }));
@@ -43,7 +43,7 @@ describe("Statistics Accumulation Bug - Real World Scenario", () => {
             console.log(`   After reset: successful=${reactState.successful}`);
 
             // Process radicals: 36 deleted (all had synonyms)
-            let localUploadStats2 = { created: 0, updated: 36, failed: 0, skipped: 0, successful: 36 };
+            const localUploadStats2 = { created: 0, updated: 36, failed: 0, skipped: 0, successful: 36 };
 
             // Update React state with functional update
             setUploadStatsFunctional(() => ({ ...localUploadStats2 }));
