@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import dotenv from "dotenv";
-import { WKRadical } from "@bachman-dev/wanikani-api-types";
+import { WKRadical } from "../../types/wanikani-legacy";
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from "../../lib/wanikani";
 
 // Load environment variables

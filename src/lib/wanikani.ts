@@ -6,7 +6,7 @@ import {
   WKStudyMaterial,
   WKSubject,
   WKVocabulary,
-} from "@bachman-dev/wanikani-api-types";
+} from "../types/wanikani-legacy";
 import axios from "axios";
 import Bottleneck from "bottleneck";
 import { SetProgress } from "./progressreporter";
@@ -88,7 +88,7 @@ export const getAssignments = async (
     `assignments?burned=${burned}`,
     "Getting assignments...",
     setProgress
-  )) as WKAssignment[];
+  )) as unknown as WKAssignment[];
 };
 
 export const getUnburnedVocabulary = async (
@@ -110,7 +110,7 @@ export const getStudyMaterials = async (
     "study_materials?subject_types=vocabulary",
     "Getting study materials...",
     setProgress
-  )) as WKStudyMaterial[];
+  )) as unknown as WKStudyMaterial[];
 };
 
 export interface WKStudyMaterialCreate {
@@ -426,7 +426,7 @@ export const getRadicalStudyMaterials = async (
   };
   setProgress?.(finalProgress);
 
-  return collection.data as WKStudyMaterial[];
+  return collection.data as unknown as WKStudyMaterial[];
 };
 
 /**
@@ -809,5 +809,5 @@ export const getKanjiStudyMaterials = async (
   };
   setProgress?.(finalProgress);
 
-  return collection.data as WKStudyMaterial[];
+  return collection.data as unknown as WKStudyMaterial[];
 };

@@ -6,7 +6,7 @@ import {
     WKCollection,
     WKDatableString,
     WKLevel,
-} from "@bachman-dev/wanikani-api-types";
+} from "../../types/wanikani-legacy";
 
 // For now we'll create mock functions that we'll implement later
 const getRadicals = vi.fn();
@@ -99,7 +99,7 @@ const createMockStudyMaterialCollection = (data: WKStudyMaterial[], nextUrl?: st
         },
         total_count: data.length,
         data_updated_at: "2024-01-01T00:00:00.000000Z" as WKDatableString,
-        data,
+        data: data as unknown as any[],
     };
 };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { WKKanji, WKStudyMaterial, WKCollection } from '@bachman-dev/wanikani-api-types';
+import { WKKanji, WKStudyMaterial, WKCollection } from '../types/wanikani-legacy';
 import {
     getKanjiStudyMaterials,
     updateKanjiSynonyms,

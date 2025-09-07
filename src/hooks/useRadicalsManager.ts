@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { WKRadical, WKStudyMaterial } from '@bachman-dev/wanikani-api-types';
+import { WKRadical, WKStudyMaterial } from '../types/wanikani-legacy';
 import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms, getRadicalCount, getRadicalsPreview } from '../lib/wanikani';
 import { translateText } from '../lib/deepl';
 import { extractContextFromMnemonic } from '../lib/contextual-translation';

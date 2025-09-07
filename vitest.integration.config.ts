@@ -16,7 +16,9 @@ export default defineConfig({
         testTimeout: 120000, // 2 minutes for slow DeepL API calls
         // Prevent parallel execution to avoid rate limiting issues
         maxConcurrency: 1,
-        pool: 'forks', // Use process isolation for better test separation
+        // Use inline mode to avoid serialization issues with axios
+        pool: 'vmThreads',
+        isolate: false, // Disable test isolation to avoid serialization
         // Only run integration tests
         include: ['**/integration/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
         exclude: [

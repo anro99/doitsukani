@@ -9,7 +9,7 @@ import {
 import {
   WKDatableString,
   WKStudyMaterial,
-} from "@bachman-dev/wanikani-api-types";
+} from "../../types/wanikani-legacy";
 
 const createMaterial = (id: number, synonyms: string[]): WKStudyMaterial => {
   return {

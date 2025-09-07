@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { WKCollection } from '@bachman-dev/wanikani-api-types';
+import { WKCollection } from '../../types/wanikani-legacy';
 
 // Mock für useKanjiManager Hook (vereinfacht für Testing)
 interface MockBatchResult {
