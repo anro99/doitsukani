@@ -10,7 +10,7 @@
   /* Border Radius */
   --radius: 0.5rem;
   
-  /* Colors - Modern design system */
+  /* Light Mode Colors - Forced for consistent UI */
   --color-border: hsl(214 32% 91%);
   --color-input: hsl(214 32% 91%);
   --color-ring: hsl(221 84% 50%);
@@ -38,6 +38,18 @@
   --color-card: hsl(0 0% 100%);
   --color-card-foreground: hsl(222 84% 5%);
   
+  /* Gray colors for proper background hierarchy */
+  --color-gray-50: hsl(210 40% 98%);
+  --color-gray-100: hsl(210 40% 96%);
+  --color-gray-200: hsl(214 32% 91%);
+  --color-gray-300: hsl(213 27% 84%);
+  --color-gray-400: hsl(215 20% 65%);
+  --color-gray-500: hsl(215 16% 47%);
+  --color-gray-600: hsl(215 19% 35%);
+  --color-gray-700: hsl(215 25% 27%);
+  --color-gray-800: hsl(217 33% 17%);
+  --color-gray-900: hsl(222 84% 5%);
+  
   /* Border Radius using CSS Variables */
   --border-radius-lg: var(--radius);
   --border-radius-md: calc(var(--radius) - 2px);
@@ -58,27 +70,75 @@
   to { height: 0 }
 }
 
-/* Dark mode support - ready for future implementation */
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-border: hsl(214 32% 20%);
-    --color-input: hsl(214 32% 20%);
-    --color-background: hsl(222 84% 5%);
-    --color-foreground: hsl(210 40% 98%);
-    
-    --color-secondary: hsl(217 33% 17%);
-    --color-secondary-foreground: hsl(210 40% 98%);
-    
-    --color-muted: hsl(217 33% 17%);
-    --color-muted-foreground: hsl(215 20% 65%);
-    
-    --color-accent: hsl(217 33% 17%);
-    --color-accent-foreground: hsl(210 40% 98%);
-    
-    --color-popover: hsl(222 84% 5%);
-    --color-popover-foreground: hsl(210 40% 98%);
-    
-    --color-card: hsl(222 84% 5%);
-    --color-card-foreground: hsl(210 40% 98%);
-  }
+/* Force light mode - prevent automatic dark mode detection */
+:root {
+  color-scheme: light;
+}
+
+/* Custom component styles to ensure proper light appearance */
+.bg-gray-50 {
+  background-color: hsl(210 40% 98%) !important;
+}
+
+.bg-white {
+  background-color: hsl(0 0% 100%) !important;
+}
+
+.text-gray-600 {
+  color: hsl(215 16% 47%) !important;
+}
+
+.text-gray-800 {
+  color: hsl(217 33% 17%) !important;
+}
+
+.text-gray-900 {
+  color: hsl(222 84% 5%) !important;
+}
+
+.border-gray-200 {
+  border-color: hsl(214 32% 91%) !important;
+}
+
+/* Ensure select/dropdown elements are readable */
+select, 
+.select,
+[role="combobox"],
+[role="listbox"],
+option {
+  background-color: hsl(0 0% 100%) !important;
+  color: hsl(222 84% 5%) !important;
+  border-color: hsl(214 32% 91%) !important;
+}
+
+/* Radix UI specific overrides */
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-select-viewport],
+[data-radix-select-item] {
+  background-color: hsl(0 0% 100%) !important;
+  color: hsl(222 84% 5%) !important;
+}
+
+/* Card components */
+.card,
+[data-card] {
+  background-color: hsl(0 0% 100%) !important;
+  color: hsl(222 84% 5%) !important;
+  border-color: hsl(214 32% 91%) !important;
+}
+
+/* Input elements */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  background-color: hsl(0 0% 100%) !important;
+  color: hsl(222 84% 5%) !important;
+  border-color: hsl(214 32% 91%) !important;
+}
+
+/* Prevent any dark mode from being applied */
+* {
+  color-scheme: light !important;
 }

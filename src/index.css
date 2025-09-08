@@ -8,5 +8,22 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Force light mode appearance */
+    background-color: white !important;
+    color: #111827 !important;
+  }
+  
+  /* Ensure all containers use light colors */
+  .min-h-screen {
+    background-color: #f9fafb !important;
+  }
+  
+  /* Card and component overrides */
+  .bg-white {
+    background-color: white !important;
+  }
+  
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
   }
 }
