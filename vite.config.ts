@@ -1,6 +1,8 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import tailwindcss from "@tailwindcss/postcss";
+import autoprefixer from "autoprefixer";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,6 +15,25 @@ export default defineConfig({
   base: process.env.NODE_ENV === "production" ? "/doitsukani/" : "/",
   build: {
     sourcemap: true, // Enable source maps explicitly
+    // Vite 7 optimizations
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-checkbox', '@radix-ui/react-label', '@radix-ui/react-progress'],
+          utils: ['axios', 'jotai', 'clsx', 'tailwind-merge']
+        }
+      }
+    }
+  },
+  css: {
+    // PostCSS configuration for TailwindCSS 4
+    postcss: {
+      plugins: [
+        tailwindcss,
+        autoprefixer,
+      ],
+    },
   },
   server: {
     proxy: {

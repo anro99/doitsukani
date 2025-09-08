@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/* TailwindCSS 4 - CSS-based configuration */
+@theme {
+  /* Container */
+  --container-center: true;
+  --container-padding: 2rem;
+  --container-screen-2xl: 1400px;
+  
+  /* Border Radius */
+  --radius: 0.5rem;
+  
+  /* Colors - Modern design system */
+  --color-border: hsl(214 32% 91%);
+  --color-input: hsl(214 32% 91%);
+  --color-ring: hsl(221 84% 50%);
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222 84% 5%);
+  
+  --color-primary: hsl(221 84% 50%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222 84% 5%);
+  
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  
+  --color-muted: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215 16% 47%);
+  
+  --color-accent: hsl(210 40% 96%);
+  --color-accent-foreground: hsl(222 84% 5%);
+  
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222 84% 5%);
+  
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222 84% 5%);
+  
+  /* Border Radius using CSS Variables */
+  --border-radius-lg: var(--radius);
+  --border-radius-md: calc(var(--radius) - 2px);
+  --border-radius-sm: calc(var(--radius) - 4px);
+  
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from { height: 0 }
+  to { height: var(--radix-accordion-content-height) }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height) }
+  to { height: 0 }
+}
+
+/* Dark mode support - ready for future implementation */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-border: hsl(214 32% 20%);
+    --color-input: hsl(214 32% 20%);
+    --color-background: hsl(222 84% 5%);
+    --color-foreground: hsl(210 40% 98%);
+    
+    --color-secondary: hsl(217 33% 17%);
+    --color-secondary-foreground: hsl(210 40% 98%);
+    
+    --color-muted: hsl(217 33% 17%);
+    --color-muted-foreground: hsl(215 20% 65%);
+    
+    --color-accent: hsl(217 33% 17%);
+    --color-accent-foreground: hsl(210 40% 98%);
+    
+    --color-popover: hsl(222 84% 5%);
+    --color-popover-foreground: hsl(210 40% 98%);
+    
+    --color-card: hsl(222 84% 5%);
+    --color-card-foreground: hsl(210 40% 98%);
+  }
+}
