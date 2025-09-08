@@ -66,6 +66,17 @@ export function useRadicalsManager() {
     const [shouldStopProcessing, setShouldStopProcessing] = useState(false);
     const stopRef = useRef(false);
 
+    // React 19 compatibility: Track component mount state
+    const mountedRef = useRef(true);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+            stopRef.current = true;
+        };
+    }, []);
+
     // Rate-limited execution helpers with stop check
     const executeWithWaniKaniLimiter = async <T>(
         fn: () => Promise<T>,
@@ -550,9 +561,13 @@ export function useRadicalsManager() {
 
         } catch (error) {
             console.error('Processing error:', error);
-            setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+            if (mountedRef.current) {
+                setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+            }
         } finally {
-            setIsProcessing(false);
+            if (mountedRef.current) {
+                setIsProcessing(false);
+            }
         }
     };
 

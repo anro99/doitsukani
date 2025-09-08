@@ -15,6 +15,17 @@ global.console = {
     error: vi.fn(),
 };
 
+// React 19 specific test setup
+if (typeof globalThis !== 'undefined') {
+    // Mock scheduler for React 19 concurrent features
+    (globalThis as any).scheduler = {
+        postTask: vi.fn().mockImplementation((callback) => {
+            // Execute immediately in tests
+            return Promise.resolve(callback());
+        })
+    };
+}
+
 // Mock window object for browser APIs (only in jsdom environment)
 if (typeof window !== 'undefined') {
     Object.defineProperty(window, 'matchMedia', {
@@ -29,6 +40,16 @@ if (typeof window !== 'undefined') {
             removeEventListener: vi.fn(),
             dispatchEvent: vi.fn(),
         })),
+    });
+
+    // Mock scheduler.postTask for React 19
+    Object.defineProperty(window, 'scheduler', {
+        writable: true,
+        value: {
+            postTask: vi.fn().mockImplementation((callback) => {
+                return Promise.resolve(callback());
+            })
+        }
     });
 }
 

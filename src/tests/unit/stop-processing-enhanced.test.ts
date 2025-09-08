@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useRadicalsManager } from '../../hooks/useRadicalsManager';
 
 // Mock external dependencies
@@ -19,6 +19,11 @@ describe('Enhanced Stop Processing', () => {
             },
             writable: true,
         });
+    });
+
+    afterEach(() => {
+        // Wait for any pending React updates to complete
+        return new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('should immediately set stop flags when stopProcessing is called', () => {
@@ -109,7 +114,7 @@ describe('Enhanced Stop Processing', () => {
     });
 
     it('should handle processing without DeepL token for translation mode', async () => {
-        const { result } = renderHook(() => useRadicalsManager());
+        const { result, unmount } = renderHook(() => useRadicalsManager());
 
         // Set API token but no DeepL token
         act(() => {
@@ -132,11 +137,14 @@ describe('Enhanced Stop Processing', () => {
             }
         ];
 
-        act(() => {
-            result.current.processTranslations(mockRadicals);
+        await act(async () => {
+            await result.current.processTranslations(mockRadicals);
         });
 
         expect(result.current.translationStatus).toContain('DeepL Token fehlt');
         expect(result.current.isProcessing).toBe(false);
+
+        // Clean unmount to prevent React 19 warnings
+        unmount();
     });
 });
