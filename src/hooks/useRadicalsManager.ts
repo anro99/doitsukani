@@ -357,8 +357,8 @@ export function useRadicalsManager() {
         setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Radicals)...`);
 
         for (let i = 0; i < batch.length; i++) {
-            // Check if processing should be stopped (both state and ref)
-            if (shouldStopProcessing || stopRef.current) {
+            // Only check stopRef for actual stopping - shouldStopProcessing is just for UI
+            if (stopRef.current) {
                 setTranslationStatus(`⏹️ Verarbeitung gestoppt bei Batch ${batchIndex + 1}/${totalBatches}, Item ${i + 1}/${batchSize}`);
                 return { ...localUploadStats, stopped: true };
             }
@@ -475,7 +475,7 @@ export function useRadicalsManager() {
         }
 
         setIsProcessing(true);
-        setShouldStopProcessing(false); // Reset stop flag
+        // Only reset stopRef - shouldStopProcessing is not needed
         stopRef.current = false; // Reset ref flag
         setProgress(0);
         setTranslationStatus('🚀 Starte Batch-Verarbeitung mit Rate-Limiting-Schutz...');
@@ -504,8 +504,8 @@ export function useRadicalsManager() {
 
             // Process each batch
             for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-                // Check if processing should be stopped (both state and ref)
-                if (shouldStopProcessing || stopRef.current) {
+                // Only check stopRef for actual stopping - shouldStopProcessing is just for UI
+                if (stopRef.current) {
                     setTranslationStatus(`⏹️ Verarbeitung vom Benutzer gestoppt nach ${batchIndex} von ${totalBatches} Batches`);
                     setUploadStatus(`⏹️ Gestoppt! Teilweise abgeschlossen: Erstellt: ${localUploadStats.created}, Aktualisiert: ${localUploadStats.updated}, Fehler: ${localUploadStats.failed}, Übersprungen: ${localUploadStats.skipped}`);
                     break;
@@ -573,7 +573,7 @@ export function useRadicalsManager() {
 
     // Stop processing function
     const stopProcessing = () => {
-        setShouldStopProcessing(true);
+        // Only set stopRef - shouldStopProcessing is not needed for actual stopping
         stopRef.current = true;
         setIsProcessing(false);
 

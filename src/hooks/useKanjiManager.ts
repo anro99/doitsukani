@@ -577,7 +577,8 @@ export function useKanjiManager() {
         setTranslationStatus(`📦 Verarbeite Batch ${batchIndex + 1}/${totalBatches} (${batchSize} Kanji)...`);
 
         for (let i = 0; i < batch.length; i++) {
-            if (shouldStopProcessing || stopRef.current) {
+            // Only check stopRef for actual stopping - shouldStopProcessing is just for UI
+            if (stopRef.current) {
                 setTranslationStatus(`⏹️ Verarbeitung gestoppt bei Batch ${batchIndex + 1}/${totalBatches}, Item ${i + 1}/${batchSize}`);
                 return { ...localUploadStats, stopped: true };
             }
@@ -689,9 +690,8 @@ export function useKanjiManager() {
         }
 
         // Always set processing state to true when starting (UI-critical)
-        console.log('🔧 useKanjiManager: Setting isProcessing to TRUE');
         setIsProcessing(true);
-        setShouldStopProcessing(false);
+        // Only reset stopRef - shouldStopProcessing is not needed
         stopRef.current = false;
 
         // Optional status updates only when mounted
@@ -710,7 +710,6 @@ export function useKanjiManager() {
                 setTranslationStatus('❌ Fehler beim Verarbeiten der Kanji.');
             }
             // Always reset processing state, even if component unmounted
-            console.log('🔧 useKanjiManager: Setting isProcessing to FALSE (error case)');
             setIsProcessing(false);
         }
     };
@@ -880,14 +879,12 @@ export function useKanjiManager() {
         setUploadStats(correctedUploadStats);
 
         // Always reset processing state, even if component unmounted
-        console.log('🔧 useKanjiManager: Setting isProcessing to FALSE');
         setIsProcessing(false);
     };
 
     // Stop processing
     const stopProcessing = () => {
-        console.log('🔧 useKanjiManager: stopProcessing called');
-        setShouldStopProcessing(true);
+        // Only set stopRef - shouldStopProcessing is not needed for actual stopping
         stopRef.current = true;
     };
 
