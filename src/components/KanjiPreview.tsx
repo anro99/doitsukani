@@ -115,7 +115,7 @@ export const KanjiPreview = ({
                         </div>
                     ))}
                 </div>
-                
+
                 {/* Show "Load More" button and statistics */}
                 <div className="mt-4 space-y-2">
                     {/* Load More Button */}
@@ -142,11 +142,11 @@ export const KanjiPreview = ({
                             ) : null}
                         </div>
                     )}
-                    
+
                     {/* Statistics display */}
                     {(() => {
                         const showingCount = Math.min(displayedPreviewCount, previewKanji.length);
-                        
+
                         return (
                             <div className="text-center text-sm text-gray-600 space-y-1">
                                 <div>

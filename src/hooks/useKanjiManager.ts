@@ -305,20 +305,20 @@ export function useKanjiManager() {
     // Load more preview kanji incrementally
     const loadMorePreviewKanji = async () => {
         if (isLoadingKanji) return; // Prevent concurrent loading
-        
+
         const newDisplayCount = displayedPreviewCount + PREVIEW_BATCH_SIZE;
         setDisplayedPreviewCount(newDisplayCount);
-        
+
         // Only load more if we don't have enough data already
         if (wkKanji.length < newDisplayCount) {
             setIsLoadingKanji(true);
             try {
                 const level = selectedLevel === 'all' ? undefined : selectedLevel;
-                
+
                 // Load more kanji
                 const moreKanji = await getKanjiPreview(apiToken, level, newDisplayCount + PREVIEW_BATCH_SIZE); // Load a bit extra
                 setWkKanji(moreKanji);
-                
+
                 // Load study materials for new kanji
                 if (moreKanji.length > 0) {
                     const subjectIds = moreKanji.map(k => k.id.toString()).join(',');
