@@ -109,6 +109,18 @@ export function useKanjiManager() {
     const [shouldStopProcessing, setShouldStopProcessing] = useState(false);
     const stopRef = useRef(false);
 
+    // React 19 compatibility: Track component mount state
+    const mountedRef = useRef(true);
+
+    // Reset stopRef when component mounts or re-mounts
+    useEffect(() => {
+        stopRef.current = false; // Always start with false
+        return () => {
+            mountedRef.current = false;
+            // DON'T set stopRef.current = true here - it causes premature stopping
+        };
+    }, []);
+
     // Simplified rate-limited execution helpers
     const executeWithWaniKaniLimiter = async <T>(
         fn: () => Promise<T>,
@@ -676,11 +688,17 @@ export function useKanjiManager() {
             return;
         }
 
+        // Always set processing state to true when starting (UI-critical)
+        console.log('🔧 useKanjiManager: Setting isProcessing to TRUE');
         setIsProcessing(true);
         setShouldStopProcessing(false);
         stopRef.current = false;
-        setProgress(0);
-        setTranslationStatus('🚀 Starte dynamische Batch-Verarbeitung...');
+
+        // Optional status updates only when mounted
+        if (mountedRef.current) {
+            setProgress(0);
+            setTranslationStatus('🚀 Starte dynamische Batch-Verarbeitung...');
+        }
 
         try {
             // Process kanji in batches to avoid loading all at once
@@ -688,7 +706,11 @@ export function useKanjiManager() {
 
         } catch (error) {
             console.error('Error starting processing:', error);
-            setTranslationStatus('❌ Fehler beim Verarbeiten der Kanji.');
+            if (mountedRef.current) {
+                setTranslationStatus('❌ Fehler beim Verarbeiten der Kanji.');
+            }
+            // Always reset processing state, even if component unmounted
+            console.log('🔧 useKanjiManager: Setting isProcessing to FALSE (error case)');
             setIsProcessing(false);
         }
     };
@@ -857,11 +879,14 @@ export function useKanjiManager() {
         };
         setUploadStats(correctedUploadStats);
 
+        // Always reset processing state, even if component unmounted
+        console.log('🔧 useKanjiManager: Setting isProcessing to FALSE');
         setIsProcessing(false);
     };
 
     // Stop processing
     const stopProcessing = () => {
+        console.log('🔧 useKanjiManager: stopProcessing called');
         setShouldStopProcessing(true);
         stopRef.current = true;
     };

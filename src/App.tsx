@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, startTransition } from "react";
 import { useAtom } from "jotai";
 import { AxiosError } from "axios";
 
@@ -24,6 +24,13 @@ function App() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji'>('vocabulary');
   const [, setProgress] = useAtom(writeProgressAtom);
+
+  // React 19 best practice: Use startTransition for non-urgent tab updates
+  const handleTabChange = (newTab: 'vocabulary' | 'radicals' | 'kanji') => {
+    startTransition(() => {
+      setActiveTab(newTab);
+    });
+  };
 
   const handleUpload = async () => {
     setUploading(true);
@@ -85,7 +92,7 @@ function App() {
             <div className="flex justify-center border-b">
               <div className="flex space-x-8">
                 <button
-                  onClick={() => setActiveTab('vocabulary')}
+                  onClick={() => handleTabChange('vocabulary')}
                   className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'vocabulary'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -94,7 +101,7 @@ function App() {
                   📚 Vocabulary Manager
                 </button>
                 <button
-                  onClick={() => setActiveTab('radicals')}
+                  onClick={() => handleTabChange('radicals')}
                   className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'radicals'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -103,7 +110,7 @@ function App() {
                   🧩 Radicals Manager
                 </button>
                 <button
-                  onClick={() => setActiveTab('kanji')}
+                  onClick={() => handleTabChange('kanji')}
                   className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'kanji'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'

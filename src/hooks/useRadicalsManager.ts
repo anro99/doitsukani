@@ -69,11 +69,12 @@ export function useRadicalsManager() {
     // React 19 compatibility: Track component mount state
     const mountedRef = useRef(true);
 
-    // Cleanup on unmount
+    // Reset stopRef when component mounts or re-mounts
     useEffect(() => {
+        stopRef.current = false; // Always start with false
         return () => {
             mountedRef.current = false;
-            stopRef.current = true;
+            // DON'T set stopRef.current = true here - it causes premature stopping
         };
     }, []);
 
@@ -565,9 +566,8 @@ export function useRadicalsManager() {
                 setTranslationStatus(`❌ Fehler bei der Verarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
             }
         } finally {
-            if (mountedRef.current) {
-                setIsProcessing(false);
-            }
+            // Always reset processing state, even if component unmounted
+            setIsProcessing(false);
         }
     };
 
