@@ -161,6 +161,10 @@ export function useKanjiManager() {
     const [selectedLevel, setSelectedLevel] = useState<number | 'all'>(1);
     const [synonymMode, setSynonymMode] = useState<SynonymMode>('smart-merge');
 
+    // Preview display state
+    const [displayedPreviewCount, setDisplayedPreviewCount] = useState(12);
+    const PREVIEW_BATCH_SIZE = 12;
+
     // Simplified processing state (same as radicals)
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -269,12 +273,13 @@ export function useKanjiManager() {
     const loadKanjiFromAPI = async () => {
         setIsLoadingKanji(true);
         setApiError('');
+        setDisplayedPreviewCount(PREVIEW_BATCH_SIZE); // Reset to initial count when loading new level
 
         try {
             const level = selectedLevel === 'all' ? undefined : selectedLevel;
 
-            // Load preview kanji (limited)
-            const previewKanji = await getKanjiPreview(apiToken, level, 15);
+            // Load initial preview kanji (limited to a reasonable amount for preview)
+            const previewKanji = await getKanjiPreview(apiToken, level, Math.max(displayedPreviewCount * 2, 48)); // Load at least 2 batches or 48
             setWkKanji(previewKanji);
 
             // Load study materials for preview kanji
@@ -294,6 +299,40 @@ export function useKanjiManager() {
             setApiError('Fehler beim Laden der Kanji. Bitte überprüfen Sie Ihren API-Token.');
         } finally {
             setIsLoadingKanji(false);
+        }
+    };
+
+    // Load more preview kanji incrementally
+    const loadMorePreviewKanji = async () => {
+        if (isLoadingKanji) return; // Prevent concurrent loading
+        
+        const newDisplayCount = displayedPreviewCount + PREVIEW_BATCH_SIZE;
+        setDisplayedPreviewCount(newDisplayCount);
+        
+        // Only load more if we don't have enough data already
+        if (wkKanji.length < newDisplayCount) {
+            setIsLoadingKanji(true);
+            try {
+                const level = selectedLevel === 'all' ? undefined : selectedLevel;
+                
+                // Load more kanji
+                const moreKanji = await getKanjiPreview(apiToken, level, newDisplayCount + PREVIEW_BATCH_SIZE); // Load a bit extra
+                setWkKanji(moreKanji);
+                
+                // Load study materials for new kanji
+                if (moreKanji.length > 0) {
+                    const subjectIds = moreKanji.map(k => k.id.toString()).join(',');
+                    const studyMaterialsData = await getKanjiStudyMaterials(apiToken, undefined, {
+                        subject_ids: subjectIds
+                    });
+                    setStudyMaterials(studyMaterialsData);
+                }
+            } catch (error) {
+                console.error('Error loading more kanji:', error);
+                setApiError('Fehler beim Laden weiterer Kanji.');
+            } finally {
+                setIsLoadingKanji(false);
+            }
         }
     };
 
@@ -914,6 +953,7 @@ export function useKanjiManager() {
         // Data
         filteredKanji,
         kanjiCount,
+        displayedPreviewCount,
 
         // Loading states
         isLoadingKanji,
@@ -929,6 +969,7 @@ export function useKanjiManager() {
         // Actions
         processTranslations: startProcessing, // Use startProcessing instead
         stopProcessing,
-        loadKanjiFromAPI
+        loadKanjiFromAPI,
+        loadMorePreviewKanji
     };
 }

@@ -22,6 +22,7 @@ export const KanjiManagerRefactored = () => {
         // Data
         filteredKanji,
         kanjiCount,
+        displayedPreviewCount,
 
         // States
         apiError,
@@ -34,7 +35,8 @@ export const KanjiManagerRefactored = () => {
 
         // Actions
         processTranslations,
-        stopProcessing
+        stopProcessing,
+        loadMorePreviewKanji
     } = useKanjiManager();
 
     const handleStartProcessing = () => {
@@ -94,9 +96,12 @@ export const KanjiManagerRefactored = () => {
                     </CardHeader>
                     <CardContent>
                         <KanjiPreview
-                            previewKanji={filteredKanji.slice(0, 12)}
+                            previewKanji={filteredKanji}
                             currentLevelCount={kanjiCount}
-                            maxPreviewCount={12}
+                            currentLevelCountLoading={isLoadingKanji}
+                            displayedPreviewCount={displayedPreviewCount}
+                            isLoadingKanji={isLoadingKanji}
+                            onLoadMore={loadMorePreviewKanji}
                         />
                     </CardContent>
                 </Card>
