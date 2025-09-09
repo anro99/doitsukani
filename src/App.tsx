@@ -17,16 +17,17 @@ import { ProgressReport } from "./components/progress";
 import { writeProgressAtom } from "./lib/progressreporter";
 import { RadicalsManagerRefactored } from "./components/RadicalsManagerRefactored";
 import { KanjiManagerRefactored } from "./components/KanjiManagerRefactored";
+import { VocabularyManagerRefactored } from "./components/VocabularyManagerRefactored";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji'>('vocabulary');
+  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager'>('vocabulary');
   const [, setProgress] = useAtom(writeProgressAtom);
 
   // React 19 best practice: Use startTransition for non-urgent tab updates
-  const handleTabChange = (newTab: 'vocabulary' | 'radicals' | 'kanji') => {
+  const handleTabChange = (newTab: 'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager') => {
     startTransition(() => {
       setActiveTab(newTab);
     });
@@ -118,6 +119,15 @@ function App() {
                 >
                   🎌 Kanji Manager
                 </button>
+                <button
+                  onClick={() => handleTabChange('vocabulary-manager')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'vocabulary-manager'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  📚 Vocabulary Manager
+                </button>
               </div>
             </div>
           </div>
@@ -202,6 +212,10 @@ function App() {
 
           {activeTab === 'kanji' && (
             <KanjiManagerRefactored />
+          )}
+
+          {activeTab === 'vocabulary-manager' && (
+            <VocabularyManagerRefactored />
           )}
         </div>
       </div>

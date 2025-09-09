@@ -22,7 +22,7 @@ interface ProcessingControlsProps {
     uploadStats: UploadStats;
     onStartProcessing: () => void;
     onStopProcessing: () => void;
-    itemType?: 'radicals' | 'kanji'; // Optional prop to specify the type
+    itemType?: 'radicals' | 'kanji' | 'vocabulary'; // Optional prop to specify the type
 }
 
 export const ProcessingControls = ({
@@ -94,7 +94,7 @@ export const ProcessingControls = ({
                 )}
 
                 <div className="text-sm text-gray-600">
-                    <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : 'Radicals'} werden verarbeitet</p>
+                    <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals'} werden verarbeitet</p>
                     <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
                     <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
                 </div>
