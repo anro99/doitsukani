@@ -63,7 +63,6 @@ export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export function useRadicalsManager() {
     // Stop processing flag with ref for immediate access
-    const [shouldStopProcessing, setShouldStopProcessing] = useState(false);
     const stopRef = useRef(false);
 
     // React 19 compatibility: Track component mount state

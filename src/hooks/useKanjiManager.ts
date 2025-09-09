@@ -106,7 +106,6 @@ export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export function useKanjiManager() {
     // Simplified stop processing (same as radicals)
-    const [shouldStopProcessing, setShouldStopProcessing] = useState(false);
     const stopRef = useRef(false);
 
     // React 19 compatibility: Track component mount state

@@ -98,7 +98,7 @@ function App() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  📚 Vocabulary Manager
+                  📚 Vocabulary Translations Upload
                 </button>
                 <button
                   onClick={() => handleTabChange('radicals')}
@@ -130,7 +130,7 @@ function App() {
               <div className="bg-white rounded-lg shadow-sm border p-8">
                 <div className="text-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                    Vocabulary Übersetzungen
+                    Vocabulary Translations Upload
                   </h2>
                   <p className="text-gray-600 text-sm">
                     Füge deutsche Übersetzungen für all deine Wanikani-Vokabeln hinzu

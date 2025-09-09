@@ -21,7 +21,6 @@ interface KanjiPreviewProps {
     // Count information for preview display
     currentLevelCount?: number;
     currentLevelCountLoading?: boolean;
-    maxPreviewCount?: number;
     // New props for "Load More" functionality
     displayedPreviewCount?: number;
     isLoadingKanji?: boolean;
@@ -32,7 +31,6 @@ export const KanjiPreview = ({
     previewKanji,
     currentLevelCount,
     currentLevelCountLoading = false,
-    maxPreviewCount = 12,
     displayedPreviewCount = 12,
     isLoadingKanji = false,
     onLoadMore
