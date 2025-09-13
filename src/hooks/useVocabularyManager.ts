@@ -6,6 +6,14 @@ import {
     getVocabularyPreview
 } from '../lib/wanikani';
 import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../lib/storage';
+import {
+    integratedVocabularyProcessor,
+    CompleteProcessingOptions,
+    ProcessingPhase,
+    CompleteProcessingResult,
+    ProcessingStatistics
+} from '../lib/vocabulary-integration';
+import { VocabularyItem } from '../lib/vocabulary-translation';
 
 // Type aliases for better readability
 type VocabularySubject = Subject & { object: 'vocabulary' };
@@ -79,6 +87,17 @@ export function useVocabularyManager() {
     const [isLoadingVocabulary, setIsLoadingVocabulary] = useState(false);
     const [apiError, setApiError] = useState<string>('');
     const [totalVocabularyCount, setTotalVocabularyCount] = useState<number>(0);
+
+    // New integrated processing states
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [currentPhase, setCurrentPhase] = useState<ProcessingPhase | null>(null);
+    const [processingResult, setProcessingResult] = useState<CompleteProcessingResult | null>(null);
+    const [processingStatistics, setProcessingStatistics] = useState<ProcessingStatistics | null>(null);
+    const stopSignalRef = useRef({ current: false });
+
+    // Create processor instance
+    const processorRef = useRef<ReturnType<typeof integratedVocabularyProcessor> | null>(null);
 
     // Handle token changes
     const handleApiTokenChange = (token: string) => {
@@ -227,13 +246,109 @@ export function useVocabularyManager() {
         }
     };
 
-    // Placeholder for processing functions - will be implemented in Phase 2
+    // Initialize processor when tokens are available
+    useEffect(() => {
+        if (apiToken && deeplToken) {
+            const options: CompleteProcessingOptions = {
+                batchSize: 10,
+                synonymMode,
+                apiToken,
+                deeplToken,
+                enableProgressReporting: true,
+                stopOnFirstError: false
+            };
+            processorRef.current = integratedVocabularyProcessor(options);
+        }
+    }, [apiToken, deeplToken, synonymMode]);
+
+    // Convert internal vocabulary format to VocabularyItem for processing
+    const convertToVocabularyItems = (vocabulary: Vocabulary[]): VocabularyItem[] => {
+        return vocabulary.map(v => ({
+            id: v.id,
+            characters: v.characters,
+            meanings: [
+                { meaning: v.primaryMeaning, primary: true },
+                ...v.alternativeMeanings.map(meaning => ({ meaning, primary: false }))
+            ]
+        }));
+    };
+
+    // Real processing function using integrated system
     const startProcessing = async () => {
-        console.log('Vocabulary processing will be implemented in Phase 2');
+        if (!processorRef.current || !apiToken || !deeplToken) {
+            setApiError('Tokens not available or processor not initialized');
+            return;
+        }
+
+        try {
+            setIsProcessing(true);
+            setProgress(0);
+            setApiError('');
+            setProcessingResult(null);
+            stopSignalRef.current = { current: false };
+
+            // Convert filtered vocabulary to VocabularyItem format
+            const vocabularyItems = convertToVocabularyItems(filteredVocabulary);
+
+            // Process with progress tracking using direct API
+            const options: CompleteProcessingOptions = {
+                batchSize: 10,
+                synonymMode,
+                apiToken,
+                deeplToken,
+                enableProgressReporting: true,
+                stopOnFirstError: false
+            };
+
+            const { processVocabularyComplete } = await import('../lib/vocabulary-integration');
+            const result = await processVocabularyComplete(vocabularyItems, options, (phase: ProcessingPhase) => {
+                if (mountedRef.current) {
+                    setCurrentPhase(phase);
+                    setProgress(phase.progress);
+                }
+            });
+
+            if (mountedRef.current) {
+                setProcessingResult(result);
+
+                // Calculate simple statistics from result
+                const stats: ProcessingStatistics = {
+                    totalProcessed: result.totalItems,
+                    totalTranslated: result.translationResults.successCount,
+                    totalUploaded: result.uploadResults.createdCount + result.uploadResults.updatedCount,
+                    totalErrors: result.translationResults.errorCount + result.uploadResults.errorCount,
+                    averageProcessingTime: result.processingTime,
+                    successRate: result.totalItems > 0
+                        ? ((result.translationResults.successCount + result.uploadResults.createdCount + result.uploadResults.updatedCount) / (result.totalItems * 2)) * 100
+                        : 0
+                };
+                setProcessingStatistics(stats);
+                setProgress(100);
+
+                if (result.success) {
+                    console.log('✅ Processing completed successfully:', result);
+                } else {
+                    console.warn('⚠️ Processing completed with errors:', result);
+                }
+            }
+        } catch (error) {
+            if (mountedRef.current) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
+                setApiError(`Processing failed: ${errorMessage}`);
+                console.error('❌ Processing error:', error);
+            }
+        } finally {
+            if (mountedRef.current) {
+                setIsProcessing(false);
+            }
+        }
     };
 
     const stopProcessing = () => {
-        console.log('Stop processing will be implemented in Phase 2');
+        if (stopSignalRef.current) {
+            stopSignalRef.current.current = true;
+            console.log('🛑 Stop processing requested');
+        }
     };
 
     // Load vocabulary when component mounts or token/level changes
@@ -268,12 +383,23 @@ export function useVocabularyManager() {
         isLoadingVocabulary,
         apiError,
 
-        // Placeholder processing states (Phase 2)
-        isProcessing: false,
-        progress: 0,
-        translationStatus: '',
-        uploadStatus: '',
-        uploadStats: { created: 0, updated: 0, failed: 0, skipped: 0, successful: 0 },
+        // Integrated processing states
+        isProcessing,
+        progress,
+        translationStatus: currentPhase?.phase === 'translation' ? currentPhase.status : '',
+        uploadStatus: currentPhase?.phase === 'upload' ? currentPhase.status : '',
+        uploadStats: {
+            created: processingResult?.uploadResults.createdCount || 0,
+            updated: processingResult?.uploadResults.updatedCount || 0,
+            failed: processingResult?.uploadResults.errorCount || 0,
+            skipped: 0, // Not used in new system
+            successful: (processingResult?.uploadResults.createdCount || 0) + (processingResult?.uploadResults.updatedCount || 0)
+        },
+
+        // New integrated processing data
+        currentPhase,
+        processingResult,
+        processingStatistics,
 
         // Actions
         processTranslations: startProcessing,

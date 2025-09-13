@@ -129,21 +129,24 @@ describe('useVocabularyManager Hook - Phase 1 Tests', () => {
             });
         });
 
-        it('should have placeholder processing functions', async () => {
+        it('should have integrated processing functions', async () => {
             const { result } = renderHook(() => useVocabularyManager());
             const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
 
+            // Processing should now use the integrated system
             await act(async () => {
                 await result.current.processTranslations();
             });
 
-            expect(consoleSpy).toHaveBeenCalledWith('Vocabulary processing will be implemented in Phase 2');
+            // Should log success message instead of placeholder
+            expect(consoleSpy).toHaveBeenCalledWith('✅ Processing completed successfully:', expect.any(Object));
 
+            // Stop processing should still work
             act(() => {
                 result.current.stopProcessing();
             });
 
-            expect(consoleSpy).toHaveBeenCalledWith('Stop processing will be implemented in Phase 2');
+            expect(consoleSpy).toHaveBeenCalledWith('🛑 Stop processing requested');
 
             consoleSpy.mockRestore();
         });
