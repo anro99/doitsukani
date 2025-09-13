@@ -79,13 +79,16 @@ describe('📚 VocabularyPreview Component Tests', () => {
             expect(screen.getByText('dog')).toBeInTheDocument();
             expect(screen.getByText('Alt: puppy, hound')).toBeInTheDocument();
 
-            // Check readings (text is split across multiple elements)
-            expect(screen.getByText('Readings:')).toBeInTheDocument();
-            expect(screen.getByText('いぬ')).toBeInTheDocument();
+            // Check readings (use getAllBy since there are multiple vocabulary items)
+            const readingsLabels = screen.getAllByText('Readings:');
+            expect(readingsLabels.length).toBeGreaterThan(0);
+            // Check specific readings with exact match (including comma)
+            expect(screen.getByText('いぬ,')).toBeInTheDocument();
             expect(screen.getByText('けん')).toBeInTheDocument();
 
-            // Check parts of speech
-            expect(screen.getByText('noun')).toBeInTheDocument();
+            // Check parts of speech (both vocabulary have "noun")
+            const nounBadges = screen.getAllByText('noun');
+            expect(nounBadges.length).toBeGreaterThan(0);
 
             // Check synonyms
             expect(screen.getByText('Hund')).toBeInTheDocument();

@@ -9,13 +9,23 @@ vi.mock('axios', () => ({
     }
 }));
 
-// Mock Bottleneck
+// Mock Bottleneck with proper function handling
 vi.mock('bottleneck', () => {
+    const mockSchedule = vi.fn().mockImplementation(async (fn: Function | any, ...args: any[]) => {
+        // If first argument is a function, call it with remaining args
+        if (typeof fn === 'function') {
+            return await fn(...args);
+        }
+        // If first argument is options and second is function
+        if (typeof args[0] === 'function') {
+            return await args[0](...args.slice(1));
+        }
+        throw new Error('Mock schedule: no function provided');
+    });
+
     return {
         default: vi.fn().mockImplementation(() => ({
-            schedule: vi.fn().mockImplementation(async (_options: any, fn: Function) => {
-                return await fn();
-            })
+            schedule: mockSchedule
         }))
     };
 });
