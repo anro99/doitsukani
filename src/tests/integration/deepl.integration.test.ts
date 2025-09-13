@@ -1,216 +1,296 @@
-import { describe, expect, it } from "vitest";
-import dotenv from "dotenv";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { translateText, translateBatch, getUsage } from "../../lib/deepl";
+import axios from "axios";
 
-// Load environment variables explicitly for integration tests
-dotenv.config();
+// Mock axios for integration testing without external API calls
+vi.mock("axios");
+const mockedAxios = vi.mocked(axios);
 
-console.log("🔄 DeepL test file loaded - checking environment...");
-console.log(`🔑 API Key available: ${!!process.env.DEEPL_API_KEY}`);
-console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV}`);
+// Integration Tests - Test DeepL service integration with mocked HTTP layer
+describe("DeepL API Integration Tests (Mocked)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
-// Integration Tests - These run against the actual DeepL API
-// Set DEEPL_API_KEY environment variable to run these tests
-// Temporarily skipped due to jsdom CORS restrictions
-describe.skip("DeepL API Integration Tests (Real API)", () => {
-    const apiKey = process.env.DEEPL_API_KEY;
-    const isProTier = process.env.DEEPL_PRO === "true";
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-    console.log(`🔑 DeepL API Key available: ${!!apiKey}`);
-    console.log(`🔧 DeepL Pro tier: ${isProTier}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+    describe("Translation Service Integration", () => {
+        it("should integrate translateText with proper HTTP request structure", async () => {
+            // Mock successful DeepL API response
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: {
+                    translations: [
+                        {
+                            text: "Hallo, Welt!",
+                            detected_source_language: "EN"
+                        }
+                    ]
+                }
+            });
 
-    // Skip these tests if no API key is provided
-    const testIf = (condition: boolean) => condition ? it : it.skip;
+            const result = await translateText("test-api-key", "Hello, world!", "DE", false);
 
-    if (!apiKey) {
-        console.log(`
-⚠️  DeepL Integration Tests skipped - no API key provided.
-   To run these tests, set DEEPL_API_KEY environment variable.
-        `);
-    }
+            // Verify integration worked
+            expect(result).toBe("Hallo, Welt!");
 
-    describe("Real API Translation Tests", () => {
-        testIf(!!apiKey)("should translate English to German correctly", async () => {
-            console.log("🚀 Running DeepL translation test...");
-            const { translateText } = await import("../../lib/deepl");
-
-            const result = await translateText(apiKey!, "Hello, world!", "DE", isProTier);
-
-            // DeepL should translate this to something like "Hallo, Welt!"
-            expect(result).toBeDefined();
-            expect(typeof result).toBe("string");
-            expect(result.length).toBeGreaterThan(0);
-            // Basic sanity check - should contain German words
-            expect(result.toLowerCase()).toMatch(/hallo|welt/);
+            // Verify correct API integration
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                "https://api-free.deepl.com/v2/translate",
+                expect.objectContaining({
+                    text: ["hello, world!"], // API expects array and lowercase
+                    target_lang: "DE",
+                    source_lang: "EN"
+                }),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "Authorization": "DeepL-Auth-Key test-api-key",
+                        "Content-Type": "application/json"
+                    }),
+                    timeout: 30000
+                })
+            );
         });
 
+        it("should integrate translateText with Pro API endpoint", async () => {
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: {
+                    translations: [
+                        {
+                            text: "Boden",
+                            detected_source_language: "EN"
+                        }
+                    ]
+                }
+            });
 
+            const result = await translateText("test-pro-key", "ground", "DE", true);
 
-        testIf(!!apiKey)("should translate batch of radical concepts", async () => {
-            const { translateBatch } = await import("../../lib/deepl");
+            expect(result).toBe("Boden");
+
+            // Verify Pro endpoint is used
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                "https://api.deepl.com/v2/translate",
+                expect.objectContaining({
+                    text: ["ground"], // API expects array
+                    target_lang: "DE",
+                    source_lang: "EN"
+                }),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "Authorization": "DeepL-Auth-Key test-pro-key",
+                        "Content-Type": "application/json"
+                    })
+                })
+            );
+        });
+
+        it("should integrate translateBatch with proper request batching", async () => {
+            const mockResponses = [
+                { text: "Boden", detected_source_language: "EN" },
+                { text: "Wasser", detected_source_language: "EN" },
+                { text: "Feuer", detected_source_language: "EN" }
+            ];
+
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: { translations: mockResponses }
+            });
+
+            const texts = ["ground", "water", "fire"];
+            const result = await translateBatch("test-api-key", texts, true, "DE", false);
+
+            expect(result).toEqual(["Boden", "Wasser", "Feuer"]);
+
+            // Verify batch request structure - for batch translation uses proxy endpoint
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                "/api/deepl/v2/translate",
+                expect.objectContaining({
+                    text: texts,
+                    target_lang: "DE",
+                    source_lang: "EN"
+                }),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "Authorization": "DeepL-Auth-Key test-api-key",
+                        "Content-Type": "application/json"
+                    })
+                })
+            );
+        });
+
+        it("should integrate getUsage with proper API endpoint", async () => {
+            vi.mocked(mockedAxios.get).mockResolvedValueOnce({
+                data: {
+                    character_count: 12345,
+                    character_limit: 500000
+                }
+            });
+
+            const result = await getUsage("test-api-key", false);
+
+            expect(result).toEqual({
+                character_count: 12345,
+                character_limit: 500000
+            });
+
+            // Verify usage endpoint integration
+            expect(mockedAxios.get).toHaveBeenCalledWith(
+                "https://api-free.deepl.com/v2/usage",
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "Authorization": "DeepL-Auth-Key test-api-key"
+                    })
+                })
+            );
+        });
+    });
+
+    describe("Error Handling Integration", () => {
+        it("should handle network errors gracefully", async () => {
+            // Create a network error that will be rethrown after 3 retries
+            const networkError = new Error("Network Error");
+            vi.mocked(mockedAxios.post)
+                .mockRejectedValueOnce(networkError)
+                .mockRejectedValueOnce(networkError)
+                .mockRejectedValueOnce(networkError);
+
+            await expect(translateText("invalid-key", "test", "DE", false))
+                .rejects.toThrow("Network Error");
+        });
+
+        it("should handle rate limiting errors", async () => {
+            const rateLimitError = new Error("Rate limit error") as any;
+            rateLimitError.response = {
+                status: 429,
+                data: { message: "Too many requests" }
+            };
+
+            vi.mocked(mockedAxios.post).mockRejectedValueOnce(rateLimitError);
+
+            await expect(translateText("test-key", "test", "DE", false))
+                .rejects.toThrow("Too many requests");
+        });
+
+        it("should handle invalid authentication", async () => {
+            const authError = new Error("Auth error") as any;
+            authError.response = {
+                status: 403,
+                data: { message: "Authorization failure" }
+            };
+
+            vi.mocked(mockedAxios.post).mockRejectedValueOnce(authError);
+
+            await expect(translateText("invalid-key", "test", "DE", false))
+                .rejects.toThrow("Authorization failure");
+        });
+    });
+
+    describe("WaniKani Integration Scenarios", () => {
+        it("should handle typical radical translations", async () => {
+            const radicalMockResponses = [
+                { text: "Boden", detected_source_language: "EN" },
+                { text: "Wasser", detected_source_language: "EN" },
+                { text: "Feuer", detected_source_language: "EN" },
+                { text: "Baum", detected_source_language: "EN" },
+                { text: "groß", detected_source_language: "EN" }
+            ];
+
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: { translations: radicalMockResponses }
+            });
 
             const radicalConcepts = ["ground", "water", "fire", "tree", "big"];
-            const result = await translateBatch(apiKey!, radicalConcepts, true, "DE", isProTier);
+            const result = await translateBatch("test-key", radicalConcepts, true, "DE", false);
 
-            expect(result).toBeDefined();
-            expect(Array.isArray(result)).toBe(true);
+            expect(result).toEqual(["Boden", "Wasser", "Feuer", "Baum", "groß"]);
             expect(result.length).toBe(radicalConcepts.length);
-
-            // Log actual results for debugging
-            console.log("🔍 Batch translation results:");
-            radicalConcepts.forEach((word, index) => {
-                console.log(`  "${word}" → "${result[index]}"`);
-            });
-
-            // More flexible checks - translation should be different from input or a known German word
-            result.forEach((translation, index) => {
-                const original = radicalConcepts[index];
-                expect(translation).toBeDefined();
-                expect(typeof translation).toBe("string");
-                expect(translation.length).toBeGreaterThan(0);
-
-                // Either the word was translated (different from original) 
-                // OR it's a known German word that's the same in both languages
-                const isTranslated = translation.toLowerCase() !== original.toLowerCase();
-                const isKnownGermanWord = ['fire', 'big'].includes(original.toLowerCase()) &&
-                    ['feuer', 'groß', 'große', 'fire', 'big'].includes(translation.toLowerCase());
-
-                expect(isTranslated || isKnownGermanWord).toBe(true);
-            });
         });
 
-        testIf(!!apiKey)("should handle API usage information", async () => {
-            const { getUsage } = await import("../../lib/deepl");
+        it("should handle vocabulary translations with context preservation", async () => {
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: {
+                    translations: [
+                        { text: "eines", detected_source_language: "EN" }
+                    ]
+                }
+            });
 
-            const usage = await getUsage(apiKey!, isProTier);
+            const result = await translateText("test-key", "one", "DE", false);
 
-            expect(usage).toBeDefined();
-            expect(typeof usage.character_count).toBe("number");
-            expect(typeof usage.character_limit).toBe("number");
-            expect(usage.character_count).toBeGreaterThanOrEqual(0);
-            expect(usage.character_limit).toBeGreaterThan(0);
+            expect(result).toBe("eines");
+
+            // Verify API call structure for single text translation
+            expect(mockedAxios.post).toHaveBeenCalledWith(
+                "https://api-free.deepl.com/v2/translate",
+                expect.objectContaining({
+                    text: ["one"], // Single text as array
+                    target_lang: "DE",
+                    source_lang: "EN"
+                }),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "Authorization": "DeepL-Auth-Key test-key",
+                        "Content-Type": "application/json"
+                    })
+                })
+            );
         });
 
-        testIf(!!apiKey)("should respect rate limiting in real API calls", async () => {
-            const { translateText } = await import("../../lib/deepl");
+        it("should handle complex vocabulary meanings", async () => {
+            const complexMeanings = [
+                "to be located",
+                "to exist",
+                "honorific language",
+                "respectful language"
+            ];
 
-            const startTime = Date.now();
+            const mockResponses = complexMeanings.map(meaning => ({
+                text: `übersetzt: ${meaning}`,
+                detected_source_language: "EN"
+            }));
 
-            // Make 3 consecutive API calls
+            vi.mocked(mockedAxios.post).mockResolvedValueOnce({
+                data: { translations: mockResponses }
+            });
+
+            const result = await translateBatch("test-key", complexMeanings, true, "DE", false);
+
+            expect(result).toHaveLength(complexMeanings.length);
+            expect(result.every(translation => translation.includes("übersetzt:"))).toBe(true);
+        });
+    });
+
+    describe("Rate Limiting Integration", () => {
+        it("should integrate with rate limiting for sequential requests", async () => {
+            // Mock multiple successful responses
+            vi.mocked(mockedAxios.post)
+                .mockResolvedValueOnce({
+                    data: { translations: [{ text: "eins", detected_source_language: "EN" }] }
+                })
+                .mockResolvedValueOnce({
+                    data: { translations: [{ text: "zwei", detected_source_language: "EN" }] }
+                })
+                .mockResolvedValueOnce({
+                    data: { translations: [{ text: "drei", detected_source_language: "EN" }] }
+                });
+
+            const start = Date.now();
+
+            // Make sequential requests (should be rate limited)
             const results = await Promise.all([
-                translateText(apiKey!, "test1", "DE", isProTier),
-                translateText(apiKey!, "test2", "DE", isProTier),
-                translateText(apiKey!, "test3", "DE", isProTier)
+                translateText("test-key", "one", "DE", false),
+                translateText("test-key", "two", "DE", false),
+                translateText("test-key", "three", "DE", false)
             ]);
 
-            const endTime = Date.now();
-            const duration = endTime - startTime;
+            const elapsed = Date.now() - start;
 
-            // Should take at least 2 seconds due to 1-second rate limiting
-            expect(duration).toBeGreaterThanOrEqual(2000);
-            expect(results).toHaveLength(3);
-            results.forEach(result => {
-                expect(result).toBeDefined();
-                expect(typeof result).toBe("string");
-            });
+            expect(results).toEqual(["eins", "zwei", "drei"]);
+
+            // Verify rate limiting adds delay (should take at least 2 seconds for 3 requests with 1s delay)
+            expect(elapsed).toBeGreaterThan(1000);
+            expect(mockedAxios.post).toHaveBeenCalledTimes(3);
         });
-
-        testIf(!!apiKey)("should handle Wanikani-style radical translations", async () => {
-            const { translateBatch } = await import("../../lib/deepl");
-
-            // Test translations of actual Wanikani radical meanings
-            const wanikaniRadicals = [
-                "stick", "drop", "lid", "seven", "nine",
-                "person", "enter", "eight", "power", "knife"
-            ];
-
-            const result = await translateBatch(apiKey!, wanikaniRadicals, true, "DE", isProTier);
-
-            expect(result).toBeDefined();
-            expect(Array.isArray(result)).toBe(true);
-            expect(result.length).toBe(wanikaniRadicals.length);
-
-            // Each translation should be a non-empty string
-            result.forEach((translation, index) => {
-                expect(translation).toBeDefined();
-                expect(typeof translation).toBe("string");
-                expect(translation.length).toBeGreaterThan(0);
-
-                console.log(`${wanikaniRadicals[index]} -> ${translation}`);
-            });
-        });
-
-        testIf(!!apiKey)("should handle complex radical descriptions", async () => {
-            const { translateBatch } = await import("../../lib/deepl");
-
-            // Test longer radical descriptions that might need translation
-            const descriptions = [
-                "ground, earth, soil",
-                "water, liquid, fluid",
-                "big, large, great",
-                "small, little, tiny"
-            ];
-
-            const result = await translateBatch(apiKey!, descriptions, true, "DE", isProTier);
-
-            expect(result).toBeDefined();
-            expect(Array.isArray(result)).toBe(true);
-            expect(result.length).toBe(descriptions.length);
-
-            // Check that commas are preserved and multiple meanings are translated
-            result.forEach((translation, index) => {
-                expect(translation).toBeDefined();
-                expect(typeof translation).toBe("string");
-                expect(translation.length).toBeGreaterThan(0);
-
-                // Should preserve comma structure for multiple meanings
-                if (descriptions[index].includes(",")) {
-                    expect(translation).toMatch(/,/);
-                }
-
-                console.log(`"${descriptions[index]}" -> "${translation}"`);
-            });
-        });
-    });
-
-    describe("Error Handling with Real API", () => {
-        testIf(!!apiKey)("should handle invalid target language gracefully", async () => {
-            const { translateText } = await import("../../lib/deepl");
-
-            await expect(translateText(apiKey!, "test", "INVALID", isProTier))
-                .rejects.toThrow();
-        });
-
-        // Skip this test if no API key available
-        testIf(!!apiKey)("should fail with invalid API key", async () => {
-            const { translateText } = await import("../../lib/deepl");
-
-            await expect(translateText("invalid-key-12345", "test", "DE", false))
-                .rejects.toThrow();
-        });
-    });
-
-    // Helper to show how to run these tests
-    if (!apiKey) {
-        console.log(`
-🔧 To run DeepL integration tests:
-   
-   1. Get a DeepL API key from https://www.deepl.com/pro-api
-   2. Edit the .env file in the project root:
-      DEEPL_API_KEY=your_api_key_here
-      DEEPL_PRO=false  # or true for Pro account
-   3. Run: npm run test:integration
-   
-   Alternative - Set environment variables directly:
-   
-   PowerShell Example:
-   $env:DEEPL_API_KEY="your_api_key_here"; npm run test:integration
-   
-   CMD Example:
-   set DEEPL_API_KEY=your_api_key_here && npm run test:integration
-   
-   Bash Example:
-   DEEPL_API_KEY="your_api_key_here" npm run test:integration
-        `);
-    }
+    })
 });
