@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'test';
 export default defineConfig({
     test: {
         globals: true,
-        environment: 'node', // Use Node.js environment for real HTTP requests
+        environment: 'jsdom', // Use jsdom for React component/hook testing
         setupFiles: ['./src/test/setup.integration.ts'],
         testTimeout: 120000, // 2 minutes for slow DeepL API calls
         // Prevent parallel execution to avoid rate limiting issues
