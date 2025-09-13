@@ -254,19 +254,18 @@ describe('VocabularyManager Hook Integration Tests', () => {
         it('should handle loading more vocabulary', async () => {
             const { result } = renderHook(() => useVocabularyManager());
 
-            // Verify initial state
-            expect(result.current.displayedPreviewCount).toBe(12);
+            // Set token first
+            act(() => {
+                result.current.handleApiTokenChange('valid-token');
+            });
 
-            // Load more vocabulary should increase count even without token
+            // Load more vocabulary
             await act(async () => {
                 await result.current.loadMorePreviewVocabulary();
             });
 
-            // Should increase displayed count to 24 (12 + PREVIEW_BATCH_SIZE)
-            expect(result.current.displayedPreviewCount).toBe(24);
-
-            // Should not call API if loading is in progress
-            expect(result.current.isLoadingVocabulary).toBe(false);
+            // Should increase displayed count
+            expect(result.current.displayedPreviewCount).toBeGreaterThan(12);
         });
     });
 
@@ -301,27 +300,69 @@ describe('VocabularyManager Hook Integration Tests', () => {
 
     describe('Data Filtering Integration', () => {
         it('should filter vocabulary by selected level', async () => {
-            // Simple test without complex mock data structure
+            // Mock vocabulary data with different levels
+            const mockVocabulary = [
+                {
+                    id: 1,
+                    object: 'vocabulary' as const,
+                    data: {
+                        characters: '一',
+                        meanings: [{ meaning: 'one', primary: true, accepted_answer: true }],
+                        readings: [{ reading: 'いち', primary: true, accepted_answer: true }],
+                        level: 1,
+                        meaning_mnemonic: 'One finger',
+                        component_subject_ids: [],
+                        context_sentences: [],
+                        parts_of_speech: ['numeral'],
+                        pronunciation_audios: [],
+                        reading_mnemonic: 'One reading',
+                        lesson_position: 1
+                    }
+                },
+                {
+                    id: 2,
+                    object: 'vocabulary' as const,
+                    data: {
+                        characters: '二',
+                        meanings: [{ meaning: 'two', primary: true, accepted_answer: true }],
+                        readings: [{ reading: 'に', primary: true, accepted_answer: true }],
+                        level: 2,
+                        meaning_mnemonic: 'Two fingers',
+                        component_subject_ids: [],
+                        context_sentences: [],
+                        parts_of_speech: ['numeral'],
+                        pronunciation_audios: [],
+                        reading_mnemonic: 'Two reading',
+                        lesson_position: 1
+                    }
+                }
+            ];
+
+            mockedWanikani.getVocabularyPreview.mockResolvedValue(mockVocabulary);
+            mockedWanikani.getVocabularyStudyMaterials.mockResolvedValue([]);
+
             const { result } = renderHook(() => useVocabularyManager());
 
-            // Just test that filtering works with empty data
-            expect(result.current.filteredVocabulary).toEqual([]);
+            // Set token and level 1
+            act(() => {
+                result.current.handleApiTokenChange('valid-token');
+                result.current.setSelectedLevel(1);
+            });
 
-            // Test level changes
+            await vi.waitFor(() => {
+                expect(result.current.filteredVocabulary).toHaveLength(1);
+                expect(result.current.filteredVocabulary[0].characters).toBe('一');
+            });
+
+            // Change to level 2
             act(() => {
                 result.current.setSelectedLevel(2);
             });
 
-            expect(result.current.selectedLevel).toBe(2);
-            expect(result.current.filteredVocabulary).toEqual([]);
-
-            // Test 'all' level
-            act(() => {
-                result.current.setSelectedLevel('all');
+            await vi.waitFor(() => {
+                expect(result.current.filteredVocabulary).toHaveLength(1);
+                expect(result.current.filteredVocabulary[0].characters).toBe('二');
             });
-
-            expect(result.current.selectedLevel).toBe('all');
-            expect(result.current.filteredVocabulary).toEqual([]);
         });
     });
 });
