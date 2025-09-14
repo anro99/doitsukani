@@ -141,7 +141,8 @@ export async function createOrUpdateStudyMaterial(
  */
 export async function uploadVocabularyBatch(
     vocabularyTranslations: VocabularyTranslation[],
-    options: VocabularyUploadOptions
+    options: VocabularyUploadOptions,
+    stopSignal?: { current: boolean }
 ): Promise<BatchUploadResult> {
     const results: UploadResultItem[] = [];
     const errors: string[] = [];
@@ -150,6 +151,12 @@ export async function uploadVocabularyBatch(
     let errorCount = 0;
 
     for (const { vocabulary, translatedSynonyms } of vocabularyTranslations) {
+        // Check stop signal before processing each item
+        if (stopSignal?.current === true) {
+            console.log('🛑 Upload processing stopped by user request');
+            break;
+        }
+
         try {
             // Find existing study material
             const mapping = await findStudyMaterialForVocabulary(options.apiToken, vocabulary.id);

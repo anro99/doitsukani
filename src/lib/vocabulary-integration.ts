@@ -56,7 +56,8 @@ export interface ProcessingStatistics {
 export async function processVocabularyComplete(
     vocabularyItems: VocabularyItem[],
     options: CompleteProcessingOptions,
-    onProgress?: (phase: ProcessingPhase) => void
+    onProgress?: (phase: ProcessingPhase) => void,
+    stopSignal?: { current: boolean }
 ): Promise<CompleteProcessingResult> {
     const startTime = Date.now();
     const phases: ProcessingPhase[] = [];
@@ -79,7 +80,8 @@ export async function processVocabularyComplete(
                 status: 'in-progress',
                 progress: Math.round(progress),
                 currentItem: vocabularyItems[Math.floor(progress / 100 * vocabularyItems.length)]?.characters
-            })
+            }),
+            stopSignal
         );
 
         reportPhase({ phase: 'translation', status: 'completed', progress: 100 });
@@ -100,7 +102,7 @@ export async function processVocabularyComplete(
             uploadResults = await uploadVocabularyBatch(successfulTranslations, {
                 synonymMode: options.synonymMode,
                 apiToken: options.apiToken
-            });
+            }, stopSignal);
 
             reportPhase({ phase: 'upload', status: 'completed', progress: 100 });
         } else {
@@ -117,7 +119,10 @@ export async function processVocabularyComplete(
         }
 
         const processingTime = Date.now() - startTime;
-        const overallSuccess = translationResults.errorCount === 0 && uploadResults.success;
+
+        // Success criteria: no actual errors (regardless of whether processing was stopped by user)
+        const hasActualErrors = translationResults.translations.some(t => t.error !== null);
+        const overallSuccess = !hasActualErrors && uploadResults.success;
 
         return {
             success: overallSuccess,
@@ -171,13 +176,20 @@ async function processTranslations(
     vocabularyItems: VocabularyItem[],
     deeplToken: string,
     stopOnFirstError: boolean,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    stopSignal?: { current: boolean }
 ): Promise<CompleteTranslationResults> {
     const translations: TranslationResultSummary[] = [];
     let successCount = 0;
     let errorCount = 0;
 
     for (let i = 0; i < vocabularyItems.length; i++) {
+        // Check stop signal before processing each item
+        if (stopSignal?.current === true) {
+            console.log('🛑 Translation processing stopped by user request');
+            break;
+        }
+
         const vocabulary = vocabularyItems[i];
 
         try {
