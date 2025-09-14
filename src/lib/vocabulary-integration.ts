@@ -64,6 +64,7 @@ export async function processVocabularyComplete(
 
     const reportPhase = (phase: ProcessingPhase) => {
         phases.push(phase);
+        console.log(`📊 PROGRESS: ${phase.phase} - ${phase.status} - ${phase.progress}%`, phase.currentItem ? `(${phase.currentItem})` : '');
         if (onProgress) onProgress(phase);
     };
 
@@ -71,16 +72,24 @@ export async function processVocabularyComplete(
         // Phase 1: Translation
         reportPhase({ phase: 'translation', status: 'started', progress: 0 });
 
+        console.log(`🚀 Starting translation of ${vocabularyItems.length} vocabulary items`);
+
         const translationResults = await processTranslations(
             vocabularyItems,
             options.deeplToken,
             options.stopOnFirstError,
-            (progress) => reportPhase({
-                phase: 'translation',
-                status: 'in-progress',
-                progress: Math.round(progress),
-                currentItem: vocabularyItems[Math.floor(progress / 100 * vocabularyItems.length)]?.characters
-            }),
+            (progress) => {
+                const currentIndex = Math.floor(progress / 100 * vocabularyItems.length);
+                const currentItem = vocabularyItems[currentIndex]?.characters;
+                console.log(`📊 Translation progress: ${progress}% (item ${currentIndex + 1}/${vocabularyItems.length}: ${currentItem})`);
+
+                reportPhase({
+                    phase: 'translation',
+                    status: 'in-progress',
+                    progress: Math.round(progress),
+                    currentItem: currentItem
+                });
+            },
             stopSignal
         );
 
@@ -97,12 +106,24 @@ export async function processVocabularyComplete(
         let uploadResults: BatchUploadResult;
 
         if (successfulTranslations.length > 0) {
+            console.log(`📤 Starting upload of ${successfulTranslations.length} successful translations`);
             reportPhase({ phase: 'upload', status: 'started', progress: 0 });
 
             uploadResults = await uploadVocabularyBatch(successfulTranslations, {
                 synonymMode: options.synonymMode,
                 apiToken: options.apiToken
-            }, stopSignal);
+            }, stopSignal, (progress) => {
+                const currentIndex = Math.floor(progress / 100 * successfulTranslations.length);
+                const currentItem = successfulTranslations[currentIndex]?.vocabulary.characters;
+                console.log(`📊 Upload progress: ${progress}% (item ${currentIndex + 1}/${successfulTranslations.length}: ${currentItem})`);
+
+                reportPhase({
+                    phase: 'upload',
+                    status: 'in-progress',
+                    progress: Math.round(progress),
+                    currentItem: currentItem
+                });
+            });
 
             reportPhase({ phase: 'upload', status: 'completed', progress: 100 });
         } else {
@@ -124,7 +145,7 @@ export async function processVocabularyComplete(
         const hasActualErrors = translationResults.translations.some(t => t.error !== null);
         const overallSuccess = !hasActualErrors && uploadResults.success;
 
-        return {
+        const result = {
             success: overallSuccess,
             totalItems: vocabularyItems.length,
             translationResults,
@@ -132,6 +153,18 @@ export async function processVocabularyComplete(
             processingTime,
             phases
         };
+
+        console.log('🎯 Processing completed:', {
+            success: result.success,
+            totalItems: result.totalItems,
+            translated: result.translationResults.successCount,
+            translationErrors: result.translationResults.errorCount,
+            uploaded: result.uploadResults.createdCount + result.uploadResults.updatedCount,
+            uploadErrors: result.uploadResults.errorCount,
+            processingTime: result.processingTime + 'ms'
+        });
+
+        return result;
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
@@ -212,6 +245,7 @@ async function processTranslations(
                 });
                 successCount++;
             }
+
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown translation error';
             translations.push({
@@ -224,7 +258,7 @@ async function processTranslations(
             if (stopOnFirstError) break;
         }
 
-        // Report progress
+        // Report progress after each vocabulary item (success or error)
         if (onProgress) {
             const progress = ((i + 1) / vocabularyItems.length) * 100;
             onProgress(progress);

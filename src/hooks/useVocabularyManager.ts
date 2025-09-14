@@ -49,10 +49,11 @@ export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export function useVocabularyManager() {
     // React 19 compatibility: Track component mount state
-    const mountedRef = useRef(true);
+    const mountedRef = useRef(false);
 
-    // Reset when component mounts or re-mounts
+    // Set mounted to true when component mounts, false when unmounts
     useEffect(() => {
+        mountedRef.current = true;
         return () => {
             mountedRef.current = false;
         };
@@ -302,9 +303,20 @@ export function useVocabularyManager() {
 
             const { processVocabularyComplete } = await import('../lib/vocabulary-integration');
             const result = await processVocabularyComplete(vocabularyItems, options, (phase: ProcessingPhase) => {
+                console.log('🔄 Progress callback received:', {
+                    phase: phase.phase,
+                    status: phase.status,
+                    progress: phase.progress,
+                    currentItem: phase.currentItem,
+                    mounted: mountedRef.current
+                });
+
                 if (mountedRef.current) {
+                    console.log('📱 Updating React state:', { phase: phase.phase, progress: phase.progress });
                     setCurrentPhase(phase);
                     setProgress(phase.progress);
+                } else {
+                    console.log('❌ Component not mounted - skipping state update');
                 }
             }, stopSignalRef.current);
 
@@ -327,6 +339,14 @@ export function useVocabularyManager() {
 
                 if (result.success) {
                     console.log('✅ Processing completed successfully:', result);
+
+                    // Reload vocabulary data to show updated synonyms
+                    if (result.uploadResults.createdCount > 0 || result.uploadResults.updatedCount > 0) {
+                        console.log('🔄 Reloading vocabulary data to show updated synonyms...');
+                        setTimeout(() => {
+                            loadVocabularyFromAPI();
+                        }, 1000); // Small delay to ensure WaniKani data is updated
+                    }
                 } else {
                     console.warn('⚠️ Processing completed with errors:', result);
                 }
@@ -348,10 +368,19 @@ export function useVocabularyManager() {
         if (stopSignalRef.current) {
             stopSignalRef.current.current = true;
             console.log('🛑 Stop processing requested');
+
+            // Don't reset UI states immediately - let the processing complete gracefully
+            // The UI will be updated when the processing actually stops
         }
     };
 
-    // Load vocabulary when component mounts or token/level changes
+    const clearResults = () => {
+        console.log('🗑️ Clearing processing results');
+        setProcessingResult(null);
+        setProcessingStatistics(null);
+        setCurrentPhase(null);
+        setProgress(0);
+    };    // Load vocabulary when component mounts or token/level changes
     useEffect(() => {
         if (apiToken) {
             loadVocabularyFromAPI();
@@ -404,6 +433,7 @@ export function useVocabularyManager() {
         // Actions
         processTranslations: startProcessing,
         stopProcessing,
+        clearResults,
         loadVocabularyFromAPI,
         loadMorePreviewVocabulary
     };

@@ -142,7 +142,8 @@ export async function createOrUpdateStudyMaterial(
 export async function uploadVocabularyBatch(
     vocabularyTranslations: VocabularyTranslation[],
     options: VocabularyUploadOptions,
-    stopSignal?: { current: boolean }
+    stopSignal?: { current: boolean },
+    onProgress?: (progress: number) => void
 ): Promise<BatchUploadResult> {
     const results: UploadResultItem[] = [];
     const errors: string[] = [];
@@ -150,7 +151,9 @@ export async function uploadVocabularyBatch(
     let updatedCount = 0;
     let errorCount = 0;
 
-    for (const { vocabulary, translatedSynonyms } of vocabularyTranslations) {
+    for (let i = 0; i < vocabularyTranslations.length; i++) {
+        const { vocabulary, translatedSynonyms } = vocabularyTranslations[i];
+
         // Check stop signal before processing each item
         if (stopSignal?.current === true) {
             console.log('🛑 Upload processing stopped by user request');
@@ -172,6 +175,12 @@ export async function uploadVocabularyBatch(
             } else {
                 errorCount++;
                 if (result.error) errors.push(result.error);
+            }
+
+            // Report progress after each upload
+            if (onProgress) {
+                const progress = Math.round(((i + 1) / vocabularyTranslations.length) * 100);
+                onProgress(progress);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';

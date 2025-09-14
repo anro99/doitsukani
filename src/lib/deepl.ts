@@ -76,10 +76,15 @@ export const translateText = async (
 
             console.log('🌐 DEBUG: DeepL response received:', response.status);
 
-            console.log('🌐 DEBUG: DeepL response received:', response.status);
-
             const data = response.data as DeepLResponse;
-            return data.translations[0].text;
+            const translatedText = data.translations[0].text;
+            console.log('🌐 DEBUG: DeepL translation result:', {
+                input: textToTranslate,
+                output: translatedText,
+                fullResponse: data
+            });
+
+            return translatedText;
         } catch (error: unknown) {
             const err = error as Error & {
                 response?: {

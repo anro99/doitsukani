@@ -33,9 +33,15 @@ export const VocabularyManagerRefactored = () => {
         uploadStatus,
         uploadStats,
 
+        // New integrated processing states
+        currentPhase,
+        processingResult,
+        processingStatistics,
+
         // Actions
         processTranslations,
         stopProcessing,
+        clearResults,
         loadMorePreviewVocabulary
     } = useVocabularyManager();
 
@@ -45,6 +51,10 @@ export const VocabularyManagerRefactored = () => {
 
     const handleStopProcessing = () => {
         stopProcessing();
+    };
+
+    const handleClearResults = () => {
+        clearResults();
     };
 
     return (
@@ -122,6 +132,12 @@ export const VocabularyManagerRefactored = () => {
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="vocabulary"
+
+                    // New integrated processing props
+                    currentPhase={currentPhase}
+                    processingResult={processingResult}
+                    processingStatistics={processingStatistics}
+                    onClearResults={handleClearResults}
                 />
             )}
 
