@@ -5,12 +5,16 @@ vi.mock('../../lib/deepl', () => ({
     translateText: vi.fn()
 }));
 
-vi.mock('../../lib/wanikani', () => ({
-    getStudyMaterials: vi.fn(),
-    createStudyMaterials: vi.fn(),
-    updateSynonyms: vi.fn(),
-    updateVocabularySynonyms: vi.fn()
-}));
+vi.mock('../../lib/wanikani', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../lib/wanikani')>();
+    return {
+        ...actual,
+        getVocabularyStudyMaterials: vi.fn(),
+        createStudyMaterials: vi.fn(),
+        updateSynonyms: vi.fn(),
+        updateVocabularySynonyms: vi.fn()
+    };
+});
 
 import {
     processVocabularyComplete,
@@ -64,7 +68,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
                 .mockResolvedValueOnce('Vogel');
 
             // Mock WaniKani study materials (none exist initially)
-            vi.mocked(wanikani.getStudyMaterials)
+            vi.mocked(wanikani.getVocabularyStudyMaterials)
                 .mockResolvedValue([] as any);
 
             // Mock WaniKani create operations
@@ -130,7 +134,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
                 .mockResolvedValueOnce('Vogel');
 
             // Mock WaniKani operations for successful translations only
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials)
                 .mockResolvedValueOnce({ data: { id: 101, meaning_synonyms: ['Katze'] } } as any)
                 .mockResolvedValueOnce({ data: { id: 103, meaning_synonyms: ['Vogel'] } } as any);
@@ -204,7 +208,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
                 .mockResolvedValueOnce('Hund')
                 .mockResolvedValueOnce('Vogel');
 
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials)
                 .mockResolvedValue({ data: { id: 101, meaning_synonyms: ['Test'] } } as any);
 
@@ -235,7 +239,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
 
             // Mock successful operations
             vi.mocked(deepl.translateText).mockResolvedValue('Test');
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials).mockResolvedValue({
                 data: { id: 101, meaning_synonyms: ['Test'] }
             } as any);
@@ -256,7 +260,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
 
             // Mock successful operations
             vi.mocked(deepl.translateText).mockResolvedValue('Test');
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials).mockResolvedValue({
                 data: { id: 101, meaning_synonyms: ['Test'] }
             } as any);
@@ -284,7 +288,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
 
             // Mock operations
             vi.mocked(deepl.translateText).mockResolvedValue('Test');
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials).mockResolvedValue({
                 data: { id: 101, meaning_synonyms: ['Test'] }
             } as any);
@@ -304,7 +308,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
         it('should handle WaniKani API rate limiting gracefully', async () => {
             // Arrange
             vi.mocked(deepl.translateText).mockResolvedValue('Test');
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
 
             // Mock rate limiting error then success
             vi.mocked(wanikani.createStudyMaterials)
@@ -329,7 +333,7 @@ describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
                 .mockResolvedValueOnce('Katze')
                 .mockResolvedValueOnce('Hund');
 
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
             vi.mocked(wanikani.createStudyMaterials)
                 .mockRejectedValueOnce(new Error('WaniKani server error'))
                 .mockResolvedValueOnce({ data: { id: 102, meaning_synonyms: ['Hund'] } } as any);

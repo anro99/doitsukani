@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock external dependencies
-vi.mock('../../lib/wanikani', () => ({
-    getStudyMaterials: vi.fn(),
-    createStudyMaterials: vi.fn(),
-    updateSynonyms: vi.fn(),
-    updateVocabularySynonyms: vi.fn()
-}));
+vi.mock('../../lib/wanikani', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../lib/wanikani')>();
+    return {
+        ...actual,
+        getVocabularyStudyMaterials: vi.fn(),
+        createStudyMaterials: vi.fn(),
+        updateSynonyms: vi.fn(),
+        updateVocabularySynonyms: vi.fn()
+    };
+});
 
 import {
     findStudyMaterialForVocabulary,
@@ -45,7 +49,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 { id: 102, data: { subject_id: 2, meaning_synonyms: ['Katze'] } }
             ];
 
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue(mockStudyMaterials as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue(mockStudyMaterials as any);
 
             // Act
             const result = await findStudyMaterialForVocabulary(mockApiToken, 1);
@@ -57,12 +61,14 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund']
             });
-            expect(wanikani.getStudyMaterials).toHaveBeenCalledWith(mockApiToken);
+            expect(wanikani.getVocabularyStudyMaterials).toHaveBeenCalledWith(mockApiToken, undefined, {
+                subject_ids: '1'
+            });
         });
 
         it('should return no mapping when study material does not exist', async () => {
             // Arrange
-            vi.mocked(wanikani.getStudyMaterials).mockResolvedValue([] as any);
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockResolvedValue([] as any);
 
             // Act
             const result = await findStudyMaterialForVocabulary(mockApiToken, 1);
@@ -78,7 +84,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
 
         it('should handle API errors gracefully', async () => {
             // Arrange
-            vi.mocked(wanikani.getStudyMaterials).mockRejectedValue(new Error('API Error'));
+            vi.mocked(wanikani.getVocabularyStudyMaterials).mockRejectedValue(new Error('API Error'));
 
             // Act & Assert
             await expect(findStudyMaterialForVocabulary(mockApiToken, 1))
@@ -232,7 +238,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             };
 
             // Mock study material finding
-            vi.mocked(wanikani.getStudyMaterials)
+            vi.mocked(wanikani.getVocabularyStudyMaterials)
                 .mockResolvedValueOnce([] as any) // No existing for vocabulary 1
                 .mockResolvedValueOnce([{ id: 102, data: { subject_id: 2, meaning_synonyms: ['Welpe'] } }] as any); // Existing for vocabulary 2
 
@@ -286,7 +292,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             };
 
             // Mock: first succeeds, second fails
-            vi.mocked(wanikani.getStudyMaterials)
+            vi.mocked(wanikani.getVocabularyStudyMaterials)
                 .mockResolvedValueOnce([] as any)
                 .mockRejectedValueOnce(new Error('API Error'));
 
