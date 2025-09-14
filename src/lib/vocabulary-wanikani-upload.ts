@@ -53,10 +53,12 @@ export async function findStudyMaterialForVocabulary(
     try {
         console.log(`🔍 Looking for study material for vocabulary ID ${vocabularyId}`);
 
-        // Use the more efficient vocabulary-specific API with subject_ids filter
-        const studyMaterials = await wanikani.getVocabularyStudyMaterials(apiToken, undefined, {
-            subject_ids: vocabularyId.toString()
-        });
+        // Use the more efficient vocabulary-specific API with subject_ids filter, rate-limited
+        const studyMaterials = await globalLimiter.schedule(() =>
+            wanikani.getVocabularyStudyMaterials(apiToken, undefined, {
+                subject_ids: vocabularyId.toString()
+            })
+        );
 
         console.log(`📊 Found ${studyMaterials.length} study materials for vocabulary ID ${vocabularyId}`);
 
@@ -94,15 +96,31 @@ export async function findStudyMaterialForVocabulary(
 /**
  * Create or update study material with synonyms
  */
+// Create a global rate limiter for all API calls
+const globalLimiter = new Bottleneck({
+    minTime: 2000, // Increased to 2 seconds between requests to avoid 429 errors
+    maxConcurrent: 1
+});
+
+// Add debugging for rate limiting
+globalLimiter.on("failed", async (error, jobInfo) => {
+    console.log(`🚫 Rate limited request failed:`, error);
+    if (jobInfo.retryCount < 3) {
+        console.log(`⏳ Retrying in ${2000 * (jobInfo.retryCount + 1)}ms...`);
+        return 2000 * (jobInfo.retryCount + 1); // Exponential backoff
+    }
+    return; // Stop retrying after 3 attempts
+});
+
+globalLimiter.on("retry", (_error, jobInfo) => {
+    console.log(`🔄 Retrying API call (attempt ${jobInfo.retryCount + 1})`);
+});
+
 export async function createOrUpdateStudyMaterial(
     mapping: StudyMaterialMapping,
     newSynonyms: string[],
     options: VocabularyUploadOptions
 ): Promise<UploadResultItem> {
-    const limiter = new Bottleneck({
-        minTime: 1200, // WaniKani allows 60 requests/minute = ~1000ms + buffer
-        maxConcurrent: 1
-    });
 
     console.log(`🔄 Processing upload for vocabulary ID ${mapping.vocabularyId}:`, {
         exists: mapping.exists,
@@ -116,7 +134,7 @@ export async function createOrUpdateStudyMaterial(
             // Update existing study material
             const finalSynonyms = mergeSynonyms(mapping.currentSynonyms, newSynonyms, options.synonymMode);
 
-            const result = await wanikani.updateSynonyms(options.apiToken, limiter, {
+            const result = await wanikani.updateSynonyms(options.apiToken, globalLimiter, {
                 id: mapping.studyMaterialId,
                 synonyms: finalSynonyms
             });
@@ -130,7 +148,7 @@ export async function createOrUpdateStudyMaterial(
             };
         } else {
             // Create new study material
-            const result = await wanikani.createStudyMaterials(options.apiToken, limiter, {
+            const result = await wanikani.createStudyMaterials(options.apiToken, globalLimiter, {
                 subject: mapping.vocabularyId,
                 synonyms: newSynonyms
             });
