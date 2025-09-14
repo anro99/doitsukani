@@ -51,13 +51,25 @@ export async function findStudyMaterialForVocabulary(
     vocabularyId: number
 ): Promise<StudyMaterialMapping> {
     try {
-        const studyMaterials = await wanikani.getStudyMaterials(apiToken);
+        console.log(`🔍 Looking for study material for vocabulary ID ${vocabularyId}`);
+
+        // Use the more efficient vocabulary-specific API with subject_ids filter
+        const studyMaterials = await wanikani.getVocabularyStudyMaterials(apiToken, undefined, {
+            subject_ids: vocabularyId.toString()
+        });
+
+        console.log(`📊 Found ${studyMaterials.length} study materials for vocabulary ID ${vocabularyId}`);
 
         const existingMaterial = studyMaterials.find(
             material => material.data.subject_id === vocabularyId
         );
 
         if (existingMaterial) {
+            console.log(`✅ Found existing study material:`, {
+                id: existingMaterial.id,
+                synonyms: existingMaterial.data.meaning_synonyms
+            });
+
             return {
                 vocabularyId,
                 studyMaterialId: existingMaterial.id,
@@ -66,6 +78,7 @@ export async function findStudyMaterialForVocabulary(
             };
         }
 
+        console.log(`❌ No existing study material found for vocabulary ID ${vocabularyId}`);
         return {
             vocabularyId,
             studyMaterialId: null,
@@ -87,8 +100,15 @@ export async function createOrUpdateStudyMaterial(
     options: VocabularyUploadOptions
 ): Promise<UploadResultItem> {
     const limiter = new Bottleneck({
-        minTime: 5000, // Conservative rate limiting for testing
+        minTime: 1200, // WaniKani allows 60 requests/minute = ~1000ms + buffer
         maxConcurrent: 1
+    });
+
+    console.log(`🔄 Processing upload for vocabulary ID ${mapping.vocabularyId}:`, {
+        exists: mapping.exists,
+        studyMaterialId: mapping.studyMaterialId,
+        currentSynonyms: mapping.currentSynonyms,
+        newSynonyms
     });
 
     try {

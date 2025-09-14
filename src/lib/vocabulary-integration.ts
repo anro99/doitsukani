@@ -109,10 +109,14 @@ export async function processVocabularyComplete(
             console.log(`📤 Starting upload of ${successfulTranslations.length} successful translations`);
             reportPhase({ phase: 'upload', status: 'started', progress: 0 });
 
+            // Create new stop signal for upload phase - don't carry over translation stop state
+            const uploadStopSignal = stopSignal ? { current: false } : undefined;
+            console.log('🔄 Created fresh stop signal for upload phase');
+
             uploadResults = await uploadVocabularyBatch(successfulTranslations, {
                 synonymMode: options.synonymMode,
                 apiToken: options.apiToken
-            }, stopSignal, (progress) => {
+            }, uploadStopSignal, (progress) => {
                 const currentIndex = Math.floor(progress / 100 * successfulTranslations.length);
                 const currentItem = successfulTranslations[currentIndex]?.vocabulary.characters;
                 console.log(`📊 Upload progress: ${progress}% (item ${currentIndex + 1}/${successfulTranslations.length}: ${currentItem})`);

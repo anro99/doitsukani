@@ -286,7 +286,10 @@ export function useVocabularyManager() {
             setProgress(0);
             setApiError('');
             setProcessingResult(null);
+
+            // Reset stop signal for new processing
             stopSignalRef.current = { current: false };
+            console.log('🔄 Reset stop signal for new processing');
 
             // Convert filtered vocabulary to VocabularyItem format
             const vocabularyItems = convertToVocabularyItems(filteredVocabulary);
@@ -365,12 +368,14 @@ export function useVocabularyManager() {
     };
 
     const stopProcessing = () => {
-        if (stopSignalRef.current) {
+        if (stopSignalRef.current && !stopSignalRef.current.current) {
             stopSignalRef.current.current = true;
             console.log('🛑 Stop processing requested');
 
             // Don't reset UI states immediately - let the processing complete gracefully
             // The UI will be updated when the processing actually stops
+        } else {
+            console.log('⚠️ Stop already requested - ignoring duplicate stop signal');
         }
     };
 
