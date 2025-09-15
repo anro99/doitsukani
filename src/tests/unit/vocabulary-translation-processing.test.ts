@@ -11,9 +11,7 @@ const mockedDeepL = vi.mocked(deepl);
 // Import the function and types we just implemented
 import {
     translateVocabularyMeanings,
-    VocabularyItem,
-    VocabularyMeaning,
-    TranslationResult
+    VocabularyItem
 } from '../../lib/vocabulary-translation';
 
 describe('🔴 RED Phase: Vocabulary Translation Processing (TDD)', () => {

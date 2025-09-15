@@ -69,35 +69,55 @@ export async function processVocabularyComplete(
     };
 
     try {
-        // Phase 1: Translation
-        reportPhase({ phase: 'translation', status: 'started', progress: 0 });
+        // Phase 1: Translation (skip for DELETE mode)
+        let translationResults: CompleteTranslationResults;
 
-        console.log(`🚀 Starting translation of ${vocabularyItems.length} vocabulary items`);
+        if (options.synonymMode === 'delete') {
+            console.log(`🗑️ DELETE mode: Skipping translation phase for ${vocabularyItems.length} vocabulary items`);
 
-        const translationResults = await processTranslations(
-            vocabularyItems,
-            options.deeplToken,
-            options.stopOnFirstError,
-            (progress) => {
-                const currentIndex = Math.floor(progress / 100 * vocabularyItems.length);
-                const currentItem = vocabularyItems[currentIndex]?.characters;
-                console.log(`📊 Translation progress: ${progress}% (item ${currentIndex + 1}/${vocabularyItems.length}: ${currentItem})`);
+            reportPhase({ phase: 'translation', status: 'started', progress: 0 });
+            reportPhase({ phase: 'translation', status: 'completed', progress: 100 });
 
-                reportPhase({
-                    phase: 'translation',
-                    status: 'in-progress',
-                    progress: Math.round(progress),
-                    currentItem: currentItem
-                });
-            },
-            stopSignal
-        );
+            // Create mock translation results for DELETE mode
+            translationResults = {
+                successCount: vocabularyItems.length,
+                errorCount: 0,
+                translations: vocabularyItems.map(v => ({
+                    vocabularyId: v.id,
+                    translatedSynonyms: [], // Empty array for DELETE mode
+                    error: null
+                }))
+            };
+        } else {
+            reportPhase({ phase: 'translation', status: 'started', progress: 0 });
 
-        reportPhase({ phase: 'translation', status: 'completed', progress: 100 });
+            console.log(`🚀 Starting translation of ${vocabularyItems.length} vocabulary items`);
 
-        // Phase 2: Upload (only successful translations)
+            translationResults = await processTranslations(
+                vocabularyItems,
+                options.deeplToken,
+                options.stopOnFirstError,
+                (progress) => {
+                    const currentIndex = Math.floor(progress / 100 * vocabularyItems.length);
+                    const currentItem = vocabularyItems[currentIndex]?.characters;
+                    console.log(`📊 Translation progress: ${progress}% (item ${currentIndex + 1}/${vocabularyItems.length}: ${currentItem})`);
+
+                    reportPhase({
+                        phase: 'translation',
+                        status: 'in-progress',
+                        progress: Math.round(progress),
+                        currentItem: currentItem
+                    });
+                },
+                stopSignal
+            );
+
+            reportPhase({ phase: 'translation', status: 'completed', progress: 100 });
+        }
+
+        // Phase 2: Upload (successful translations, including DELETE mode with empty arrays)
         const successfulTranslations = translationResults.translations
-            .filter(t => t.error === null && t.translatedSynonyms.length > 0)
+            .filter(t => t.error === null) // Include DELETE mode results (empty synonyms are valid)
             .map(t => ({
                 vocabulary: vocabularyItems.find(v => v.id === t.vocabularyId)!,
                 translatedSynonyms: t.translatedSynonyms

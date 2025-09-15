@@ -6,20 +6,11 @@
 
 import { describe, test, expect } from 'vitest';
 import {
-    processPreciseSynonymManagement
+    processPreciseSynonymManagement,
+    type StudyMaterialMapping
 } from '../../../src/lib/vocabulary-wanikani-upload';
-import type { VocabularyItem } from '../../../src/lib/vocabulary-translation';
-import type { StudyMaterialMapping } from '../../../src/lib/vocabulary-wanikani-upload';
 
 describe('🎯 Precise Synonym Management - Integration Tests', () => {
-    const mockVocabulary: VocabularyItem = {
-        id: 1,
-        characters: '本',
-        meanings: [
-            { meaning: 'book', primary: true },
-            { meaning: 'origin', primary: false }
-        ]
-    };
 
     test('should limit synonyms to 8 with proper ordering', () => {
         const mapping: StudyMaterialMapping = {
@@ -35,7 +26,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
             'Schrift', 'Druckwerk', 'Titel', 'Exemplar', 'Werk'
         ];
 
-        const result = processPreciseSynonymManagement(mockVocabulary, {
+        const result = processPreciseSynonymManagement({
             synonymMode: 'smart-merge',
             currentSynonyms: mapping.currentSynonyms,
             translatedSynonyms
@@ -69,7 +60,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
 
         const translatedSynonyms = ['book', 'Buch', 'Band']; // Exact match
 
-        const result = processPreciseSynonymManagement(mockVocabulary, {
+        const result = processPreciseSynonymManagement({
             synonymMode: 'smart-merge',
             currentSynonyms: mapping.currentSynonyms,
             translatedSynonyms
@@ -89,7 +80,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
 
         const translatedSynonyms = ['book', 'Buch', 'Band'];
 
-        const result = processPreciseSynonymManagement(mockVocabulary, {
+        const result = processPreciseSynonymManagement({
             synonymMode: 'replace',
             currentSynonyms: mapping.currentSynonyms,
             translatedSynonyms
@@ -112,7 +103,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
 
         const translatedSynonyms = ['book', 'Buch']; // Remove these
 
-        const result = processPreciseSynonymManagement(mockVocabulary, {
+        const result = processPreciseSynonymManagement({
             synonymMode: 'delete',
             currentSynonyms: mapping.currentSynonyms,
             translatedSynonyms
@@ -134,7 +125,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
 
         const translatedSynonyms = ['book', 'BOOK', 'bOOk', 'Buch']; // Various cases
 
-        const result = processPreciseSynonymManagement(mockVocabulary, {
+        const result = processPreciseSynonymManagement({
             synonymMode: 'smart-merge',
             currentSynonyms: mapping.currentSynonyms,
             translatedSynonyms

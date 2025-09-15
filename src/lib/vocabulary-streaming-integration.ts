@@ -99,39 +99,55 @@ export async function processVocabularyStreaming(
             const currentItem = vocabulary.characters;
 
             try {
-                // Step 1: Translate
-                console.log(`🔄 Translating ${currentItem}...`);
-                const translationResult = await translateVocabularyMeanings(vocabulary, options.deeplToken);
+                let translatedSynonyms: string[] = [];
 
-                if (translationResult.error) {
-                    console.log(`❌ Translation failed for ${currentItem}: ${translationResult.error}`);
-                    errorCount++;
+                // Check if translation is needed based on synonym mode
+                if (options.synonymMode === 'delete') {
+                    // DELETE mode: Skip translation, use empty array for removal
+                    console.log(`🗑️ DELETE mode: Skipping translation for ${currentItem}, removing all synonyms`);
+                    translatedSynonyms = []; // Empty array means remove all
+                    translatedCount++; // Count as "translated" for progress purposes
                 } else {
-                    translatedCount++;
-                    console.log(`✅ Translated ${currentItem}: ${translationResult.translatedSynonyms.join(', ')}`);
+                    // Step 1: Translate (for replace and smart-merge modes)
+                    console.log(`🔄 Translating ${currentItem}...`);
+                    const translationResult = await translateVocabularyMeanings(vocabulary, options.deeplToken);
 
-                    // Step 2: Upload immediately after successful translation
-                    try {
-                        console.log(`📤 Uploading ${currentItem}...`);
-                        const uploadResult = await uploadVocabularyBatch([{
-                            vocabulary,
-                            translatedSynonyms: translationResult.translatedSynonyms
-                        }], {
-                            synonymMode: options.synonymMode,
-                            apiToken: options.apiToken
-                        });
-
-                        if (uploadResult.success && uploadResult.results.length > 0) {
-                            uploadedCount++;
-                            console.log(`✅ Uploaded ${currentItem} successfully`);
-                        } else {
-                            errorCount++;
-                            console.log(`❌ Upload failed for ${currentItem}: ${uploadResult.errors.join(', ')}`);
-                        }
-                    } catch (uploadError) {
+                    if (translationResult.error) {
+                        console.log(`❌ Translation failed for ${currentItem}: ${translationResult.error}`);
                         errorCount++;
-                        console.log(`❌ Upload error for ${currentItem}: ${uploadError}`);
+                        // Skip upload if translation failed
+                        const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
+                        const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
+                        reportPhases(translationProgress, uploadProgress, currentItem);
+                        continue;
+                    } else {
+                        translatedCount++;
+                        translatedSynonyms = translationResult.translatedSynonyms;
+                        console.log(`✅ Translated ${currentItem}: ${translatedSynonyms.join(', ')}`);
                     }
+                }
+
+                // Step 2: Upload after translation (or skip in DELETE mode)
+                try {
+                    console.log(`📤 Uploading ${currentItem}...`);
+                    const uploadResult = await uploadVocabularyBatch([{
+                        vocabulary,
+                        translatedSynonyms
+                    }], {
+                        synonymMode: options.synonymMode,
+                        apiToken: options.apiToken
+                    });
+
+                    if (uploadResult.success && uploadResult.results.length > 0) {
+                        uploadedCount++;
+                        console.log(`✅ Uploaded ${currentItem} successfully`);
+                    } else {
+                        errorCount++;
+                        console.log(`❌ Upload failed for ${currentItem}: ${uploadResult.errors.join(', ')}`);
+                    }
+                } catch (uploadError) {
+                    errorCount++;
+                    console.log(`❌ Upload error for ${currentItem}: ${uploadError}`);
                 }
 
                 // Report progress after each item

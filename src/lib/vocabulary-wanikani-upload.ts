@@ -63,7 +63,6 @@ export interface SynonymManagementResult {
  * 5. Compare with existing to determine if update needed
  */
 export function processPreciseSynonymManagement(
-    vocabulary: VocabularyItem,
     options: SynonymManagementOptions
 ): SynonymManagementResult {
     const { synonymMode, currentSynonyms, translatedSynonyms } = options;
@@ -90,11 +89,12 @@ export function processPreciseSynonymManagement(
             break;
     }
 
-    // For delete mode, we're done - just check if update needed
+    // For delete mode, we're done - apply limit and check if update needed
     if (synonymMode === 'delete') {
-        const needsUpdate = !arraysEqual(finalSynonyms, currentSynonyms);
+        const limitedSynonyms = finalSynonyms.slice(0, 8); // Limit to 8
+        const needsUpdate = !arraysEqual(limitedSynonyms, currentSynonyms);
         return {
-            finalSynonyms: finalSynonyms.slice(0, 8), // Limit to 8
+            finalSynonyms: limitedSynonyms,
             needsUpdate,
             changesMade: needsUpdate
         };
@@ -265,7 +265,7 @@ function handle422Error(error: any, vocabularyId: number, synonyms: string[]): U
  */
 export async function createOrUpdateStudyMaterial(
     mapping: StudyMaterialMapping,
-    vocabulary: VocabularyItem,
+    _vocabulary: VocabularyItem,
     translatedSynonyms: string[],
     options: VocabularyUploadOptions
 ): Promise<UploadResultItem> {
@@ -278,7 +278,7 @@ export async function createOrUpdateStudyMaterial(
     });
 
     // Use precise synonym management
-    const synonymResult = processPreciseSynonymManagement(vocabulary, {
+    const synonymResult = processPreciseSynonymManagement({
         synonymMode: options.synonymMode,
         currentSynonyms: mapping.currentSynonyms,
         translatedSynonyms
