@@ -16,11 +16,7 @@ interface LevelSelectorProps {
     onLevelChange: (level: number | 'all') => void;
     synonymMode: SynonymMode;
     onSynonymModeChange: (mode: SynonymMode) => void;
-    isStreamingMode: boolean;
-    onStreamingModeChange: (streaming: boolean) => void;
     maxLevel?: number;
-    isProcessing?: boolean;
-    // Count props removed - no longer needed
 }
 
 const synonymModeOptions: SynonymModeData[] = [
@@ -49,10 +45,7 @@ export const LevelSelector = ({
     onLevelChange,
     synonymMode,
     onSynonymModeChange,
-    isStreamingMode,
-    onStreamingModeChange,
-    maxLevel = 60,
-    isProcessing = false
+    maxLevel = 60
 }: LevelSelectorProps) => {
     // Simplified - no count logic needed
     const levelOptions = [
@@ -121,56 +114,7 @@ export const LevelSelector = ({
                     </RadioGroup>
                 </div>
 
-                <div className="space-y-3">
-                    <Label>Verarbeitungsmodus</Label>
-                    <RadioGroup
-                        value={isStreamingMode ? 'streaming' : 'sequential'}
-                        onValueChange={(value) => onStreamingModeChange(value === 'streaming')}
-                        className="space-y-3"
-                        disabled={isProcessing}
-                    >
-                        <div className="flex items-start space-x-3">
-                            <RadioGroupItem
-                                value="sequential"
-                                id="mode-sequential"
-                                className="mt-1"
-                                disabled={isProcessing}
-                            />
-                            <div className="flex-1 space-y-1">
-                                <Label
-                                    htmlFor="mode-sequential"
-                                    className={`flex items-center gap-2 cursor-pointer ${isProcessing ? 'opacity-50' : ''}`}
-                                >
-                                    <span>🔄</span>
-                                    <span className="font-medium">Sequenziell</span>
-                                </Label>
-                                <p className="text-sm text-gray-600 leading-relaxed">
-                                    Erst alle Übersetzungen durchführen, dann alle zu WaniKani hochladen
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                            <RadioGroupItem
-                                value="streaming"
-                                id="mode-streaming"
-                                className="mt-1"
-                                disabled={isProcessing}
-                            />
-                            <div className="flex-1 space-y-1">
-                                <Label
-                                    htmlFor="mode-streaming"
-                                    className={`flex items-center gap-2 cursor-pointer ${isProcessing ? 'opacity-50' : ''}`}
-                                >
-                                    <span>⚡</span>
-                                    <span className="font-medium">Streaming</span>
-                                </Label>
-                                <p className="text-sm text-gray-600 leading-relaxed">
-                                    Sobald ein Vocabulary übersetzt ist, wird es sofort zu WaniKani hochgeladen (parallel)
-                                </p>
-                            </div>
-                        </div>
-                    </RadioGroup>
-                </div>
+
             </CardContent>
         </Card>
     );

@@ -242,6 +242,8 @@ export function useVocabularyManager() {
         }
     };
 
+
+
     // Convert internal vocabulary format to VocabularyItem for processing
     const convertToVocabularyItems = (vocabulary: Vocabulary[]): VocabularyItem[] => {
         return vocabulary.map(v => ({
@@ -254,7 +256,7 @@ export function useVocabularyManager() {
         }));
     };
 
-    // Streaming processing function
+    // Real processing function using integrated system
     const startProcessing = async () => {
         if (!apiToken || !deeplToken) {
             setApiError('Tokens not available');
@@ -269,12 +271,12 @@ export function useVocabularyManager() {
 
             // Reset stop signal for new processing
             stopSignalRef.current = { current: false };
-            console.log('🚀 Starting STREAMING processing');
+            console.log('� Starting STREAMING processing');
 
             // Convert filtered vocabulary to VocabularyItem format
             const vocabularyItems = convertToVocabularyItems(filteredVocabulary);
 
-            // Process with streaming mode
+            // Process with progress tracking using appropriate mode
             const options: CompleteProcessingOptions = {
                 batchSize: 10,
                 synonymMode,
@@ -284,34 +286,82 @@ export function useVocabularyManager() {
                 stopOnFirstError: false
             };
 
-            // 🚀 STREAMING MODE: Parallel translation/upload
-            const result = await processVocabularyStreaming(vocabularyItems, options, (phases: StreamingProcessingPhase) => {
-                console.log('🚀 Streaming progress:', {
-                    translation: phases.translationPhase.progress,
-                    upload: phases.uploadPhase.progress,
-                    overall: phases.overallPhase.progress,
-                    mounted: mountedRef.current
-                });
+            if (isStreamingMode) {
+                // 🚀 STREAMING MODE: Parallel translation/upload
+                const result = await processVocabularyStreaming(vocabularyItems, options, (phases: StreamingProcessingPhase) => {
+                    console.log('� Streaming progress:', {
+                        translation: phases.translationPhase.progress,
+                        upload: phases.uploadPhase.progress,
+                        overall: phases.overallPhase.progress,
+                        mounted: mountedRef.current
+                    });
+
+                    if (mountedRef.current) {
+                        setStreamingPhases(phases);
+                        setProgress(phases.overallPhase.progress);
+                    }
+                }, stopSignalRef.current);
 
                 if (mountedRef.current) {
-                    setStreamingPhases(phases);
-                    setProgress(phases.overallPhase.progress);
-                }
-            }, stopSignalRef.current);
+                    setStreamingResult(result);
+                    setProgress(100);
 
-            if (mountedRef.current) {
-                setStreamingResult(result);
-                setProgress(100);
+                    if (result.success) {
+                        console.log('✅ Streaming processing completed successfully:', result);
 
-                if (result.success) {
-                    console.log('✅ Streaming processing completed successfully:', result);
-
-                    // Reload vocabulary data to show updated synonyms
-                    if (result.uploadCount > 0) {
-                        setTimeout(() => loadVocabularyFromAPI(), 1000);
+                        // Reload vocabulary data to show updated synonyms
+                        if (result.uploadCount > 0) {
+                            setTimeout(() => loadVocabularyFromAPI(), 1000);
+                        }
+                    } else {
+                        console.warn('⚠️ Streaming processing completed with errors:', result);
                     }
-                } else {
-                    console.warn('⚠️ Streaming processing completed with errors:', result);
+                }
+            } else {
+                // 📋 SEQUENTIAL MODE: Traditional batch processing
+                const { processVocabularyComplete } = await import('../lib/vocabulary-integration');
+                const result = await processVocabularyComplete(vocabularyItems, options, (phase: ProcessingPhase) => {
+                    console.log('📋 Sequential progress:', {
+                        phase: phase.phase,
+                        status: phase.status,
+                        progress: phase.progress,
+                        currentItem: phase.currentItem,
+                        mounted: mountedRef.current
+                    });
+
+                    if (mountedRef.current) {
+                        setCurrentPhase(phase);
+                        setProgress(phase.progress);
+                    }
+                }, stopSignalRef.current);
+
+                if (mountedRef.current) {
+                    setProcessingResult(result);
+
+                    // Calculate simple statistics from result
+                    const stats: ProcessingStatistics = {
+                        totalProcessed: result.totalItems,
+                        totalTranslated: result.translationResults.successCount,
+                        totalUploaded: result.uploadResults.createdCount + result.uploadResults.updatedCount,
+                        totalErrors: result.translationResults.errorCount + result.uploadResults.errorCount,
+                        averageProcessingTime: result.processingTime,
+                        successRate: result.totalItems > 0
+                            ? ((result.translationResults.successCount + result.uploadResults.createdCount + result.uploadResults.updatedCount) / (result.totalItems * 2)) * 100
+                            : 0
+                    };
+                    setProcessingStatistics(stats);
+                    setProgress(100);
+
+                    if (result.success) {
+                        console.log('✅ Sequential processing completed successfully:', result);
+
+                        // Reload vocabulary data to show updated synonyms
+                        if (result.uploadResults.createdCount > 0 || result.uploadResults.updatedCount > 0) {
+                            setTimeout(() => loadVocabularyFromAPI(), 1000);
+                        }
+                    } else {
+                        console.warn('⚠️ Sequential processing completed with errors:', result);
+                    }
                 }
             }
         } catch (error) {
@@ -341,12 +391,13 @@ export function useVocabularyManager() {
 
     const clearResults = () => {
         console.log('🗑️ Clearing processing results');
+        setProcessingResult(null);
+        setProcessingStatistics(null);
+        setCurrentPhase(null);
         setStreamingPhases(null);
         setStreamingResult(null);
         setProgress(0);
-    };
-
-    // Load vocabulary when component mounts or token/level changes
+    };    // Load vocabulary when component mounts or token/level changes
     useEffect(() => {
         if (apiToken) {
             loadVocabularyFromAPI();
@@ -362,6 +413,8 @@ export function useVocabularyManager() {
         setSelectedLevel,
         synonymMode,
         setSynonymMode,
+        isStreamingMode,
+        setIsStreamingMode,
 
         // Tokens
         apiToken,
@@ -378,20 +431,25 @@ export function useVocabularyManager() {
         isLoadingVocabulary,
         apiError,
 
-        // Streaming processing states
+        // Integrated processing states
         isProcessing,
         progress,
-        translationStatus: '', // Not used in streaming mode
-        uploadStatus: '', // Not used in streaming mode
+        translationStatus: currentPhase?.phase === 'translation' ? currentPhase.status : '',
+        uploadStatus: currentPhase?.phase === 'upload' ? currentPhase.status : '',
         uploadStats: {
-            created: streamingResult?.uploadCount || 0,
-            updated: 0, // Not tracked separately in streaming mode
-            failed: streamingResult?.errorCount || 0,
-            skipped: 0, // Not used in streaming mode
-            successful: streamingResult?.uploadCount || 0
+            created: isStreamingMode ? streamingResult?.uploadCount || 0 : processingResult?.uploadResults.createdCount || 0,
+            updated: isStreamingMode ? 0 : processingResult?.uploadResults.updatedCount || 0,
+            failed: isStreamingMode ? streamingResult?.errorCount || 0 : processingResult?.uploadResults.errorCount || 0,
+            skipped: 0, // Not used in new system
+            successful: isStreamingMode ? streamingResult?.uploadCount || 0 : (processingResult?.uploadResults.createdCount || 0) + (processingResult?.uploadResults.updatedCount || 0)
         },
 
-        // Streaming processing data
+        // New integrated processing data
+        currentPhase,
+        processingResult,
+        processingStatistics,
+
+        // New streaming processing data
         streamingPhases,
         streamingResult,
 

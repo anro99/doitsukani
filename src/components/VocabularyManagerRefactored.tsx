@@ -12,8 +12,6 @@ export const VocabularyManagerRefactored = () => {
         synonymMode,
         setSynonymMode,
         setSelectedLevel,
-        isStreamingMode,
-        setIsStreamingMode,
 
         // Tokens  
         apiToken,
@@ -35,12 +33,7 @@ export const VocabularyManagerRefactored = () => {
         uploadStatus,
         uploadStats,
 
-        // New integrated processing states
-        currentPhase,
-        processingResult,
-        processingStatistics,
-
-        // New streaming processing states
+        // Streaming processing states
         streamingPhases,
         streamingResult,
 
@@ -91,9 +84,6 @@ export const VocabularyManagerRefactored = () => {
                     onLevelChange={setSelectedLevel}
                     synonymMode={synonymMode}
                     onSynonymModeChange={setSynonymMode}
-                    isStreamingMode={isStreamingMode}
-                    onStreamingModeChange={setIsStreamingMode}
-                    isProcessing={isProcessing}
                 />
             )}
 
@@ -141,15 +131,9 @@ export const VocabularyManagerRefactored = () => {
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="vocabulary"
-
-                    // New integrated processing props
-                    currentPhase={currentPhase}
-                    processingResult={processingResult}
-                    processingStatistics={processingStatistics}
                     onClearResults={handleClearResults}
 
-                    // New streaming processing props
-                    isStreamingMode={isStreamingMode}
+                    // Streaming processing props
                     streamingPhases={streamingPhases}
                     streamingResult={streamingResult}
                 />

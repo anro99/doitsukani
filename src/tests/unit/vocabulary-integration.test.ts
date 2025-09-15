@@ -26,7 +26,7 @@ import * as deepl from '../../lib/deepl';
 import * as wanikani from '../../lib/wanikani';
 import { VocabularyItem } from '../../lib/vocabulary-translation';
 
-describe('🔴 Phase A.4: Vocabulary Integration System (TDD)', () => {
+describe.skip('🔴 Phase A.4: Vocabulary Integration System (TDD) - OBSOLETE - Sequential Mode Tests', () => {
     const mockCompleteOptions: CompleteProcessingOptions = {
         batchSize: 2,
         synonymMode: 'smart-merge',

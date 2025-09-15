@@ -138,8 +138,8 @@ describe('useVocabularyManager Hook - Phase 1 Tests', () => {
                 await result.current.processTranslations();
             });
 
-            // Should log success message instead of placeholder
-            expect(consoleSpy).toHaveBeenCalledWith('✅ Processing completed successfully:', expect.any(Object));
+            // Should log success message for streaming mode
+            expect(consoleSpy).toHaveBeenCalledWith('✅ Streaming processing completed successfully:', expect.any(Object));
 
             // Stop processing should still work
             act(() => {

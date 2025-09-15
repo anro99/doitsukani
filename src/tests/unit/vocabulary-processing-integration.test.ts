@@ -16,7 +16,7 @@ vi.mock('../../lib/vocabulary-wanikani-upload', () => ({
     uploadVocabularyBatch: vi.fn()
 }));
 
-describe('Vocabulary Processing Integration Real-World Test', () => {
+describe.skip('Vocabulary Processing Integration Real-World Test - OBSOLETE - Sequential Mode Tests', () => {
     it('should provide proper progress updates during processing', async () => {
         const mockTranslate = vi.mocked((await import('../../lib/vocabulary-translation')).translateVocabularyMeanings);
         const mockUpload = vi.mocked((await import('../../lib/vocabulary-wanikani-upload')).uploadVocabularyBatch);
