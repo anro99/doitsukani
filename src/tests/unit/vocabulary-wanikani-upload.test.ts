@@ -223,6 +223,81 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 error: 'Upload failed'
             });
         });
+
+        it('should handle 422 validation errors with detailed analysis', async () => {
+            // Arrange
+            const mapping: StudyMaterialMapping = {
+                vocabularyId: 1,
+                studyMaterialId: 101,
+                exists: true,
+                currentSynonyms: ['Hund']
+            };
+            const newSynonyms = ['Katze', 'Hund']; // Duplicate that could cause 422
+            const options: VocabularyUploadOptions = {
+                synonymMode: 'smart-merge',
+                apiToken: mockApiToken
+            };
+
+            const error422 = {
+                response: {
+                    status: 422,
+                    data: {
+                        error: 'Validation failed: meaning_synonyms contains duplicates'
+                    }
+                }
+            };
+
+            vi.mocked(wanikani.updateSynonyms).mockRejectedValue(error422);
+
+            // Act
+            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+
+            // Assert
+            expect(result).toEqual({
+                vocabularyId: 1,
+                studyMaterialId: null,
+                action: 'failed',
+                finalSynonyms: [],
+                success: false,
+                error: '422 Validation Error: Validation failed: meaning_synonyms contains duplicates'
+            });
+        });
+
+        it('should prevent 422 errors by removing case-insensitive duplicates', async () => {
+            // Arrange
+            const mapping: StudyMaterialMapping = {
+                vocabularyId: 1,
+                studyMaterialId: 101,
+                exists: true,
+                currentSynonyms: ['Hund', 'DOG']
+            };
+            const newSynonyms = ['katze', 'KATZE', 'dog']; // Case variations that should be deduplicated
+            const options: VocabularyUploadOptions = {
+                synonymMode: 'smart-merge',
+                apiToken: mockApiToken
+            };
+
+            vi.mocked(wanikani.updateSynonyms).mockResolvedValue({
+                data: { meaning_synonyms: ['Hund', 'DOG', 'katze'] }
+            } as any);
+
+            // Act
+            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+
+            // Assert
+            expect(result.success).toBe(true);
+            expect(vi.mocked(wanikani.updateSynonyms)).toHaveBeenCalledWith(
+                mockApiToken,
+                expect.any(Object), // globalLimiter
+                expect.objectContaining({
+                    id: 101,
+                    synonyms: expect.arrayContaining(['Hund', 'DOG', 'katze']) // Should deduplicate case-insensitive
+                })
+            );
+
+            const calledSynonyms = vi.mocked(wanikani.updateSynonyms).mock.calls[0][2].synonyms;
+            expect(calledSynonyms).toHaveLength(3); // Should have removed the duplicate 'KATZE' and 'dog'
+        });
     });
 
     describe('uploadVocabularyBatch', () => {

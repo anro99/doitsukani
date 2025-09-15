@@ -18,7 +18,7 @@ export interface VocabularyUploadOptions {
 export interface UploadResultItem {
     vocabularyId: number;
     studyMaterialId: number | null;
-    action: 'created' | 'updated' | 'error';
+    action: 'created' | 'updated' | 'error' | 'failed';
     finalSynonyms: string[];
     success: boolean;
     error?: string;
@@ -104,17 +104,64 @@ const globalLimiter = new Bottleneck({
 
 // Add debugging for rate limiting
 globalLimiter.on("failed", async (error, jobInfo) => {
-    console.log(`🚫 Rate limited request failed:`, error);
-    if (jobInfo.retryCount < 3) {
-        console.log(`⏳ Retrying in ${2000 * (jobInfo.retryCount + 1)}ms...`);
-        return 2000 * (jobInfo.retryCount + 1); // Exponential backoff
+    const status = error?.response?.status || error?.status;
+    console.log(`🚫 API request failed with status ${status}:`, error);
+
+    // Only retry on actual rate limiting (429) or temporary server errors (5xx)
+    if (status === 429 || (status >= 500 && status < 600)) {
+        if (jobInfo.retryCount < 3) {
+            console.log(`⏳ Retrying in ${2000 * (jobInfo.retryCount + 1)}ms...`);
+            return 2000 * (jobInfo.retryCount + 1); // Exponential backoff
+        }
+    } else if (status === 422) {
+        console.log(`🚫 422 Validation Error - Not retrying. Data might be invalid (duplicates, too long, etc.)`);
+        return; // Don't retry validation errors
+    } else {
+        console.log(`🚫 Non-retryable error (status: ${status}) - Not retrying`);
+        return; // Don't retry other client errors (4xx)
     }
+
     return; // Stop retrying after 3 attempts
 });
 
 globalLimiter.on("retry", (_error, jobInfo) => {
     console.log(`🔄 Retrying API call (attempt ${jobInfo.retryCount + 1})`);
 });
+
+/**
+ * Handle 422 validation errors with detailed error analysis
+ */
+function handle422Error(error: any, vocabularyId: number, synonyms: string[]): UploadResultItem {
+    console.log(`🚫 422 Validation Error for vocabulary ${vocabularyId}:`, error.response?.data);
+
+    let errorReason = 'Unknown validation error';
+
+    if (error.response?.data?.error) {
+        errorReason = error.response.data.error;
+    } else if (error.response?.data?.errors) {
+        errorReason = JSON.stringify(error.response.data.errors);
+    }
+
+    // Common 422 reasons:
+    // - Duplicate synonyms
+    // - Synonyms too long (>255 chars)
+    // - Too many synonyms (>10)
+    console.log(`🔍 422 Error analysis:`, {
+        synonymCount: synonyms.length,
+        maxSynonymLength: Math.max(...synonyms.map(s => s.length)),
+        duplicates: synonyms.filter((item, index) => synonyms.indexOf(item) !== index),
+        errorReason
+    });
+
+    return {
+        vocabularyId,
+        studyMaterialId: null,
+        action: 'failed',
+        finalSynonyms: [],
+        success: false,
+        error: `422 Validation Error: ${errorReason}`
+    };
+}
 
 export async function createOrUpdateStudyMaterial(
     mapping: StudyMaterialMapping,
@@ -134,23 +181,50 @@ export async function createOrUpdateStudyMaterial(
             // Update existing study material
             const finalSynonyms = mergeSynonyms(mapping.currentSynonyms, newSynonyms, options.synonymMode);
 
+            // Validate and clean synonyms before sending
+            let validSynonyms = finalSynonyms
+                .map(s => s.trim()) // Remove whitespace
+                .filter(s => s.length > 0) // Remove empty strings
+                .map(s => s.length > 255 ? s.substring(0, 255) : s); // Truncate very long synonyms
+
+            if (validSynonyms.length > 10) {
+                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 10`);
+                validSynonyms = validSynonyms.slice(0, 10);
+            }
+
+            console.log(`📝 Final synonyms for upload:`, validSynonyms);
+
             const result = await wanikani.updateSynonyms(options.apiToken, globalLimiter, {
                 id: mapping.studyMaterialId,
-                synonyms: finalSynonyms
+                synonyms: validSynonyms
             });
 
             return {
                 vocabularyId: mapping.vocabularyId,
                 studyMaterialId: mapping.studyMaterialId,
                 action: 'updated',
-                finalSynonyms: result.data.meaning_synonyms || finalSynonyms,
+                finalSynonyms: result.data.meaning_synonyms || validSynonyms,
                 success: true
             };
         } else {
             // Create new study material
+            let validSynonyms = newSynonyms
+                .map(s => s.trim()) // Remove whitespace
+                .filter(s => s.length > 0) // Remove empty strings
+                .map(s => s.length > 255 ? s.substring(0, 255) : s); // Truncate very long synonyms
+
+            validSynonyms = removeDuplicatesCaseInsensitive(validSynonyms);
+
+            if (validSynonyms.length > 10) {
+                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 10`);
+                validSynonyms = validSynonyms.slice(0, 10);
+            }
+
+            console.log(`📝 Final synonyms for creation:`, validSynonyms);
+
             const result = await wanikani.createStudyMaterials(options.apiToken, globalLimiter, {
                 subject: mapping.vocabularyId,
-                synonyms: newSynonyms
+                synonyms: validSynonyms
             });
 
             return {
@@ -161,7 +235,12 @@ export async function createOrUpdateStudyMaterial(
                 success: true
             };
         }
-    } catch (error) {
+    } catch (error: any) {
+        // Handle 422 validation errors specifically
+        if (error?.response?.status === 422) {
+            return handle422Error(error, mapping.vocabularyId, newSynonyms);
+        }
+
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
             vocabularyId: mapping.vocabularyId,
@@ -254,13 +333,30 @@ export async function uploadVocabularyBatch(
 function mergeSynonyms(currentSynonyms: string[], newSynonyms: string[], mode: string): string[] {
     switch (mode) {
         case 'replace':
-            return newSynonyms;
+            return removeDuplicatesCaseInsensitive(newSynonyms);
         case 'delete':
-            return currentSynonyms.filter(synonym => !newSynonyms.includes(synonym));
+            return currentSynonyms.filter(synonym =>
+                !newSynonyms.some(newSyn => newSyn.toLowerCase() === synonym.toLowerCase())
+            );
         case 'smart-merge':
         default:
-            // Remove duplicates and merge
+            // Remove duplicates (case-insensitive) and merge
             const combined = [...currentSynonyms, ...newSynonyms];
-            return Array.from(new Set(combined));
+            return removeDuplicatesCaseInsensitive(combined);
     }
+}
+
+/**
+ * Remove duplicates case-insensitively, preserving the first occurrence
+ */
+function removeDuplicatesCaseInsensitive(synonyms: string[]): string[] {
+    const seen = new Set<string>();
+    return synonyms.filter(synonym => {
+        const lowerCase = synonym.toLowerCase().trim();
+        if (seen.has(lowerCase)) {
+            return false;
+        }
+        seen.add(lowerCase);
+        return true;
+    });
 }
