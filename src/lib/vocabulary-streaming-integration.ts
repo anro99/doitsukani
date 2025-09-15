@@ -1,5 +1,5 @@
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
-import { uploadVocabularyBatch } from './vocabulary-wanikani-upload';
+import { uploadVocabularyBatchPrecise } from './vocabulary-wanikani-upload';
 import { CompleteProcessingOptions, ProcessingPhase } from './vocabulary-integration';
 
 // Extended ProcessingPhase interface for unified progress
@@ -113,7 +113,7 @@ export async function processVocabularyStreaming(
                     // Step 2: Upload immediately after successful translation
                     try {
                         console.log(`📤 Uploading ${currentItem}...`);
-                        const uploadResult = await uploadVocabularyBatch([{
+                        const uploadResult = await uploadVocabularyBatchPrecise([{
                             vocabulary,
                             translatedSynonyms: translationResult.translatedSynonyms
                         }], {
