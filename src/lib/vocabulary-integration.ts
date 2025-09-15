@@ -1,5 +1,5 @@
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
-import { uploadVocabularyBatch, BatchUploadResult } from './vocabulary-wanikani-upload';
+import { uploadVocabularyBatchPrecise, BatchUploadResult } from './vocabulary-wanikani-upload';
 
 // Types for integrated processing
 export interface CompleteProcessingOptions {

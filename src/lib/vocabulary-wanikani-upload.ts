@@ -39,6 +39,103 @@ export interface VocabularyTranslation {
     translatedSynonyms: string[];
 }
 
+// Precise Synonym Management Interfaces
+export interface SynonymManagementOptions {
+    synonymMode: 'smart-merge' | 'replace' | 'delete';
+    currentSynonyms: string[];
+    translatedSynonyms: string[];
+}
+
+export interface SynonymManagementResult {
+    finalSynonyms: string[];
+    needsUpdate: boolean;
+    changesMade: boolean;
+}
+
+/**
+ * 🎯 Precise Synonym Management - Implements 8-synonym limit with specific ordering
+ * 
+ * Algorithm:
+ * 1. Copy existing synonyms (except in replace mode)
+ * 2. Add primary translation if not duplicate
+ * 3. Add alternative translations in order if not duplicates
+ * 4. Limit to 8 synonyms total
+ * 5. Compare with existing to determine if update needed
+ */
+export function processPreciseSynonymManagement(
+    vocabulary: VocabularyItem,
+    options: SynonymManagementOptions
+): SynonymManagementResult {
+    const { synonymMode, currentSynonyms, translatedSynonyms } = options;
+
+    // Step 1: Initialize synonym array based on mode
+    let finalSynonyms: string[] = [];
+
+    switch (synonymMode) {
+        case 'replace':
+            // Replace mode: ignore existing synonyms
+            break;
+        case 'delete':
+            // Delete mode: remove translated synonyms from current ones (case-insensitive)
+            finalSynonyms = currentSynonyms.filter(current =>
+                !translatedSynonyms.some(translated =>
+                    translated.toLowerCase().trim() === current.toLowerCase().trim()
+                )
+            );
+            break;
+        case 'smart-merge':
+        default:
+            // Smart-merge: start with existing synonyms
+            finalSynonyms = [...currentSynonyms];
+            break;
+    }
+
+    // For delete mode, we're done - just check if update needed
+    if (synonymMode === 'delete') {
+        const needsUpdate = !arraysEqual(finalSynonyms, currentSynonyms);
+        return {
+            finalSynonyms: finalSynonyms.slice(0, 8), // Limit to 8
+            needsUpdate,
+            changesMade: needsUpdate
+        };
+    }
+
+    // Step 2-6: Add translated synonyms if not duplicates (case-insensitive check)
+    for (const translatedSynonym of translatedSynonyms) {
+        const trimmed = translatedSynonym.trim();
+        if (trimmed.length === 0) continue;
+
+        // Check if this synonym already exists (case-insensitive)
+        const isDuplicate = finalSynonyms.some(existing =>
+            existing.toLowerCase().trim() === trimmed.toLowerCase()
+        );
+
+        if (!isDuplicate && finalSynonyms.length < 8) {
+            finalSynonyms.push(trimmed);
+        }
+    }
+
+    // Step 7: Limit to 8 synonyms
+    const limitedSynonyms = finalSynonyms.slice(0, 8);
+
+    // Step 8: Check if update is needed
+    const needsUpdate = !arraysEqual(limitedSynonyms, currentSynonyms);
+
+    return {
+        finalSynonyms: limitedSynonyms,
+        needsUpdate,
+        changesMade: needsUpdate
+    };
+}
+
+/**
+ * Helper function to compare arrays for equality (order and content)
+ */
+function arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((val, index) => val === b[index]);
+}
+
 /**
  * 🔴 RED Phase: Minimal implementations to make tests pass
  */
@@ -163,6 +260,92 @@ function handle422Error(error: any, vocabularyId: number, synonyms: string[]): U
     };
 }
 
+/**
+ * Enhanced createOrUpdateStudyMaterial using precise synonym management
+ */
+export async function createOrUpdateStudyMaterialPrecise(
+    mapping: StudyMaterialMapping,
+    vocabulary: VocabularyItem,
+    translatedSynonyms: string[],
+    options: VocabularyUploadOptions
+): Promise<UploadResultItem> {
+
+    console.log(`🎯 Processing precise upload for vocabulary ID ${mapping.vocabularyId}:`, {
+        exists: mapping.exists,
+        studyMaterialId: mapping.studyMaterialId,
+        currentSynonyms: mapping.currentSynonyms,
+        translatedSynonyms
+    });
+
+    // Use precise synonym management
+    const synonymResult = processPreciseSynonymManagement(vocabulary, {
+        synonymMode: options.synonymMode,
+        currentSynonyms: mapping.currentSynonyms,
+        translatedSynonyms
+    });
+
+    // If no update needed, return success without API call
+    if (!synonymResult.needsUpdate) {
+        console.log(`✅ No update needed for vocabulary ID ${mapping.vocabularyId} - synonyms already match`);
+        return {
+            vocabularyId: mapping.vocabularyId,
+            studyMaterialId: mapping.studyMaterialId,
+            action: 'updated',
+            finalSynonyms: synonymResult.finalSynonyms,
+            success: true
+        };
+    }
+
+    console.log(`📝 Final synonyms for upload (max 8):`, synonymResult.finalSynonyms);
+
+    try {
+        if (mapping.exists && mapping.studyMaterialId) {
+            // Update existing study material
+            const result = await wanikani.updateSynonyms(options.apiToken, globalLimiter, {
+                id: mapping.studyMaterialId,
+                synonyms: synonymResult.finalSynonyms
+            });
+
+            return {
+                vocabularyId: mapping.vocabularyId,
+                studyMaterialId: mapping.studyMaterialId,
+                action: 'updated',
+                finalSynonyms: result.data.meaning_synonyms || synonymResult.finalSynonyms,
+                success: true
+            };
+        } else {
+            // Create new study material
+            const result = await wanikani.createStudyMaterials(options.apiToken, globalLimiter, {
+                subject: mapping.vocabularyId,
+                synonyms: synonymResult.finalSynonyms
+            });
+
+            return {
+                vocabularyId: mapping.vocabularyId,
+                studyMaterialId: result.data.id,
+                action: 'created',
+                finalSynonyms: result.data.meaning_synonyms || synonymResult.finalSynonyms,
+                success: true
+            };
+        }
+    } catch (error: any) {
+        // Handle 422 validation errors specifically
+        if (error?.response?.status === 422) {
+            return handle422Error(error, mapping.vocabularyId, synonymResult.finalSynonyms);
+        }
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+            vocabularyId: mapping.vocabularyId,
+            studyMaterialId: mapping.studyMaterialId,
+            action: 'error',
+            finalSynonyms: [],
+            success: false,
+            error: errorMessage
+        };
+    }
+}
+
 export async function createOrUpdateStudyMaterial(
     mapping: StudyMaterialMapping,
     newSynonyms: string[],
@@ -178,7 +361,7 @@ export async function createOrUpdateStudyMaterial(
 
     try {
         if (mapping.exists && mapping.studyMaterialId) {
-            // Update existing study material
+            // Update existing study material - limit to 8 synonyms (was 10)
             const finalSynonyms = mergeSynonyms(mapping.currentSynonyms, newSynonyms, options.synonymMode);
 
             // Validate and clean synonyms before sending
@@ -187,9 +370,9 @@ export async function createOrUpdateStudyMaterial(
                 .filter(s => s.length > 0) // Remove empty strings
                 .map(s => s.length > 255 ? s.substring(0, 255) : s); // Truncate very long synonyms
 
-            if (validSynonyms.length > 10) {
-                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 10`);
-                validSynonyms = validSynonyms.slice(0, 10);
+            if (validSynonyms.length > 8) { // Changed from 10 to 8
+                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 8`);
+                validSynonyms = validSynonyms.slice(0, 8);
             }
 
             console.log(`📝 Final synonyms for upload:`, validSynonyms);
@@ -215,9 +398,9 @@ export async function createOrUpdateStudyMaterial(
 
             validSynonyms = removeDuplicatesCaseInsensitive(validSynonyms);
 
-            if (validSynonyms.length > 10) {
-                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 10`);
-                validSynonyms = validSynonyms.slice(0, 10);
+            if (validSynonyms.length > 8) { // Changed from 10 to 8
+                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 8`);
+                validSynonyms = validSynonyms.slice(0, 8);
             }
 
             console.log(`📝 Final synonyms for creation:`, validSynonyms);
@@ -251,6 +434,85 @@ export async function createOrUpdateStudyMaterial(
             error: errorMessage
         };
     }
+}
+
+/**
+ * Upload a batch of vocabulary translations to WaniKani with enhanced precision
+ */
+export async function uploadVocabularyBatchPrecise(
+    vocabularyTranslations: VocabularyTranslation[],
+    options: VocabularyUploadOptions,
+    stopSignal?: { current: boolean },
+    onProgress?: (progress: number) => void
+): Promise<BatchUploadResult> {
+    const results: UploadResultItem[] = [];
+    const errors: string[] = [];
+    let createdCount = 0;
+    let updatedCount = 0;
+    let errorCount = 0;
+
+    console.log(`🎯 Starting precise vocabulary batch upload of ${vocabularyTranslations.length} items with enhanced synonym management`);
+
+    for (let i = 0; i < vocabularyTranslations.length; i++) {
+        const { vocabulary, translatedSynonyms } = vocabularyTranslations[i];
+
+        if (stopSignal?.current) {
+            console.log('🛑 Upload stopped by user');
+            break;
+        }
+
+        try {
+            // Find existing study material
+            const mapping = await findStudyMaterialForVocabulary(options.apiToken, vocabulary.id);
+
+            // Use precise create or update function
+            const result = await createOrUpdateStudyMaterialPrecise(mapping, vocabulary, translatedSynonyms, options);
+
+            results.push(result);
+
+            if (result.success) {
+                if (result.action === 'created') createdCount++;
+                else if (result.action === 'updated') updatedCount++;
+            } else {
+                errorCount++;
+                if (result.error) errors.push(result.error);
+            }
+
+            // Report progress after each upload
+            if (onProgress) {
+                const progress = Math.round(((i + 1) / vocabularyTranslations.length) * 100);
+                onProgress(progress);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorResult: UploadResultItem = {
+                vocabularyId: vocabulary.id,
+                studyMaterialId: null,
+                action: 'error',
+                finalSynonyms: [],
+                success: false,
+                error: errorMessage
+            };
+
+            results.push(errorResult);
+            errors.push(errorMessage);
+            errorCount++;
+        }
+
+        // Rate limiting is handled by the globalLimiter in individual API calls
+    }
+
+    console.log(`✅ Precise batch upload completed: ${createdCount} created, ${updatedCount} updated, ${errorCount} errors`);
+
+    return {
+        success: errorCount === 0,
+        totalItems: vocabularyTranslations.length,
+        createdCount,
+        updatedCount,
+        errorCount,
+        results,
+        errors
+    };
 }
 
 /**
