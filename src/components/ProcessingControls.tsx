@@ -2,6 +2,7 @@
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { ProcessingPhase, CompleteProcessingResult, ProcessingStatistics } from '../lib/vocabulary-integration';
+import { StreamingProcessingPhase, StreamingCompleteProcessingResult } from '../lib/vocabulary-streaming-integration';
 
 interface UploadStats {
     created: number;
@@ -30,6 +31,11 @@ interface ProcessingControlsProps {
     currentPhase?: ProcessingPhase | null;
     processingResult?: CompleteProcessingResult | null;
     processingStatistics?: ProcessingStatistics | null;
+
+    // New streaming processing props
+    streamingPhases?: StreamingProcessingPhase | null;
+    streamingResult?: StreamingCompleteProcessingResult | null;
+    isStreamingMode?: boolean;
 }
 
 export const ProcessingControls = ({
@@ -50,7 +56,12 @@ export const ProcessingControls = ({
     // New integrated processing props
     currentPhase,
     processingResult,
-    processingStatistics
+    processingStatistics,
+
+    // New streaming processing props
+    streamingPhases,
+    streamingResult,
+    isStreamingMode = false
 }: ProcessingControlsProps) => {
     const canStart = apiToken &&
         (synonymMode === 'delete' || deeplToken) &&
@@ -68,10 +79,10 @@ export const ProcessingControls = ({
                         onClick={onStartProcessing}
                         disabled={!canStart}
                         className={`flex-1 ${processingResult?.success
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : processingResult && !processingResult.success
-                                    ? 'bg-orange-600 hover:bg-orange-700'
-                                    : ''
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : processingResult && !processingResult.success
+                                ? 'bg-orange-600 hover:bg-orange-700'
+                                : ''
                             }`}
                         variant={processingResult ? "default" : "default"}
                     >
@@ -120,8 +131,67 @@ export const ProcessingControls = ({
 
                 {isProcessing && (
                     <div className="space-y-4">
-                        {/* Enhanced Phase-based Progress */}
-                        {currentPhase && (
+                        {/* NEW: Streaming Mode - Dual Progress Bars */}
+                        {isStreamingMode && streamingPhases && (
+                            <div className="space-y-4">
+                                <div className="text-sm font-medium text-gray-700 text-center">
+                                    🚀 Streaming Mode: Parallel Translation & Upload
+                                </div>
+
+                                {/* Translation Progress */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🔄</span>
+                                        <span className="text-sm font-medium text-blue-700">Translation</span>
+                                        <span className="text-xs text-gray-500 ml-auto">
+                                            {streamingPhases.translationPhase.status}
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        value={streamingPhases.translationPhase.progress}
+                                        className="w-full bg-blue-100"
+                                    />
+                                    <p className="text-xs text-blue-600 text-center">
+                                        {streamingPhases.translationPhase.progress}% translated
+                                    </p>
+                                </div>
+
+                                {/* Upload Progress */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">📤</span>
+                                        <span className="text-sm font-medium text-green-700">Upload</span>
+                                        <span className="text-xs text-gray-500 ml-auto">
+                                            {streamingPhases.uploadPhase.status}
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        value={streamingPhases.uploadPhase.progress}
+                                        className="w-full bg-green-100"
+                                    />
+                                    <p className="text-xs text-green-600 text-center">
+                                        {streamingPhases.uploadPhase.progress}% uploaded
+                                    </p>
+                                </div>
+
+                                {/* Current Item */}
+                                {streamingPhases.overallPhase.currentItem && (
+                                    <p className="text-xs text-gray-600 text-center">
+                                        Verarbeite: <span className="font-mono font-bold">{streamingPhases.overallPhase.currentItem}</span>
+                                    </p>
+                                )}
+
+                                {/* Overall Progress */}
+                                <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-sm text-gray-700 text-center">
+                                        Gesamt: {streamingPhases.overallPhase.progress}% abgeschlossen
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Enhanced Phase-based Progress (Legacy Sequential Mode) */}
+                        {!isStreamingMode && currentPhase && (
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                     {currentPhase.phase === 'translation' && <span className="text-lg">🔄</span>}
@@ -149,7 +219,7 @@ export const ProcessingControls = ({
                         )}
 
                         {/* Fallback for non-integrated processing */}
-                        {!currentPhase && (
+                        {!isStreamingMode && !currentPhase && (
                             <div className="space-y-2">
                                 <Progress value={progress} className="w-full" />
                                 <p className="text-sm text-gray-600 text-center">
@@ -192,11 +262,44 @@ export const ProcessingControls = ({
                     </div>
                 )}
 
-                {/* Processing Result Summary */}
-                {processingResult && !isProcessing && (
+                {/* Streaming Processing Result Summary */}
+                {isStreamingMode && streamingResult && !isProcessing && (
+                    <div className={`p-3 border rounded-lg ${streamingResult.success
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-orange-50 border-orange-200'
+                        }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">🚀</span>
+                            <span className="text-lg">{streamingResult.success ? '✅' : '⚠️'}</span>
+                            <h4 className={`text-sm font-medium ${streamingResult.success ? 'text-green-800' : 'text-orange-800'
+                                }`}>
+                                Streaming Processing {streamingResult.success ? 'Completed' : 'Completed with Errors'}
+                            </h4>
+                        </div>
+
+                        <div className={`text-xs grid grid-cols-2 gap-2 ${streamingResult.success ? 'text-green-700' : 'text-orange-700'
+                            }`}>
+                            <div>📊 Items: <strong>{streamingResult.totalItems}</strong></div>
+                            <div>⏱️ Time: <strong>{(streamingResult.processingTime / 1000).toFixed(1)}s</strong></div>
+                            <div>🔄 Translated: <strong>{streamingResult.translationCount}</strong></div>
+                            <div>📤 Uploaded: <strong>{streamingResult.uploadCount}</strong></div>
+                            <div>❌ Errors: <strong>{streamingResult.errorCount}</strong></div>
+                            <div>⚡ Parallel: <strong>Yes</strong></div>
+                        </div>
+
+                        {streamingResult.errorCount > 0 && (
+                            <div className="mt-2 text-xs text-red-600">
+                                <div>❌ {streamingResult.errorCount} items had processing errors</div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Legacy Processing Result Summary */}
+                {!isStreamingMode && processingResult && !isProcessing && (
                     <div className={`p-3 border rounded-lg ${processingResult.success
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-orange-50 border-orange-200'
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-orange-50 border-orange-200'
                         }`}>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-lg">{processingResult.success ? '✅' : '⚠️'}</span>

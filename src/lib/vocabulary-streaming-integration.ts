@@ -1,0 +1,172 @@
+import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
+import { uploadVocabularyBatch } from './vocabulary-wanikani-upload';
+import { CompleteProcessingOptions, ProcessingPhase } from './vocabulary-integration';
+
+// Streaming-specific interfaces
+export interface StreamingProcessingPhase {
+    translationPhase: ProcessingPhase;
+    uploadPhase: ProcessingPhase;
+    overallPhase: ProcessingPhase;
+}
+
+export interface StreamingCompleteProcessingResult {
+    success: boolean;
+    totalItems: number;
+    translationCount: number;
+    uploadCount: number;
+    errorCount: number;
+    processingTime: number;
+    phases: StreamingProcessingPhase[];
+}
+
+/**
+ * 🚀 NEW: Streaming vocabulary processing with immediate upload
+ * "Sobald ein Vocabulary übersetzt worden ist, soll es zu Wanikani hochgeladen werden"
+ * 
+ * This processes vocabulary items one by one, uploading each translation immediately
+ * instead of waiting for all translations to complete first.
+ */
+export async function processVocabularyStreaming(
+    vocabularyItems: VocabularyItem[],
+    options: CompleteProcessingOptions,
+    onProgress?: (phases: StreamingProcessingPhase) => void,
+    stopSignal?: { current: boolean }
+): Promise<StreamingCompleteProcessingResult> {
+    const startTime = Date.now();
+    const phases: StreamingProcessingPhase[] = [];
+
+    let translatedCount = 0;
+    let uploadedCount = 0;
+    let errorCount = 0;
+
+    const reportPhases = (translationProgress: number, uploadProgress: number, currentItem?: string) => {
+        const translationPhase: ProcessingPhase = {
+            phase: 'translation',
+            status: translatedCount >= vocabularyItems.length ? 'completed' : 'in-progress',
+            progress: translationProgress,
+            currentItem
+        };
+
+        const uploadPhase: ProcessingPhase = {
+            phase: 'upload',
+            status: uploadedCount >= translatedCount ? 'completed' : 'in-progress',
+            progress: uploadProgress,
+            currentItem
+        };
+
+        const overallPhase: ProcessingPhase = {
+            phase: 'both',
+            status: translationPhase.status === 'completed' && uploadPhase.status === 'completed'
+                ? 'completed' : 'in-progress',
+            progress: Math.max(translationProgress, uploadProgress),
+            currentItem
+        };
+
+        const streamingPhase: StreamingProcessingPhase = {
+            translationPhase,
+            uploadPhase,
+            overallPhase
+        };
+
+        phases.push(streamingPhase);
+        console.log(`📊 STREAMING: Translation ${translationProgress}%, Upload ${uploadProgress}% - ${currentItem}`);
+        if (onProgress) onProgress(streamingPhase);
+    };
+
+    try {
+        console.log(`🚀 Starting STREAMING processing of ${vocabularyItems.length} vocabulary items`);
+
+        // Process each vocabulary item individually with immediate upload
+        for (let i = 0; i < vocabularyItems.length; i++) {
+            if (stopSignal?.current === true) {
+                console.log('🛑 Streaming processing stopped by user request');
+                break;
+            }
+
+            const vocabulary = vocabularyItems[i];
+            const currentItem = vocabulary.characters;
+
+            try {
+                // Step 1: Translate
+                console.log(`🔄 Translating ${currentItem}...`);
+                const translationResult = await translateVocabularyMeanings(vocabulary, options.deeplToken);
+
+                if (translationResult.error) {
+                    console.log(`❌ Translation failed for ${currentItem}: ${translationResult.error}`);
+                    errorCount++;
+                } else {
+                    translatedCount++;
+                    console.log(`✅ Translated ${currentItem}: ${translationResult.translatedSynonyms.join(', ')}`);
+
+                    // Step 2: Upload immediately after successful translation
+                    try {
+                        console.log(`📤 Uploading ${currentItem}...`);
+                        const uploadResult = await uploadVocabularyBatch([{
+                            vocabulary,
+                            translatedSynonyms: translationResult.translatedSynonyms
+                        }], {
+                            synonymMode: options.synonymMode,
+                            apiToken: options.apiToken
+                        });
+
+                        if (uploadResult.success && uploadResult.results.length > 0) {
+                            uploadedCount++;
+                            console.log(`✅ Uploaded ${currentItem} successfully`);
+                        } else {
+                            errorCount++;
+                            console.log(`❌ Upload failed for ${currentItem}: ${uploadResult.errors.join(', ')}`);
+                        }
+                    } catch (uploadError) {
+                        errorCount++;
+                        console.log(`❌ Upload error for ${currentItem}: ${uploadError}`);
+                    }
+                }
+
+                // Report progress after each item
+                const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
+                const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
+                reportPhases(translationProgress, uploadProgress, currentItem);
+
+                // Small delay to prevent overwhelming the APIs
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+            } catch (error) {
+                errorCount++;
+                console.log(`❌ Processing error for ${currentItem}: ${error}`);
+
+                const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
+                const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
+                reportPhases(translationProgress, uploadProgress, currentItem);
+            }
+        }
+
+        const processingTime = Date.now() - startTime;
+
+        const result: StreamingCompleteProcessingResult = {
+            success: errorCount === 0,
+            totalItems: vocabularyItems.length,
+            translationCount: translatedCount,
+            uploadCount: uploadedCount,
+            errorCount,
+            processingTime,
+            phases
+        };
+
+        console.log('🎯 STREAMING Processing completed:', result);
+        return result;
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown streaming processing error';
+        console.log('❌ STREAMING Processing failed:', errorMessage);
+
+        return {
+            success: false,
+            totalItems: vocabularyItems.length,
+            translationCount: translatedCount,
+            uploadCount: uploadedCount,
+            errorCount: vocabularyItems.length - translatedCount,
+            processingTime: Date.now() - startTime,
+            phases
+        };
+    }
+}

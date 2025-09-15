@@ -12,7 +12,7 @@ export interface CompleteProcessingOptions {
 }
 
 export interface ProcessingPhase {
-    phase: 'translation' | 'upload';
+    phase: 'translation' | 'upload' | 'both';
     status: 'started' | 'in-progress' | 'completed' | 'error';
     progress: number;
     currentItem?: string;
