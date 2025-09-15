@@ -261,9 +261,9 @@ function handle422Error(error: any, vocabularyId: number, synonyms: string[]): U
 }
 
 /**
- * Enhanced createOrUpdateStudyMaterial using precise synonym management
+ * Create or update study material using precise synonym management
  */
-export async function createOrUpdateStudyMaterialPrecise(
+export async function createOrUpdateStudyMaterial(
     mapping: StudyMaterialMapping,
     vocabulary: VocabularyItem,
     translatedSynonyms: string[],
@@ -346,100 +346,12 @@ export async function createOrUpdateStudyMaterialPrecise(
     }
 }
 
-export async function createOrUpdateStudyMaterial(
-    mapping: StudyMaterialMapping,
-    newSynonyms: string[],
-    options: VocabularyUploadOptions
-): Promise<UploadResultItem> {
 
-    console.log(`🔄 Processing upload for vocabulary ID ${mapping.vocabularyId}:`, {
-        exists: mapping.exists,
-        studyMaterialId: mapping.studyMaterialId,
-        currentSynonyms: mapping.currentSynonyms,
-        newSynonyms
-    });
-
-    try {
-        if (mapping.exists && mapping.studyMaterialId) {
-            // Update existing study material - limit to 8 synonyms (was 10)
-            const finalSynonyms = mergeSynonyms(mapping.currentSynonyms, newSynonyms, options.synonymMode);
-
-            // Validate and clean synonyms before sending
-            let validSynonyms = finalSynonyms
-                .map(s => s.trim()) // Remove whitespace
-                .filter(s => s.length > 0) // Remove empty strings
-                .map(s => s.length > 255 ? s.substring(0, 255) : s); // Truncate very long synonyms
-
-            if (validSynonyms.length > 8) { // Changed from 10 to 8
-                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 8`);
-                validSynonyms = validSynonyms.slice(0, 8);
-            }
-
-            console.log(`📝 Final synonyms for upload:`, validSynonyms);
-
-            const result = await wanikani.updateSynonyms(options.apiToken, globalLimiter, {
-                id: mapping.studyMaterialId,
-                synonyms: validSynonyms
-            });
-
-            return {
-                vocabularyId: mapping.vocabularyId,
-                studyMaterialId: mapping.studyMaterialId,
-                action: 'updated',
-                finalSynonyms: result.data.meaning_synonyms || validSynonyms,
-                success: true
-            };
-        } else {
-            // Create new study material
-            let validSynonyms = newSynonyms
-                .map(s => s.trim()) // Remove whitespace
-                .filter(s => s.length > 0) // Remove empty strings
-                .map(s => s.length > 255 ? s.substring(0, 255) : s); // Truncate very long synonyms
-
-            validSynonyms = removeDuplicatesCaseInsensitive(validSynonyms);
-
-            if (validSynonyms.length > 8) { // Changed from 10 to 8
-                console.log(`⚠️ Too many synonyms (${validSynonyms.length}), truncating to 8`);
-                validSynonyms = validSynonyms.slice(0, 8);
-            }
-
-            console.log(`📝 Final synonyms for creation:`, validSynonyms);
-
-            const result = await wanikani.createStudyMaterials(options.apiToken, globalLimiter, {
-                subject: mapping.vocabularyId,
-                synonyms: validSynonyms
-            });
-
-            return {
-                vocabularyId: mapping.vocabularyId,
-                studyMaterialId: result.data.id,
-                action: 'created',
-                finalSynonyms: result.data.meaning_synonyms || newSynonyms,
-                success: true
-            };
-        }
-    } catch (error: any) {
-        // Handle 422 validation errors specifically
-        if (error?.response?.status === 422) {
-            return handle422Error(error, mapping.vocabularyId, newSynonyms);
-        }
-
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-            vocabularyId: mapping.vocabularyId,
-            studyMaterialId: mapping.studyMaterialId,
-            action: 'error',
-            finalSynonyms: [],
-            success: false,
-            error: errorMessage
-        };
-    }
-}
 
 /**
- * Upload a batch of vocabulary translations to WaniKani with enhanced precision
+ * Upload a batch of vocabulary translations to WaniKani
  */
-export async function uploadVocabularyBatchPrecise(
+export async function uploadVocabularyBatch(
     vocabularyTranslations: VocabularyTranslation[],
     options: VocabularyUploadOptions,
     stopSignal?: { current: boolean },
@@ -466,7 +378,7 @@ export async function uploadVocabularyBatchPrecise(
             const mapping = await findStudyMaterialForVocabulary(options.apiToken, vocabulary.id);
 
             // Use precise create or update function
-            const result = await createOrUpdateStudyMaterialPrecise(mapping, vocabulary, translatedSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, vocabulary, translatedSynonyms, options);
 
             results.push(result);
 
@@ -515,110 +427,6 @@ export async function uploadVocabularyBatchPrecise(
     };
 }
 
-/**
- * Upload a batch of vocabulary translations to WaniKani
- */
-export async function uploadVocabularyBatch(
-    vocabularyTranslations: VocabularyTranslation[],
-    options: VocabularyUploadOptions,
-    stopSignal?: { current: boolean },
-    onProgress?: (progress: number) => void
-): Promise<BatchUploadResult> {
-    const results: UploadResultItem[] = [];
-    const errors: string[] = [];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let errorCount = 0;
 
-    for (let i = 0; i < vocabularyTranslations.length; i++) {
-        const { vocabulary, translatedSynonyms } = vocabularyTranslations[i];
 
-        // Check stop signal before processing each item
-        if (stopSignal?.current === true) {
-            console.log('🛑 Upload processing stopped by user request');
-            break;
-        }
 
-        try {
-            // Find existing study material
-            const mapping = await findStudyMaterialForVocabulary(options.apiToken, vocabulary.id);
-
-            // Create or update study material
-            const result = await createOrUpdateStudyMaterial(mapping, translatedSynonyms, options);
-
-            results.push(result);
-
-            if (result.success) {
-                if (result.action === 'created') createdCount++;
-                else if (result.action === 'updated') updatedCount++;
-            } else {
-                errorCount++;
-                if (result.error) errors.push(result.error);
-            }
-
-            // Report progress after each upload
-            if (onProgress) {
-                const progress = Math.round(((i + 1) / vocabularyTranslations.length) * 100);
-                onProgress(progress);
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            const errorResult: UploadResultItem = {
-                vocabularyId: vocabulary.id,
-                studyMaterialId: null,
-                action: 'error',
-                finalSynonyms: [],
-                success: false,
-                error: errorMessage
-            };
-
-            results.push(errorResult);
-            errors.push(errorMessage);
-            errorCount++;
-        }
-    }
-
-    return {
-        success: errorCount === 0,
-        totalItems: vocabularyTranslations.length,
-        createdCount,
-        updatedCount,
-        errorCount,
-        results,
-        errors
-    };
-}
-
-/**
- * Merge synonyms based on the specified mode
- */
-function mergeSynonyms(currentSynonyms: string[], newSynonyms: string[], mode: string): string[] {
-    switch (mode) {
-        case 'replace':
-            return removeDuplicatesCaseInsensitive(newSynonyms);
-        case 'delete':
-            return currentSynonyms.filter(synonym =>
-                !newSynonyms.some(newSyn => newSyn.toLowerCase() === synonym.toLowerCase())
-            );
-        case 'smart-merge':
-        default:
-            // Remove duplicates (case-insensitive) and merge
-            const combined = [...currentSynonyms, ...newSynonyms];
-            return removeDuplicatesCaseInsensitive(combined);
-    }
-}
-
-/**
- * Remove duplicates case-insensitively, preserving the first occurrence
- */
-function removeDuplicatesCaseInsensitive(synonyms: string[]): string[] {
-    const seen = new Set<string>();
-    return synonyms.filter(synonym => {
-        const lowerCase = synonym.toLowerCase().trim();
-        if (seen.has(lowerCase)) {
-            return false;
-        }
-        seen.add(lowerCase);
-        return true;
-    });
-}

@@ -1,5 +1,5 @@
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
-import { uploadVocabularyBatchPrecise, BatchUploadResult } from './vocabulary-wanikani-upload';
+import { uploadVocabularyBatch, BatchUploadResult } from './vocabulary-wanikani-upload';
 
 // Types for integrated processing
 export interface CompleteProcessingOptions {
@@ -113,7 +113,7 @@ export async function processVocabularyComplete(
             const uploadStopSignal = stopSignal ? { current: false } : undefined;
             console.log('🔄 Created fresh stop signal for upload phase');
 
-            uploadResults = await uploadVocabularyBatchPrecise(successfulTranslations, {
+            uploadResults = await uploadVocabularyBatch(successfulTranslations, {
                 synonymMode: options.synonymMode,
                 apiToken: options.apiToken
             }, uploadStopSignal, (progress: number) => {

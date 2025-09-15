@@ -14,12 +14,12 @@ vi.mock('../../../src/lib/vocabulary-translation', () => ({
 }));
 
 vi.mock('../../../src/lib/vocabulary-wanikani-upload', () => ({
-    uploadVocabularyBatchPrecise: vi.fn(),
+    uploadVocabularyBatch: vi.fn(),
     BatchUploadResult: {},
     VocabularyTranslation: {}
 }));
 
-describe('🚀 Migration Test - New Precise Functions Integration', () => {
+describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
     const mockVocabulary: VocabularyItem[] = [
         {
             id: 1,
@@ -44,9 +44,9 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         vi.clearAllMocks();
     });
 
-    test('streaming integration should use uploadVocabularyBatchPrecise', async () => {
+    test('streaming integration should use uploadVocabularyBatch (now precise)', async () => {
         const { translateVocabularyMeanings } = await import('../../../src/lib/vocabulary-translation');
-        const { uploadVocabularyBatchPrecise } = await import('../../../src/lib/vocabulary-wanikani-upload');
+        const { uploadVocabularyBatch } = await import('../../../src/lib/vocabulary-wanikani-upload');
 
         // Mock translation success
         vi.mocked(translateVocabularyMeanings).mockResolvedValue({
@@ -57,7 +57,7 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         });
 
         // Mock upload success  
-        vi.mocked(uploadVocabularyBatchPrecise).mockResolvedValue({
+        vi.mocked(uploadVocabularyBatch).mockResolvedValue({
             success: true,
             totalItems: 1,
             createdCount: 1,
@@ -82,7 +82,7 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         );
 
         // Verify the precise function was called
-        expect(uploadVocabularyBatchPrecise).toHaveBeenCalledWith(
+        expect(uploadVocabularyBatch).toHaveBeenCalledWith(
             expect.arrayContaining([
                 expect.objectContaining({
                     vocabulary: expect.objectContaining({ id: 1 }),
@@ -96,9 +96,9 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         );
     });
 
-    test('batch integration should use uploadVocabularyBatchPrecise', async () => {
+    test('batch integration should use uploadVocabularyBatch (now precise)', async () => {
         const { translateVocabularyMeanings } = await import('../../../src/lib/vocabulary-translation');
-        const { uploadVocabularyBatchPrecise } = await import('../../../src/lib/vocabulary-wanikani-upload');
+        const { uploadVocabularyBatch } = await import('../../../src/lib/vocabulary-wanikani-upload');
 
         // Mock translation success
         vi.mocked(translateVocabularyMeanings).mockResolvedValue({
@@ -109,7 +109,7 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         });
 
         // Mock upload success
-        vi.mocked(uploadVocabularyBatchPrecise).mockResolvedValue({
+        vi.mocked(uploadVocabularyBatch).mockResolvedValue({
             success: true,
             totalItems: 1,
             createdCount: 1,
@@ -134,7 +134,7 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         );
 
         // Verify the precise function was called
-        expect(uploadVocabularyBatchPrecise).toHaveBeenCalledWith(
+        expect(uploadVocabularyBatch).toHaveBeenCalledWith(
             expect.arrayContaining([
                 expect.objectContaining({
                     vocabulary: expect.objectContaining({ id: 1 }),
@@ -150,14 +150,16 @@ describe('🚀 Migration Test - New Precise Functions Integration', () => {
         );
     });
 
-    test('migration should maintain backward compatibility', async () => {
+    test('should only have precise functions (no legacy)', async () => {
         // Use importOriginal to get the real functions, not mocks
         const actual = await vi.importActual('../../../src/lib/vocabulary-wanikani-upload') as any;
 
         expect(typeof actual.uploadVocabularyBatch).toBe('function');
-        expect(typeof actual.uploadVocabularyBatchPrecise).toBe('function');
+        expect(typeof actual.createOrUpdateStudyMaterial).toBe('function');
+        expect(typeof actual.processPreciseSynonymManagement).toBe('function');
 
-        // They should be different functions
-        expect(actual.uploadVocabularyBatch).not.toBe(actual.uploadVocabularyBatchPrecise);
+        // Legacy functions should not exist
+        expect(actual.uploadVocabularyBatchPrecise).toBeUndefined();
+        expect(actual.createOrUpdateStudyMaterialPrecise).toBeUndefined();
     });
 });
