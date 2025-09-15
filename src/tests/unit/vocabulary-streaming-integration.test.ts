@@ -339,5 +339,140 @@ describe('🚀 Phase 2: Streaming Vocabulary Integration (TDD)', () => {
             // This proves "Sobald ein Vocabulary übersetzt worden ist, soll es zu Wanikani hochgeladen werden"
             console.log('📊 Upload pattern (Streaming Mode):', uploadCalls.map(c => `${c.itemCount} item(s)`));
         });
+
+        it('should use unified progress bar based on completed vocabulary items only', async () => {
+            const mockTranslateVocabularyMeanings = translateVocabularyMeanings as any;
+            const mockUploadVocabularyBatch = uploadVocabularyBatch as any;
+
+            // Setup mocks
+            mockTranslateVocabularyMeanings.mockImplementation(async (vocabulary: any) => {
+                // Simulate translation delay
+                await new Promise(resolve => setTimeout(resolve, 10));
+                return {
+                    vocabularyId: vocabulary.id,
+                    originalMeanings: vocabulary.meanings,
+                    translatedSynonyms: [`german_${vocabulary.characters}`],
+                    selected: [`german_${vocabulary.characters}`]
+                };
+            });
+
+            mockUploadVocabularyBatch.mockImplementation(async (vocabularyTranslations: any) => {
+                // Simulate upload delay
+                await new Promise(resolve => setTimeout(resolve, 5));
+                return {
+                    success: true,
+                    totalItems: vocabularyTranslations.length,
+                    createdCount: 1,
+                    updatedCount: 0,
+                    errorCount: 0,
+                    results: vocabularyTranslations.map((vt: any) => ({
+                        vocabularyId: vt.vocabulary.id,
+                        status: 'created',
+                        synonyms: vt.translatedSynonyms
+                    })),
+                    errors: []
+                };
+            });
+
+            const testVocabulary = [
+                { id: 1, characters: '犬', meanings: [{ meaning: 'dog', primary: true }] },
+                { id: 2, characters: '猫', meanings: [{ meaning: 'cat', primary: true }] },
+                { id: 3, characters: '鳥', meanings: [{ meaning: 'bird', primary: true }] }
+            ];
+
+            const progressUpdates: any[] = [];
+            const onProgress = (phases: any) => {
+                progressUpdates.push({
+                    overallProgress: phases.overallPhase.progress,
+                    translationActivity: phases.translationPhase.currentItem,
+                    uploadActivity: phases.uploadPhase.currentItem,
+                    completedItems: phases.overallPhase.completedItems || 0,
+                    totalItems: testVocabulary.length
+                });
+            };
+
+            const result = await processVocabularyStreaming(testVocabulary, mockOptions, onProgress);
+
+            expect(result.success).toBe(true);
+            expect(result.totalItems).toBe(3);
+
+            // Progress should only increment when items are fully completed (uploaded)
+            const finalProgress = progressUpdates[progressUpdates.length - 1];
+            expect(finalProgress.overallProgress).toBe(100);
+            expect(finalProgress.completedItems).toBe(3);
+
+            // Should show current translation and upload activities
+            const intermediateUpdates = progressUpdates.filter(update => update.overallProgress < 100);
+            expect(intermediateUpdates.some(update => update.translationActivity)).toBe(true);
+            expect(intermediateUpdates.some(update => update.uploadActivity)).toBe(true);
+        });
+
+        it('should handle mixed success/failure scenarios in unified progress', async () => {
+            const mockTranslateVocabularyMeanings = translateVocabularyMeanings as any;
+            const mockUploadVocabularyBatch = uploadVocabularyBatch as any;
+
+            let translationCallCount = 0;
+            mockTranslateVocabularyMeanings.mockImplementation(async (vocabulary: any) => {
+                translationCallCount++;
+                if (translationCallCount === 2) {
+                    // Second translation fails
+                    return { error: 'Translation failed' };
+                }
+                return {
+                    vocabularyId: vocabulary.id,
+                    originalMeanings: vocabulary.meanings,
+                    translatedSynonyms: [`german_${vocabulary.characters}`],
+                    selected: [`german_${vocabulary.characters}`]
+                };
+            });
+
+            let uploadCallCount = 0;
+            mockUploadVocabularyBatch.mockImplementation(async () => {
+                uploadCallCount++;
+                if (uploadCallCount === 1) {
+                    // First upload fails
+                    return {
+                        success: false,
+                        createdCount: 0,
+                        updatedCount: 0,
+                        errorCount: 1,
+                        errors: ['Upload failed']
+                    };
+                }
+                return {
+                    success: true,
+                    createdCount: 1,
+                    updatedCount: 0,
+                    errorCount: 0,
+                    errors: []
+                };
+            });
+
+            const testVocabulary = [
+                { id: 1, characters: '犬', meanings: [{ meaning: 'dog', primary: true }] },
+                { id: 2, characters: '猫', meanings: [{ meaning: 'cat', primary: true }] },
+                { id: 3, characters: '鳥', meanings: [{ meaning: 'bird', primary: true }] }
+            ];
+
+            const progressUpdates: any[] = [];
+            const onProgress = (phases: any) => {
+                progressUpdates.push({
+                    overallProgress: phases.overallPhase.progress,
+                    completedItems: phases.overallPhase.completedItems || 0,
+                    errorItems: phases.overallPhase.errorItems || 0
+                });
+            };
+
+            const result = await processVocabularyStreaming(testVocabulary, mockOptions, onProgress);
+
+            // Should complete with mixed results
+            expect(result.totalItems).toBe(3);
+            expect(result.errorCount).toBeGreaterThan(0);
+
+            // Progress should still reach 100% when all items are processed (success or failure)
+            const finalProgress = progressUpdates[progressUpdates.length - 1];
+            expect(finalProgress.overallProgress).toBe(100);
+            expect(finalProgress.completedItems + finalProgress.errorItems).toBe(3);
+        });
     });
 });

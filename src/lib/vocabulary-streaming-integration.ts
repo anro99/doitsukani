@@ -2,11 +2,17 @@ import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-transl
 import { uploadVocabularyBatch } from './vocabulary-wanikani-upload';
 import { CompleteProcessingOptions, ProcessingPhase } from './vocabulary-integration';
 
+// Extended ProcessingPhase interface for unified progress
+export interface UnifiedProcessingPhase extends ProcessingPhase {
+    completedItems?: number;  // Successfully processed items (uploaded)
+    errorItems?: number;      // Items that failed during processing
+}
+
 // Streaming-specific interfaces
 export interface StreamingProcessingPhase {
     translationPhase: ProcessingPhase;
     uploadPhase: ProcessingPhase;
-    overallPhase: ProcessingPhase;
+    overallPhase: UnifiedProcessingPhase;  // Now includes unified progress properties
 }
 
 export interface StreamingCompleteProcessingResult {
@@ -54,12 +60,18 @@ export async function processVocabularyStreaming(
             currentItem
         };
 
-        const overallPhase: ProcessingPhase = {
+        // Unified progress: completed items are those that finished processing (success or failure)
+        const totalProcessedItems = uploadedCount + errorCount;
+        const unifiedProgress = vocabularyItems.length === 0 ? 100 : Math.round((totalProcessedItems / vocabularyItems.length) * 100);
+
+        const overallPhase: UnifiedProcessingPhase = {
             phase: 'both',
             status: translationPhase.status === 'completed' && uploadPhase.status === 'completed'
                 ? 'completed' : 'in-progress',
-            progress: Math.max(translationProgress, uploadProgress),
-            currentItem
+            progress: unifiedProgress,  // Use unified progress instead of max
+            currentItem,
+            completedItems: uploadedCount,
+            errorItems: errorCount
         };
 
         const streamingPhase: StreamingProcessingPhase = {
@@ -69,7 +81,7 @@ export async function processVocabularyStreaming(
         };
 
         phases.push(streamingPhase);
-        console.log(`📊 STREAMING: Translation ${translationProgress}%, Upload ${uploadProgress}% - ${currentItem}`);
+        console.log(`📊 STREAMING: Translation ${translationProgress}%, Upload ${uploadProgress}%, Unified ${unifiedProgress}% - ${currentItem}`);
         if (onProgress) onProgress(streamingPhase);
     };
 

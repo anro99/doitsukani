@@ -106,61 +106,53 @@ export const ProcessingControls = ({
 
                 {isProcessing && (
                     <div className="space-y-4">
-                        {/* Streaming Mode - Dual Progress Bars */}
+                        {/* Unified Progress Bar */}
                         {streamingPhases && (
                             <div className="space-y-4">
                                 <div className="text-sm font-medium text-gray-700 text-center">
-                                    🚀 Streaming Mode: Parallel Translation & Upload
+                                    🚀 Vocabulary Processing Progress
                                 </div>
 
-                                {/* Translation Progress */}
+                                {/* Main Progress Bar */}
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg">🔄</span>
-                                        <span className="text-sm font-medium text-blue-700">Translation</span>
-                                        <span className="text-xs text-gray-500 ml-auto">
-                                            {streamingPhases.translationPhase.status}
+                                    <Progress
+                                        value={streamingPhases.overallPhase.progress}
+                                        className="w-full h-3 bg-gray-100"
+                                    />
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">
+                                            {streamingPhases.overallPhase.completedItems || 0} abgeschlossen
+                                        </span>
+                                        <span className="font-medium text-gray-800">
+                                            {streamingPhases.overallPhase.progress}%
+                                        </span>
+                                        <span className="text-red-600">
+                                            {streamingPhases.overallPhase.errorItems || 0} Fehler
                                         </span>
                                     </div>
-                                    <Progress
-                                        value={streamingPhases.translationPhase.progress}
-                                        className="w-full bg-blue-100"
-                                    />
-                                    <p className="text-xs text-blue-600 text-center">
-                                        {streamingPhases.translationPhase.progress}% translated
-                                    </p>
                                 </div>
 
-                                {/* Upload Progress */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg">📤</span>
-                                        <span className="text-sm font-medium text-green-700">Upload</span>
-                                        <span className="text-xs text-gray-500 ml-auto">
-                                            {streamingPhases.uploadPhase.status}
-                                        </span>
-                                    </div>
-                                    <Progress
-                                        value={streamingPhases.uploadPhase.progress}
-                                        className="w-full bg-green-100"
-                                    />
-                                    <p className="text-xs text-green-600 text-center">
-                                        {streamingPhases.uploadPhase.progress}% uploaded
-                                    </p>
-                                </div>
+                                {/* Activity Indicators */}
+                                <div className="space-y-2 pt-2 border-t border-gray-200">
+                                    <div className="text-xs font-medium text-gray-600 text-center">Aktuelle Aktivitäten</div>
 
-                                {/* Current Item */}
-                                {streamingPhases.overallPhase.currentItem && (
-                                    <p className="text-xs text-gray-600 text-center">
-                                        Verarbeite: <span className="font-mono font-bold">{streamingPhases.overallPhase.currentItem}</span>
-                                    </p>
-                                )}
+                                    {/* Translation Activity */}
+                                    {streamingPhases.translationPhase.currentItem && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-blue-500">🔄</span>
+                                            <span className="text-blue-700">Übersetze:</span>
+                                            <span className="font-mono font-bold">{streamingPhases.translationPhase.currentItem}</span>
+                                        </div>
+                                    )}
 
-                                {/* Overall Progress */}
-                                <div className="pt-2 border-t border-gray-200">
-                                    <p className="text-sm text-gray-700 text-center">
-                                        Gesamt: {streamingPhases.overallPhase.progress}% abgeschlossen
-                                    </p>
+                                    {/* Upload Activity */}
+                                    {streamingPhases.uploadPhase.currentItem && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-green-500">📤</span>
+                                            <span className="text-green-700">Lade hoch:</span>
+                                            <span className="font-mono font-bold">{streamingPhases.uploadPhase.currentItem}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
