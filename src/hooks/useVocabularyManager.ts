@@ -11,7 +11,11 @@ import {
     StreamingProcessingPhase,
     StreamingCompleteProcessingResult
 } from '../lib/vocabulary-streaming-integration';
-import { CompleteProcessingOptions } from '../lib/vocabulary-integration';
+import {
+    CompleteProcessingOptions,
+    VocabularyItemResult,
+    VocabularyItemError
+} from '../lib/vocabulary-integration';
 import { VocabularyItem } from '../lib/vocabulary-translation';
 
 // Type aliases for better readability
@@ -94,6 +98,61 @@ export function useVocabularyManager() {
     const [streamingPhases, setStreamingPhases] = useState<StreamingProcessingPhase | null>(null);
     const [streamingResult, setStreamingResult] = useState<StreamingCompleteProcessingResult | null>(null);
     const stopSignalRef = useRef({ current: false });
+
+    // Live update states for individual items
+    const [processingItems, setProcessingItems] = useState<Set<number>>(new Set());
+    const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
+
+    // Live update callback functions
+    const handleItemProcessing = (item: VocabularyItem, phase: 'translation' | 'upload') => {
+        if (!mountedRef.current) return;
+
+        console.log(`🔄 Processing item ${item.id} (${item.characters}) - ${phase}`);
+        setProcessingItems(prev => new Set(prev).add(item.id));
+
+        // Remove from error items if it was there before
+        setErrorItems(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(item.id);
+            return newMap;
+        });
+    };
+
+    const handleItemUpdated = (item: VocabularyItem, result: VocabularyItemResult) => {
+        if (!mountedRef.current) return;
+
+        console.log(`✅ Updated item ${item.id} (${item.characters}):`, result);
+
+        // Remove from processing items
+        setProcessingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(item.id);
+            return newSet;
+        });
+
+        // Remove from error items (in case it was there)
+        setErrorItems(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(item.id);
+            return newMap;
+        });
+    };
+
+    const handleItemError = (item: VocabularyItem, error: VocabularyItemError) => {
+        if (!mountedRef.current) return;
+
+        console.error(`❌ Error processing item ${item.id} (${item.characters}):`, error);
+
+        // Remove from processing items
+        setProcessingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(item.id);
+            return newSet;
+        });
+
+        // Add to error items
+        setErrorItems(prev => new Map(prev).set(item.id, error.error));
+    };
 
     // Handle token changes
     const handleApiTokenChange = (token: string) => {
@@ -281,7 +340,12 @@ export function useVocabularyManager() {
                 apiToken,
                 deeplToken,
                 enableProgressReporting: true,
-                stopOnFirstError: false
+                stopOnFirstError: false,
+
+                // Live update callbacks
+                onItemProcessing: handleItemProcessing,
+                onItemUpdated: handleItemUpdated,
+                onItemError: handleItemError
             };
 
             // 🚀 STREAMING MODE: Parallel translation/upload
@@ -344,6 +408,10 @@ export function useVocabularyManager() {
         setStreamingPhases(null);
         setStreamingResult(null);
         setProgress(0);
+
+        // Clear live update states
+        setProcessingItems(new Set());
+        setErrorItems(new Map());
     };
 
     // Load vocabulary when component mounts or token/level changes
@@ -394,6 +462,10 @@ export function useVocabularyManager() {
         // Streaming processing data
         streamingPhases,
         streamingResult,
+
+        // Live update states
+        processingItems,
+        errorItems,
 
         // Actions
         processTranslations: startProcessing,

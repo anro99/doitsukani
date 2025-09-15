@@ -65,8 +65,12 @@ describe('useVocabularyManager - Live Updates (Phase 1)', () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
             });
 
-            // Future implementation: should have processingItems state
-            // For now, verify the foundation exists
+            // Verify processingItems state exists and is initialized
+            expect(result.current.processingItems).toBeDefined();
+            expect(result.current.processingItems).toBeInstanceOf(Set);
+            expect(result.current.processingItems.size).toBe(0);
+
+            // Foundation still exists
             expect(result.current.isProcessing).toBe(false);
             expect(result.current.progress).toBe(0);
         });
@@ -79,8 +83,12 @@ describe('useVocabularyManager - Live Updates (Phase 1)', () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
             });
 
-            // Future implementation: should have errorItems state
-            // For now, verify upload stats foundation exists
+            // Verify errorItems state exists and is initialized
+            expect(result.current.errorItems).toBeDefined();
+            expect(result.current.errorItems).toBeInstanceOf(Map);
+            expect(result.current.errorItems.size).toBe(0);
+
+            // Foundation still exists
             expect(result.current.uploadStats.failed).toBe(0);
         });
 
@@ -286,6 +294,10 @@ describe('useVocabularyManager - Live Updates (Phase 1)', () => {
             expect(result.current.selectedLevel).toBe(5);
             expect(result.current.synonymMode).toBe('replace');
             expect(result.current.progress).toBe(0);
+
+            // Live update states should be cleared
+            expect(result.current.processingItems.size).toBe(0);
+            expect(result.current.errorItems.size).toBe(0);
         });
     });
 

@@ -1,6 +1,24 @@
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
 import { uploadVocabularyBatch, BatchUploadResult } from './vocabulary-wanikani-upload';
 
+// Live update callback types for streaming integration
+export interface VocabularyItemResult {
+    vocabularyId: number;
+    success: boolean;
+    translatedSynonyms: string[];
+    uploadedSynonyms: string[];
+    message: string;
+}
+
+export interface VocabularyItemError {
+    vocabularyId: number;
+    phase: 'translation' | 'upload';
+    error: string;
+    originalError?: Error;
+    timestamp?: string;
+    retryable?: boolean;
+}
+
 // Types for integrated processing
 export interface CompleteProcessingOptions {
     batchSize: number;
@@ -9,6 +27,11 @@ export interface CompleteProcessingOptions {
     deeplToken: string;
     enableProgressReporting: boolean;
     stopOnFirstError: boolean;
+
+    // Live update callbacks (optional)
+    onItemProcessing?: (item: VocabularyItem, phase: 'translation' | 'upload') => void;
+    onItemUpdated?: (item: VocabularyItem, result: VocabularyItemResult) => void;
+    onItemError?: (item: VocabularyItem, error: VocabularyItemError) => void;
 }
 
 export interface ProcessingPhase {

@@ -45,6 +45,17 @@ export async function processVocabularyStreaming(
     let uploadedCount = 0;
     let errorCount = 0;
 
+    // Helper function to safely call callbacks
+    const safeCallCallback = (callbackName: string, callback: Function | undefined, ...args: any[]) => {
+        if (callback) {
+            try {
+                callback(...args);
+            } catch (error) {
+                console.warn(`⚠️ Callback error in ${callbackName}:`, error);
+            }
+        }
+    };
+
     const reportPhases = (translationProgress: number, uploadProgress: number, currentItem?: string) => {
         const translationPhase: ProcessingPhase = {
             phase: 'translation',
@@ -110,10 +121,25 @@ export async function processVocabularyStreaming(
                 } else {
                     // Step 1: Translate (for replace and smart-merge modes)
                     console.log(`🔄 Translating ${currentItem}...`);
+
+                    // Call onItemProcessing callback for translation phase
+                    safeCallCallback('onItemProcessing', options.onItemProcessing, vocabulary, 'translation');
+
                     const translationResult = await translateVocabularyMeanings(vocabulary, options.deeplToken);
 
                     if (translationResult.error) {
                         console.log(`❌ Translation failed for ${currentItem}: ${translationResult.error}`);
+
+                        // Call onItemError callback for translation failure
+                        safeCallCallback('onItemError', options.onItemError, vocabulary, {
+                            vocabularyId: vocabulary.id,
+                            phase: 'translation' as const,
+                            error: `Translation failed: ${translationResult.error}`,
+                            originalError: new Error(translationResult.error),
+                            timestamp: new Date().toISOString(),
+                            retryable: true
+                        });
+
                         errorCount++;
                         // Skip upload if translation failed
                         const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
@@ -130,6 +156,10 @@ export async function processVocabularyStreaming(
                 // Step 2: Upload after translation (or skip in DELETE mode)
                 try {
                     console.log(`📤 Uploading ${currentItem}...`);
+
+                    // Call onItemProcessing callback for upload phase
+                    safeCallCallback('onItemProcessing', options.onItemProcessing, vocabulary, 'upload');
+
                     const uploadResult = await uploadVocabularyBatch([{
                         vocabulary,
                         translatedSynonyms
@@ -141,13 +171,42 @@ export async function processVocabularyStreaming(
                     if (uploadResult.success && uploadResult.results.length > 0) {
                         uploadedCount++;
                         console.log(`✅ Uploaded ${currentItem} successfully`);
+
+                        // Call onItemUpdated callback for successful processing
+                        safeCallCallback('onItemUpdated', options.onItemUpdated, vocabulary, {
+                            vocabularyId: vocabulary.id,
+                            success: true,
+                            translatedSynonyms,
+                            uploadedSynonyms: translatedSynonyms,
+                            message: 'Successfully processed and uploaded'
+                        });
                     } else {
                         errorCount++;
                         console.log(`❌ Upload failed for ${currentItem}: ${uploadResult.errors.join(', ')}`);
+
+                        // Call onItemError callback for upload failure
+                        safeCallCallback('onItemError', options.onItemError, vocabulary, {
+                            vocabularyId: vocabulary.id,
+                            phase: 'upload' as const,
+                            error: `Upload failed: ${uploadResult.errors.join(', ')}`,
+                            originalError: new Error(uploadResult.errors.join(', ')),
+                            timestamp: new Date().toISOString(),
+                            retryable: true
+                        });
                     }
                 } catch (uploadError) {
                     errorCount++;
                     console.log(`❌ Upload error for ${currentItem}: ${uploadError}`);
+
+                    // Call onItemError callback for upload exception
+                    safeCallCallback('onItemError', options.onItemError, vocabulary, {
+                        vocabularyId: vocabulary.id,
+                        phase: 'upload' as const,
+                        error: `Upload error: ${uploadError}`,
+                        originalError: uploadError instanceof Error ? uploadError : new Error(String(uploadError)),
+                        timestamp: new Date().toISOString(),
+                        retryable: true
+                    });
                 }
 
                 // Report progress after each item
@@ -161,6 +220,16 @@ export async function processVocabularyStreaming(
             } catch (error) {
                 errorCount++;
                 console.log(`❌ Processing error for ${currentItem}: ${error}`);
+
+                // Call onItemError callback for general processing error
+                safeCallCallback('onItemError', options.onItemError, vocabulary, {
+                    vocabularyId: vocabulary.id,
+                    phase: 'translation' as const, // Default to translation phase for general errors
+                    error: `Processing error: ${error}`,
+                    originalError: error instanceof Error ? error : new Error(String(error)),
+                    timestamp: new Date().toISOString(),
+                    retryable: false
+                });
 
                 const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
                 const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
