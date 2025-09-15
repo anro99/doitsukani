@@ -101,7 +101,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund']
             };
-            const newSynonyms = ['Katze', 'Kätzchen'];
+            const translatedSynonyms = ['Katze', 'Kätzchen'];
             const options: VocabularyUploadOptions = {
                 synonymMode: 'smart-merge',
                 apiToken: mockApiToken
@@ -112,7 +112,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             } as any);
 
             // Act
-            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(result).toEqual({
@@ -137,7 +137,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: false,
                 currentSynonyms: []
             };
-            const newSynonyms = ['Katze'];
+            const translatedSynonyms = ['Katze'];
             const options: VocabularyUploadOptions = {
                 synonymMode: 'replace',
                 apiToken: mockApiToken
@@ -148,7 +148,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             } as any);
 
             // Act
-            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(result).toEqual({
@@ -173,7 +173,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund', 'Welpe']
             };
-            const newSynonyms = ['Katze'];
+            const translatedSynonyms = ['Katze'];
             const options: VocabularyUploadOptions = {
                 synonymMode: 'replace',
                 apiToken: mockApiToken
@@ -184,7 +184,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             } as any);
 
             // Act
-            await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(wanikani.updateSynonyms).toHaveBeenCalledWith(
@@ -202,7 +202,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund']
             };
-            const newSynonyms = ['Katze'];
+            const translatedSynonyms = ['Katze'];
             const options: VocabularyUploadOptions = {
                 synonymMode: 'smart-merge',
                 apiToken: mockApiToken
@@ -211,7 +211,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             vi.mocked(wanikani.updateSynonyms).mockRejectedValue(new Error('Upload failed'));
 
             // Act
-            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(result).toEqual({
@@ -232,7 +232,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund']
             };
-            const newSynonyms = ['Katze', 'Hund']; // Duplicate that could cause 422
+            const translatedSynonyms = ['Katze', 'Hund']; // Duplicate that could cause 422
             const options: VocabularyUploadOptions = {
                 synonymMode: 'smart-merge',
                 apiToken: mockApiToken
@@ -250,7 +250,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             vi.mocked(wanikani.updateSynonyms).mockRejectedValue(error422);
 
             // Act
-            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(result).toEqual({
@@ -271,7 +271,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
                 exists: true,
                 currentSynonyms: ['Hund', 'DOG']
             };
-            const newSynonyms = ['katze', 'KATZE', 'dog']; // Case variations that should be deduplicated
+            const translatedSynonyms = ['katze', 'KATZE', 'dog']; // Case variations that should be deduplicated
             const options: VocabularyUploadOptions = {
                 synonymMode: 'smart-merge',
                 apiToken: mockApiToken
@@ -282,7 +282,7 @@ describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
             } as any);
 
             // Act
-            const result = await createOrUpdateStudyMaterial(mapping, newSynonyms, options);
+            const result = await createOrUpdateStudyMaterial(mapping, mockVocabularyItems[0], translatedSynonyms, options);
 
             // Assert
             expect(result.success).toBe(true);
