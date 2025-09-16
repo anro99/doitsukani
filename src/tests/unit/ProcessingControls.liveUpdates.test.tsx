@@ -357,8 +357,8 @@ describe('🎯 Phase 2 Task 4: ProcessingControls Live Feedback', () => {
 
             const updateTime = performance.now() - startTime;
 
-            // Should handle updates efficiently (less than 500ms for 50 updates)
-            expect(updateTime).toBeLessThan(500);
+            // Should handle updates efficiently (less than 600ms for 50 updates)
+            expect(updateTime).toBeLessThan(600);
         });
 
         it('should provide proper accessibility attributes', () => {

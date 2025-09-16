@@ -376,7 +376,6 @@ export function useVocabularyManager() {
                     setProgress(phases.overallPhase.progress);
                 }
             }, stopSignalRef.current);
-
             if (mountedRef.current) {
                 setStreamingResult(result);
                 setProgress(100);
