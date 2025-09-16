@@ -40,11 +40,13 @@ export const VocabularyManagerRefactored = () => {
         // Live update states (Phase 2)
         processingItems,
         errorItems,
+        currentProcessingItem,
 
         // Actions
         processTranslations,
         stopProcessing,
         clearResults,
+        clearErrors,
         loadMorePreviewVocabulary
     } = useVocabularyManager();
 
@@ -142,6 +144,12 @@ export const VocabularyManagerRefactored = () => {
                     // Streaming processing props
                     streamingPhases={streamingPhases}
                     streamingResult={streamingResult}
+
+                    // Live-Update props for Phase 2
+                    processingItems={processingItems}
+                    errorItems={errorItems}
+                    currentProcessingItem={currentProcessingItem}
+                    onClearErrors={clearErrors}
                 />
             )}
 

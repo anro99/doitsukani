@@ -102,6 +102,7 @@ export function useVocabularyManager() {
     // Live update states for individual items
     const [processingItems, setProcessingItems] = useState<Set<number>>(new Set());
     const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
+    const [currentProcessingItem, setCurrentProcessingItem] = useState<{ id: number; characters: string; primaryMeaning: string } | null>(null);
 
     // Live update callback functions
     const handleItemProcessing = (item: VocabularyItem, phase: 'translation' | 'upload') => {
@@ -109,6 +110,13 @@ export function useVocabularyManager() {
 
         console.log(`🔄 Processing item ${item.id} (${item.characters}) - ${phase}`);
         setProcessingItems(prev => new Set(prev).add(item.id));
+
+        // Set as current processing item
+        setCurrentProcessingItem({
+            id: item.id,
+            characters: item.characters,
+            primaryMeaning: item.meanings.find(m => m.primary)?.meaning || item.meanings[0]?.meaning || ''
+        });
 
         // Remove from error items if it was there before
         setErrorItems(prev => {
@@ -130,6 +138,9 @@ export function useVocabularyManager() {
             return newSet;
         });
 
+        // Clear current processing item if this was it
+        setCurrentProcessingItem(prev => (prev?.id === item.id ? null : prev));
+
         // Remove from error items (in case it was there)
         setErrorItems(prev => {
             const newMap = new Map(prev);
@@ -149,6 +160,9 @@ export function useVocabularyManager() {
             newSet.delete(item.id);
             return newSet;
         });
+
+        // Clear current processing item if this was it
+        setCurrentProcessingItem(prev => (prev?.id === item.id ? null : prev));
 
         // Add to error items
         setErrorItems(prev => new Map(prev).set(item.id, error.error));
@@ -412,6 +426,12 @@ export function useVocabularyManager() {
         // Clear live update states
         setProcessingItems(new Set());
         setErrorItems(new Map());
+        setCurrentProcessingItem(null);
+    };
+
+    const clearErrors = () => {
+        console.log('🗑️ Clearing error items');
+        setErrorItems(new Map());
     };
 
     // Load vocabulary when component mounts or token/level changes
@@ -466,11 +486,13 @@ export function useVocabularyManager() {
         // Live update states
         processingItems,
         errorItems,
+        currentProcessingItem,
 
         // Actions
         processTranslations: startProcessing,
         stopProcessing,
         clearResults,
+        clearErrors,
         loadVocabularyFromAPI,
         loadMorePreviewVocabulary
     };

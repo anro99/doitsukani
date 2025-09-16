@@ -35,7 +35,7 @@ interface ProcessingControlsProps {
     // Live-Update props for Phase 2
     processingItems?: Set<number>;
     errorItems?: Map<number, string>;
-    currentProcessingItem?: number | { id: number; characters: string; primaryMeaning: string };
+    currentProcessingItem?: number | { id: number; characters: string; primaryMeaning: string } | null;
     onClearErrors?: () => void;
 }
 
