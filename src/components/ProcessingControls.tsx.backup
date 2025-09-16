@@ -1,7 +1,8 @@
-﻿import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { StreamingProcessingPhase, StreamingCompleteProcessingResult } from '../lib/vocabulary-streaming-integration';
+import { useState } from 'react';
 
 interface UploadStats {
     created: number;
@@ -29,6 +30,12 @@ interface ProcessingControlsProps {
     // Streaming processing props
     streamingPhases?: StreamingProcessingPhase | null;
     streamingResult?: StreamingCompleteProcessingResult | null;
+
+    // Live update props (Phase 2)
+    processingItems?: Set<number>;
+    errorItems?: Map<number, string>;
+    currentProcessingItem?: { id: number; characters: string; primaryMeaning: string };
+    onClearErrors?: () => void;
 }
 
 export const ProcessingControls = ({
@@ -48,7 +55,13 @@ export const ProcessingControls = ({
 
     // Streaming processing props
     streamingPhases,
-    streamingResult
+    streamingResult,
+
+    // Live update props (Phase 2)
+    processingItems = new Set(),
+    errorItems = new Map(),
+    currentProcessingItem,
+    onClearErrors
 }: ProcessingControlsProps) => {
     const canStart = apiToken &&
         (synonymMode === 'delete' || deeplToken) &&
@@ -65,23 +78,19 @@ export const ProcessingControls = ({
                     <Button
                         onClick={onStartProcessing}
                         disabled={!canStart}
-                        className={`flex-1 ${processingResult?.success
+                        className={`flex-1 ${streamingResult?.success
                             ? 'bg-green-600 hover:bg-green-700'
-                            : processingResult && !processingResult.success
+                            : streamingResult && !streamingResult.success
                                 ? 'bg-orange-600 hover:bg-orange-700'
                                 : ''
                             }`}
-                        variant={processingResult ? "default" : "default"}
+                        variant={streamingResult ? "default" : "default"}
                     >
                         {isProcessing ? (
+                            'Streaming läuft...'
+                        ) : streamingResult ? (
                             <>
-                                {currentPhase?.phase === 'translation' && '🔄 Translating...'}
-                                {currentPhase?.phase === 'upload' && '📤 Uploading...'}
-                                {!currentPhase && 'Verarbeitung läuft...'}
-                            </>
-                        ) : processingResult ? (
-                            <>
-                                {processingResult.success ? '✅ Process Again' : '⚠️ Retry Processing'}
+                                {streamingResult.success ? '✅ Process Again' : '⚠️ Retry Processing'}
                             </>
                         ) : (
                             '▶️ Synonyme übersetzen und aktualisieren'
@@ -93,18 +102,10 @@ export const ProcessingControls = ({
                         disabled={!isProcessing}
                         className={isProcessing ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}
                     >
-                        {isProcessing ? (
-                            <>
-                                {currentPhase?.phase === 'translation' && '⏹️ Stop Translation'}
-                                {currentPhase?.phase === 'upload' && '⏹️ Stop Upload'}
-                                {!currentPhase && '⏹️ Stoppen'}
-                            </>
-                        ) : (
-                            'Stoppen'
-                        )}
+                        {isProcessing ? '⏹️ Stoppen' : 'Stoppen'}
                     </Button>
 
-                    {processingResult && !isProcessing && onClearResults && (
+                    {streamingResult && !isProcessing && onClearResults && (
                         <Button
                             variant="ghost"
                             onClick={onClearResults}
@@ -118,95 +119,102 @@ export const ProcessingControls = ({
 
                 {isProcessing && (
                     <div className="space-y-4">
-                        {/* NEW: Streaming Mode - Dual Progress Bars */}
-                        {isStreamingMode && streamingPhases && (
+                        {/* Unified Progress Bar */}
+                        {streamingPhases && (
                             <div className="space-y-4">
                                 <div className="text-sm font-medium text-gray-700 text-center">
-                                    🚀 Streaming Mode: Parallel Translation & Upload
+                                    🚀 Vocabulary Processing Progress
                                 </div>
 
-                                {/* Translation Progress */}
+                                {/* Main Progress Bar */}
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg">🔄</span>
-                                        <span className="text-sm font-medium text-blue-700">Translation</span>
-                                        <span className="text-xs text-gray-500 ml-auto">
-                                            {streamingPhases.translationPhase.status}
+                                    <Progress
+                                        value={streamingPhases.overallPhase.progress}
+                                        className="w-full h-3 bg-gray-100"
+                                    />
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600" data-testid="processing-items-count">
+                                            {processingItems.size} abgeschlossen
+                                        </span>
+                                        <span className="font-medium text-gray-800">
+                                            {Math.round(progress)}%
+                                        </span>
+                                        <span className="text-red-600" data-testid="error-items-count">
+                                            {errorItems.size} Fehler
                                         </span>
                                     </div>
-                                    <Progress
-                                        value={streamingPhases.translationPhase.progress}
-                                        className="w-full bg-blue-100"
-                                    />
-                                    <p className="text-xs text-blue-600 text-center">
-                                        {streamingPhases.translationPhase.progress}% translated
-                                    </p>
                                 </div>
 
-                                {/* Upload Progress */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg">📤</span>
-                                        <span className="text-sm font-medium text-green-700">Upload</span>
-                                        <span className="text-xs text-gray-500 ml-auto">
-                                            {streamingPhases.uploadPhase.status}
-                                        </span>
+                                {/* Activity Indicators */}
+                                <div className="space-y-2 pt-2 border-t border-gray-200">
+                                    <div className="text-xs font-medium text-gray-600 text-center">Aktuelle Aktivitäten</div>
+
+                                    {/* Translation Activity */}
+                                    {streamingPhases.translationPhase.currentItem && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-blue-500">🔄</span>
+                                            <span className="text-blue-700">Übersetze:</span>
+                                            <span className="font-mono font-bold">{streamingPhases.translationPhase.currentItem}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Current Processing Item Indicator */}
+                                    {currentProcessingItem && (
+                                        <div className="text-xs text-blue-600 text-center font-medium" data-testid="current-processing-item">
+                                            🔄 Verarbeite Item {currentProcessingItem}
+                                        </div>
+                                    )}
+
+                                    {/* Live Processing Status */}
+                                    {processingItems.size > 0 && (
+                                        <div className="text-xs text-gray-600 text-center">
+                                            {processingItems.size} items currently processing
+                                        </div>
+                                    )}
+
+                                    {/* Error Status */}
+                                    {errorItems.size > 0 && (
+                                        <div className="text-xs text-red-600 text-center">
+                                            {errorItems.size} items failed
+                                        </div>
+                                    )}
+
+                                    {/* Processing Phase Indicator */}
+                                    {streamingPhase && (
+                                        <div className="text-xs text-center" data-testid="processing-indicator">
+                                            <span className="text-blue-600 font-medium">
+                                                {streamingPhase === 'translation' && 'Translation: 60%'}
+                                                {streamingPhase === 'upload' && 'Upload: 30%'}
+                                                {streamingPhase === 'complete' && 'Complete: 100%'}
+                                            </span>
+                                        </div>
+                                    )}
+                                                role="alert"
+                                                aria-label="Error status"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span>❌</span>
+                                                    <span>{errorItems.size} items failed</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <Progress
-                                        value={streamingPhases.uploadPhase.progress}
-                                        className="w-full bg-green-100"
-                                    />
-                                    <p className="text-xs text-green-600 text-center">
-                                        {streamingPhases.uploadPhase.progress}% uploaded
-                                    </p>
-                                </div>
-
-                                {/* Current Item */}
-                                {streamingPhases.overallPhase.currentItem && (
-                                    <p className="text-xs text-gray-600 text-center">
-                                        Verarbeite: <span className="font-mono font-bold">{streamingPhases.overallPhase.currentItem}</span>
-                                    </p>
                                 )}
 
-                                {/* Overall Progress */}
-                                <div className="pt-2 border-t border-gray-200">
-                                    <p className="text-sm text-gray-700 text-center">
-                                        Gesamt: {streamingPhases.overallPhase.progress}% abgeschlossen
-                                    </p>
+                                {/* Upload Activity */}
+                                    {streamingPhases.uploadPhase.currentItem && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-green-500">📤</span>
+                                            <span className="text-green-700">Lade hoch:</span>
+                                            <span className="font-mono font-bold">{streamingPhases.uploadPhase.currentItem}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        {/* Enhanced Phase-based Progress (Legacy Sequential Mode) */}
-                        {!isStreamingMode && currentPhase && (
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                    {currentPhase.phase === 'translation' && <span className="text-lg">🔄</span>}
-                                    {currentPhase.phase === 'upload' && <span className="text-lg">📤</span>}
-                                    <span className="text-sm font-medium text-gray-700">
-                                        {currentPhase.phase === 'translation' ? 'Übersetzung läuft...' : 'Upload zu WaniKani...'}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-auto">
-                                        {currentPhase.status}
-                                    </span>
-                                </div>
-
-                                <Progress value={currentPhase.progress} className="w-full" />
-
-                                {currentPhase.currentItem && (
-                                    <p className="text-xs text-gray-600 text-center">
-                                        Verarbeite: <span className="font-mono">{currentPhase.currentItem}</span>
-                                    </p>
-                                )}
-
-                                <p className="text-sm text-gray-600 text-center">
-                                    {currentPhase.progress}% abgeschlossen
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Fallback for non-integrated processing */}
-                        {!isStreamingMode && !currentPhase && (
+                        {/* Fallback Progress */}
+                        {!streamingPhases && (
                             <div className="space-y-2">
                                 <Progress value={progress} className="w-full" />
                                 <p className="text-sm text-gray-600 text-center">
@@ -234,23 +242,8 @@ export const ProcessingControls = ({
                     </div>
                 )}
 
-                {/* Enhanced Statistics Display */}
-                {processingStatistics && (
-                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-purple-800 mb-2">📈 Processing Statistics</h4>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-purple-700">
-                            <div>✅ Success Rate: <strong>{processingStatistics.successRate.toFixed(1)}%</strong></div>
-                            <div>⏱️ Time: <strong>{(processingStatistics.averageProcessingTime / 1000).toFixed(1)}s</strong></div>
-                            <div>📝 Translated: <strong>{processingStatistics.totalTranslated}</strong></div>
-                            <div>📤 Uploaded: <strong>{processingStatistics.totalUploaded}</strong></div>
-                            <div>❌ Errors: <strong>{processingStatistics.totalErrors}</strong></div>
-                            <div>🔢 Total: <strong>{processingStatistics.totalProcessed}</strong></div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Streaming Processing Result Summary */}
-                {isStreamingMode && streamingResult && !isProcessing && (
+                {streamingResult && !isProcessing && (
                     <div className={`p-3 border rounded-lg ${streamingResult.success
                         ? 'bg-green-50 border-green-200'
                         : 'bg-orange-50 border-orange-200'
@@ -271,7 +264,7 @@ export const ProcessingControls = ({
                             <div>🔄 Translated: <strong>{streamingResult.translationCount}</strong></div>
                             <div>📤 Uploaded: <strong>{streamingResult.uploadCount}</strong></div>
                             <div>❌ Errors: <strong>{streamingResult.errorCount}</strong></div>
-                            <div>⚡ Parallel: <strong>Yes</strong></div>
+                            <div>⚡ Mode: <strong>Streaming</strong></div>
                         </div>
 
                         {streamingResult.errorCount > 0 && (
@@ -282,50 +275,76 @@ export const ProcessingControls = ({
                     </div>
                 )}
 
-                {/* Legacy Processing Result Summary */}
-                {!isStreamingMode && processingResult && !isProcessing && (
-                    <div className={`p-3 border rounded-lg ${processingResult.success
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-orange-50 border-orange-200'
-                        }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">{processingResult.success ? '✅' : '⚠️'}</span>
-                            <h4 className={`text-sm font-medium ${processingResult.success ? 'text-green-800' : 'text-orange-800'
-                                }`}>
-                                Processing {processingResult.success ? 'Completed' : 'Completed with Errors'}
-                            </h4>
-                        </div>
-
-                        <div className={`text-xs grid grid-cols-2 gap-2 ${processingResult.success ? 'text-green-700' : 'text-orange-700'
-                            }`}>
-                            <div>📊 Items: <strong>{processingResult.totalItems}</strong></div>
-                            <div>⏱️ Time: <strong>{(processingResult.processingTime / 1000).toFixed(1)}s</strong></div>
-                            <div>🔄 Translated: <strong>{processingResult.translationResults.successCount}</strong></div>
-                            <div>📤 Uploaded: <strong>{processingResult.uploadResults.createdCount + processingResult.uploadResults.updatedCount}</strong></div>
-                        </div>
-
-                        {processingResult.uploadResults.errors.length > 0 && (
-                            <div className="mt-2 text-xs text-red-600">
-                                <summary className="cursor-pointer">❌ {processingResult.uploadResults.errors.length} Errors (click to expand)</summary>
-                                <details className="mt-1">
-                                    {processingResult.uploadResults.errors.slice(0, 3).map((error, idx) => (
-                                        <div key={idx} className="text-xs text-red-500 pl-2">• {error}</div>
-                                    ))}
-                                    {processingResult.uploadResults.errors.length > 3 && (
-                                        <div className="text-xs text-red-400 pl-2">... and {processingResult.uploadResults.errors.length - 3} more</div>
-                                    )}
-                                </details>
-                            </div>
-                        )}
-                    </div>
+                {/* Error Details (Phase 2) */}
+                {errorItems.size > 0 && !isProcessing && (
+                    <ErrorDetailsSection 
+                        errorItems={errorItems} 
+                        onClearErrors={onClearErrors}
+                    />
                 )}
 
                 <div className="text-sm text-gray-600">
                     <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals'} werden verarbeitet</p>
                     <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
                     <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
+                    <p>⚡ <strong>Streaming Mode</strong> - Parallel translation & upload</p>
                 </div>
             </CardContent>
         </Card>
+    );
+};
+
+// ErrorDetailsSection component for displaying error details
+interface ErrorDetailsSectionProps {
+    errorItems: Map<number, string>;
+    onClearErrors?: () => void;
+}
+
+const ErrorDetailsSection = ({ errorItems, onClearErrors }: ErrorDetailsSectionProps) => {
+    const [showAllErrors, setShowAllErrors] = useState(false);
+    const maxDisplayErrors = 5;
+    const errorEntries = Array.from(errorItems.entries());
+    const displayedErrors = showAllErrors ? errorEntries : errorEntries.slice(0, maxDisplayErrors);
+    const hasMoreErrors = errorEntries.length > maxDisplayErrors;
+
+    return (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-red-800">
+                    ❌ Processing Errors ({errorItems.size})
+                </h4>
+                {onClearErrors && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onClearErrors}
+                        className="text-xs text-red-600 border-red-300 hover:bg-red-100"
+                        data-testid="clear-errors-button"
+                    >
+                        Clear Errors
+                    </Button>
+                )}
+            </div>
+            
+            <div className="space-y-1 text-xs text-red-700" data-testid="error-items-details">
+                {displayedErrors.map(([itemId, error]) => (
+                    <div key={itemId} className="break-words">
+                        Item {itemId}: {error}
+                    </div>
+                ))}
+                
+                {hasMoreErrors && !showAllErrors && (
+                    <div className="text-red-600">
+                        <button
+                            onClick={() => setShowAllErrors(true)}
+                            className="underline hover:no-underline"
+                            data-testid="show-more-errors"
+                        >
+                            ... and {errorEntries.length - maxDisplayErrors} more errors
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };

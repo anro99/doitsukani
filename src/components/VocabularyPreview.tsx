@@ -32,6 +32,10 @@ interface VocabularyPreviewProps {
     displayedPreviewCount?: number;
     isLoadingVocabulary?: boolean;
     onLoadMore?: () => void;
+
+    // Live update props (Phase 2)
+    processingItems?: Set<number>;
+    errorItems?: Map<number, string>;
 }
 
 export const VocabularyPreview = ({
@@ -40,13 +44,81 @@ export const VocabularyPreview = ({
     currentLevelCountLoading = false,
     displayedPreviewCount = 12,
     isLoadingVocabulary = false,
-    onLoadMore
+    onLoadMore,
+    processingItems = new Set(),
+    errorItems = new Map()
 }: VocabularyPreviewProps) => {
     // Helper function to get count info for preview display
     const getCountInfo = () => {
         if (currentLevelCountLoading) return 'Lade Count...';
         if (currentLevelCount !== undefined) return `${currentLevelCount} Vocabulary insgesamt`;
         return 'Count nicht verfügbar';
+    };
+
+    // Helper function to determine item status for live updates
+    const getItemStatus = (vocabulary: Vocabulary) => {
+        const hasError = errorItems.has(vocabulary.id);
+        const isProcessing = processingItems.has(vocabulary.id);
+        const isCompleted = vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0;
+
+        // Priority: error > processing > completed > default
+        if (hasError) {
+            return {
+                type: 'error' as const,
+                message: errorItems.get(vocabulary.id) || 'Unknown error'
+            };
+        }
+        if (isProcessing) {
+            return { type: 'processing' as const };
+        }
+        if (isCompleted) {
+            return { type: 'completed' as const };
+        }
+        return { type: 'default' as const };
+    };
+
+    // Helper function to render status indicator
+    const renderStatusIndicator = (vocabulary: Vocabulary) => {
+        const status = getItemStatus(vocabulary);
+
+        switch (status.type) {
+            case 'error':
+                return (
+                    <div
+                        className="flex items-center gap-1 text-red-500 text-xs mt-2"
+                        data-testid={`error-indicator-${vocabulary.id}`}
+                        role="alert"
+                        aria-label={`Processing failed: ${status.message}`}
+                    >
+                        <span className="text-red-500">❌</span>
+                        <span className="break-words">{status.message}</span>
+                    </div>
+                );
+            case 'processing':
+                return (
+                    <div
+                        className="flex items-center gap-1 text-blue-500 text-xs mt-2"
+                        data-testid={`processing-indicator-${vocabulary.id}`}
+                        role="status"
+                        aria-label="Currently processing"
+                    >
+                        <span className="animate-spin text-blue-500">⟳</span>
+                        <span>Processing...</span>
+                    </div>
+                );
+            case 'completed':
+                return (
+                    <div
+                        className="flex items-center gap-1 text-green-500 text-xs mt-2"
+                        data-testid={`completed-indicator-${vocabulary.id}`}
+                    >
+                        <span className="text-green-500">✅</span>
+                        <span>Completed</span>
+                    </div>
+                );
+            default:
+                return null;
+        }
     };
 
     // Helper function to format readings
@@ -118,7 +190,11 @@ export const VocabularyPreview = ({
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {previewVocabulary.slice(0, displayedPreviewCount).map((vocabulary: Vocabulary) => (
-                        <div key={vocabulary.id} className="p-4 border rounded-lg bg-gradient-to-br from-purple-50 to-indigo-50">
+                        <div
+                            key={vocabulary.id}
+                            className="p-4 border rounded-lg bg-gradient-to-br from-purple-50 to-indigo-50"
+                            data-testid={`vocabulary-card-${vocabulary.id}`}
+                        >
                             <div className="flex items-start gap-3 mb-3">
                                 <span className="text-2xl font-bold text-purple-600 min-w-fit">
                                     {vocabulary.characters}
@@ -160,6 +236,25 @@ export const VocabularyPreview = ({
                                 </div>
                             </div>
 
+                            {/* Translated Synonyms (if completed) */}
+                            {vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0 && (
+                                <div className="text-sm text-gray-600 mt-3">
+                                    <div className="mb-1">
+                                        <span className="font-medium text-green-700">Übersetzte Synonyme:</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {vocabulary.translatedSynonyms.map((synonym: string, idx: number) => (
+                                                <Badge key={idx} variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
+                                                    {synonym}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                        <div className="text-xs text-green-600 mt-1">
+                                            {vocabulary.translatedSynonyms.join(', ')}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Context Sentences Preview */}
                             {vocabulary.contextSentences && vocabulary.contextSentences.length > 0 && (
                                 <div className="mt-2 p-2 bg-white/60 rounded text-xs">
@@ -175,6 +270,9 @@ export const VocabularyPreview = ({
                                     )}
                                 </div>
                             )}
+
+                            {/* Live Status Indicator (Phase 2) */}
+                            {renderStatusIndicator(vocabulary)}
                         </div>
                     ))}
                 </div>

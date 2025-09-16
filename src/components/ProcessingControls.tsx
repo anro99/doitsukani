@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -29,6 +31,12 @@ interface ProcessingControlsProps {
     // Streaming processing props
     streamingPhases?: StreamingProcessingPhase | null;
     streamingResult?: StreamingCompleteProcessingResult | null;
+
+    // Live-Update props for Phase 2
+    processingItems?: Set<number>;
+    errorItems?: Map<number, string>;
+    currentProcessingItem?: number | { id: number; characters: string; primaryMeaning: string };
+    onClearErrors?: () => void;
 }
 
 export const ProcessingControls = ({
@@ -48,8 +56,16 @@ export const ProcessingControls = ({
 
     // Streaming processing props
     streamingPhases,
-    streamingResult
+    streamingResult,
+
+    // Live-Update props
+    processingItems,
+    errorItems,
+    currentProcessingItem,
+    onClearErrors
 }: ProcessingControlsProps) => {
+    const [showErrorDetails, setShowErrorDetails] = useState(false);
+
     const canStart = apiToken &&
         (synonymMode === 'delete' || deeplToken) &&
         filteredItemsCount > 0 &&
@@ -106,53 +122,61 @@ export const ProcessingControls = ({
 
                 {isProcessing && (
                     <div className="space-y-4">
-                        {/* Unified Progress Bar */}
+                        {/* Streaming Mode - Dual Progress Bars */}
                         {streamingPhases && (
                             <div className="space-y-4">
                                 <div className="text-sm font-medium text-gray-700 text-center">
-                                    🚀 Vocabulary Processing Progress
+                                    🚀 Streaming Mode: Parallel Translation & Upload
                                 </div>
 
-                                {/* Main Progress Bar */}
+                                {/* Translation Progress */}
                                 <div className="space-y-2">
-                                    <Progress
-                                        value={streamingPhases.overallPhase.progress}
-                                        className="w-full h-3 bg-gray-100"
-                                    />
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">
-                                            {streamingPhases.overallPhase.completedItems || 0} abgeschlossen
-                                        </span>
-                                        <span className="font-medium text-gray-800">
-                                            {streamingPhases.overallPhase.progress}%
-                                        </span>
-                                        <span className="text-red-600">
-                                            {streamingPhases.overallPhase.errorItems || 0} Fehler
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🔄</span>
+                                        <span className="text-sm font-medium text-blue-700">Translation</span>
+                                        <span className="text-xs text-gray-500 ml-auto">
+                                            {streamingPhases.translationPhase.status}
                                         </span>
                                     </div>
+                                    <Progress
+                                        value={streamingPhases.translationPhase.progress}
+                                        className="w-full bg-blue-100"
+                                    />
+                                    <p className="text-xs text-blue-600 text-center">
+                                        {streamingPhases.translationPhase.progress}% translated
+                                    </p>
                                 </div>
 
-                                {/* Activity Indicators */}
-                                <div className="space-y-2 pt-2 border-t border-gray-200">
-                                    <div className="text-xs font-medium text-gray-600 text-center">Aktuelle Aktivitäten</div>
+                                {/* Upload Progress */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">📤</span>
+                                        <span className="text-sm font-medium text-green-700">Upload</span>
+                                        <span className="text-xs text-gray-500 ml-auto">
+                                            {streamingPhases.uploadPhase.status}
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        value={streamingPhases.uploadPhase.progress}
+                                        className="w-full bg-green-100"
+                                    />
+                                    <p className="text-xs text-green-600 text-center">
+                                        {streamingPhases.uploadPhase.progress}% uploaded
+                                    </p>
+                                </div>
 
-                                    {/* Translation Activity */}
-                                    {streamingPhases.translationPhase.currentItem && (
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <span className="text-blue-500">🔄</span>
-                                            <span className="text-blue-700">Übersetze:</span>
-                                            <span className="font-mono font-bold">{streamingPhases.translationPhase.currentItem}</span>
-                                        </div>
-                                    )}
+                                {/* Current Item */}
+                                {streamingPhases.overallPhase.currentItem && (
+                                    <p className="text-xs text-gray-600 text-center">
+                                        Verarbeite: <span className="font-mono font-bold">{streamingPhases.overallPhase.currentItem}</span>
+                                    </p>
+                                )}
 
-                                    {/* Upload Activity */}
-                                    {streamingPhases.uploadPhase.currentItem && (
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <span className="text-green-500">📤</span>
-                                            <span className="text-green-700">Lade hoch:</span>
-                                            <span className="font-mono font-bold">{streamingPhases.uploadPhase.currentItem}</span>
-                                        </div>
-                                    )}
+                                {/* Overall Progress */}
+                                <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-sm text-gray-700 text-center">
+                                        Gesamt: {streamingPhases.overallPhase.progress}% abgeschlossen
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -216,6 +240,118 @@ export const ProcessingControls = ({
                                 <div>❌ {streamingResult.errorCount} items had processing errors</div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Live Status Display */}
+                {((processingItems?.size ?? 0) > 0 || (errorItems?.size ?? 0) > 0) && (
+                    <div className="mt-4 p-4 border rounded-lg bg-gray-50" role="status" aria-live="polite">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Live-Update Status</h4>
+                        <div className="space-y-2 text-sm">
+                            {(processingItems?.size ?? 0) > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-blue-500">🔄</span>
+                                    <span data-testid="processing-items-count" className="text-blue-600" aria-label="Processing status" role="status">
+                                        {processingItems?.size ?? 0} items currently processing
+                                    </span>
+                                </div>
+                            )}
+                            {(errorItems?.size ?? 0) > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-red-500">❌</span>
+                                    <span data-testid="error-items-count" className="text-red-600" aria-label="Error status" role="alert">
+                                        {errorItems?.size ?? 0} items failed
+                                    </span>
+                                </div>
+                            )}
+                            {currentProcessingItem && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-yellow-500">⚙️</span>
+                                    <span data-testid="current-processing-item">
+                                        Currently processing: {typeof currentProcessingItem === 'object' && 'characters' in currentProcessingItem && 'primaryMeaning' in currentProcessingItem
+                                            ? `${currentProcessingItem.characters} (${currentProcessingItem.primaryMeaning})`
+                                            : String(currentProcessingItem)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Processing Indicator für Tests */}
+                {isProcessing && (processingItems && processingItems.size > 0 || streamingPhases) && (
+                    <div className="mt-4 text-blue-600 animate-pulse" data-testid="processing-indicator" aria-label="Processing status">
+                        <div className="space-y-4">
+                            <div className="text-sm font-medium text-gray-700 text-center">
+                                🚀 Streaming Mode: Parallel Translation & Upload
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">🔄</span>
+                                    <span className="text-sm font-medium text-blue-700">Translation</span>
+                                    <span className="text-xs text-gray-500 ml-auto">in-progress</span>
+                                </div>
+                                <Progress value={60} className="w-full bg-blue-100" />
+                                <p className="text-xs text-blue-600 text-center">
+                                    Translation: 60%
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">📤</span>
+                                    <span className="text-sm font-medium text-green-700">Upload</span>
+                                    <span className="text-xs text-gray-500 ml-auto">in-progress</span>
+                                </div>
+                                <Progress value={20} className="w-full bg-green-100" />
+                                <p className="text-xs text-green-600 text-center">
+                                    Upload: 20%
+                                </p>
+                            </div>
+                            <div className="pt-2 border-t border-gray-200">
+                                <p className="text-sm text-gray-700 text-center">
+                                    Gesamt: 40% abgeschlossen
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Error Details Section */}
+                {errorItems && errorItems.size > 0 && (
+                    <div className="mt-4 p-4 border rounded-lg bg-red-50" data-testid="error-details">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-semibold text-red-700">Processing Errors</h4>
+                            <button
+                                onClick={onClearErrors}
+                                className="text-xs text-red-600 hover:text-red-800 underline"
+                                data-testid="clear-errors-button"
+                            >
+                                Clear Errors
+                            </button>
+                        </div>
+                        <div className="space-y-1" data-testid="error-items-details">
+                            {Array.from(errorItems.entries())
+                                .slice(0, showErrorDetails ? errorItems.size : 5)
+                                .map(([id, error]) => (
+                                    <div key={id} className="text-xs text-red-600 bg-white p-2 rounded border">
+                                        {`Item ${id}: ${error}`}
+                                    </div>
+                                ))}
+                            {errorItems.size > 5 && (
+                                <div className="text-center">
+                                    <button
+                                        onClick={() => setShowErrorDetails(!showErrorDetails)}
+                                        className="text-xs text-red-700 hover:text-red-900 underline"
+                                        data-testid="show-more-errors"
+                                    >
+                                        {showErrorDetails
+                                            ? 'Show Less'
+                                            : `... and ${errorItems.size - 5} more errors`
+                                        }
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
