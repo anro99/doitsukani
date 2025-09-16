@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
