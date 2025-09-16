@@ -75,12 +75,8 @@ export function processPreciseSynonymManagement(
             // Replace mode: ignore existing synonyms
             break;
         case 'delete':
-            // Delete mode: remove translated synonyms from current ones (case-insensitive)
-            finalSynonyms = currentSynonyms.filter(current =>
-                !translatedSynonyms.some(translated =>
-                    translated.toLowerCase().trim() === current.toLowerCase().trim()
-                )
-            );
+            // Delete mode: remove ALL synonyms (empty array)
+            finalSynonyms = [];
             break;
         case 'smart-merge':
         default:

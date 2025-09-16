@@ -147,6 +147,44 @@ export function useVocabularyManager() {
             newMap.delete(item.id);
             return newMap;
         });
+
+        // 🚀 LIVE UPDATE: Update study materials in real-time
+        if (result.success) {
+            console.log(`🔄 LIVE-UPDATE: Processing update for ${item.characters} (ID: ${item.id}):`, {
+                success: result.success,
+                uploadedSynonyms: result.uploadedSynonyms,
+                currentStudyMaterialsCount: studyMaterials.length
+            });
+
+            setStudyMaterials(prev => {
+                const updated = [...prev];
+                const existingIndex = updated.findIndex(sm => sm.data.subject_id === item.id);
+
+                console.log(`🔍 Looking for study material with subject_id ${item.id}, found at index: ${existingIndex}`);
+
+                if (existingIndex >= 0) {
+                    const oldSynonyms = updated[existingIndex].data.meaning_synonyms;
+                    // Update existing study material
+                    updated[existingIndex] = {
+                        ...updated[existingIndex],
+                        data: {
+                            ...updated[existingIndex].data,
+                            meaning_synonyms: result.uploadedSynonyms || []
+                        }
+                    };
+                    console.log(`🔄 Live-updated study material for ${item.characters}:`, {
+                        old: oldSynonyms,
+                        new: result.uploadedSynonyms,
+                        studyMaterialId: updated[existingIndex].id
+                    });
+                } else {
+                    console.log(`⚠️ No existing study material found for ${item.characters} (ID: ${item.id}) - will be created on next reload`);
+                    console.log(`📊 Available study materials:`, prev.map(sm => ({ id: sm.data.subject_id, synonyms: sm.data.meaning_synonyms })));
+                }
+
+                return updated;
+            });
+        }
     };
 
     const handleItemError = (item: VocabularyItem, error: VocabularyItemError) => {
@@ -232,7 +270,15 @@ export function useVocabularyManager() {
     const filteredVocabulary = useMemo(() => {
         if (!wkVocabulary || wkVocabulary.length === 0) return [];
 
+        console.log(`🔄 RECALCULATING filteredVocabulary with ${wkVocabulary.length} vocabulary items and ${studyMaterials.length} study materials`);
+
         const internalVocabulary = convertToInternalFormat(wkVocabulary, studyMaterials);
+
+        console.log(`📊 Internal vocabulary sample:`, internalVocabulary.slice(0, 3).map(v => ({
+            id: v.id,
+            characters: v.characters,
+            currentSynonyms: v.currentSynonyms
+        })));
 
         if (selectedLevel === 'all') {
             return internalVocabulary;
