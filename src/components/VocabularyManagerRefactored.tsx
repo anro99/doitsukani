@@ -37,10 +37,8 @@ export const VocabularyManagerRefactored = () => {
         streamingPhases,
         streamingResult,
 
-        // Live update states (Phase 2)
-        processingItems,
+        // Error states
         errorItems,
-        currentProcessingItem,
 
         // Actions
         processTranslations,
@@ -117,7 +115,6 @@ export const VocabularyManagerRefactored = () => {
                             displayedPreviewCount={displayedPreviewCount}
                             isLoadingVocabulary={isLoadingVocabulary}
                             onLoadMore={loadMorePreviewVocabulary}
-                            processingItems={processingItems}
                             errorItems={errorItems}
                         />
                     </CardContent>
@@ -145,10 +142,8 @@ export const VocabularyManagerRefactored = () => {
                     streamingPhases={streamingPhases}
                     streamingResult={streamingResult}
 
-                    // Live-Update props for Phase 2
-                    processingItems={processingItems}
+                    // Error handling
                     errorItems={errorItems}
-                    currentProcessingItem={currentProcessingItem}
                     onClearErrors={clearErrors}
                 />
             )}

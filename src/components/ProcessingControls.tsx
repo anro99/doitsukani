@@ -31,10 +31,8 @@ interface ProcessingControlsProps {
     streamingPhases?: StreamingProcessingPhase | null;
     streamingResult?: StreamingCompleteProcessingResult | null;
 
-    // Live-Update props for Phase 2
-    processingItems?: Set<number>;
+    // Error handling
     errorItems?: Map<number, string>;
-    currentProcessingItem?: number | { id: number; characters: string; primaryMeaning: string } | null;
     onClearErrors?: () => void;
 }
 
@@ -57,10 +55,8 @@ export const ProcessingControls = ({
     streamingPhases,
     streamingResult,
 
-    // Live-Update props
-    processingItems,
+    // Error handling
     errorItems,
-    currentProcessingItem,
     onClearErrors
 }: ProcessingControlsProps) => {
     const [showErrorDetails, setShowErrorDetails] = useState(false);
@@ -242,78 +238,9 @@ export const ProcessingControls = ({
                     </div>
                 )}
 
-                {/* Live Status Display */}
-                {((processingItems?.size ?? 0) > 0 || (errorItems?.size ?? 0) > 0) && (
-                    <div className="mt-4 p-4 border rounded-lg bg-gray-50" role="status" aria-live="polite">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Live-Update Status</h4>
-                        <div className="space-y-2 text-sm">
-                            {(processingItems?.size ?? 0) > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-blue-500">🔄</span>
-                                    <span data-testid="processing-items-count" className="text-blue-600" aria-label="Processing status" role="status">
-                                        {processingItems?.size ?? 0} items currently processing
-                                    </span>
-                                </div>
-                            )}
-                            {(errorItems?.size ?? 0) > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-red-500">❌</span>
-                                    <span data-testid="error-items-count" className="text-red-600" aria-label="Error status" role="alert">
-                                        {errorItems?.size ?? 0} items failed
-                                    </span>
-                                </div>
-                            )}
-                            {currentProcessingItem && (
-                                <div className="flex items-center gap-2">
-                                    <span className="text-yellow-500">⚙️</span>
-                                    <span data-testid="current-processing-item">
-                                        Currently processing: {typeof currentProcessingItem === 'object' && 'characters' in currentProcessingItem && 'primaryMeaning' in currentProcessingItem
-                                            ? `${currentProcessingItem.characters} (${currentProcessingItem.primaryMeaning})`
-                                            : String(currentProcessingItem)}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
-                {/* Processing Indicator für Tests */}
-                {isProcessing && (processingItems && processingItems.size > 0 || streamingPhases) && (
-                    <div className="mt-4 text-blue-600 animate-pulse" data-testid="processing-indicator" aria-label="Processing status">
-                        <div className="space-y-4">
-                            <div className="text-sm font-medium text-gray-700 text-center">
-                                🚀 Streaming Mode: Parallel Translation & Upload
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg">🔄</span>
-                                    <span className="text-sm font-medium text-blue-700">Translation</span>
-                                    <span className="text-xs text-gray-500 ml-auto">in-progress</span>
-                                </div>
-                                <Progress value={60} className="w-full bg-blue-100" />
-                                <p className="text-xs text-blue-600 text-center">
-                                    Translation: 60%
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg">📤</span>
-                                    <span className="text-sm font-medium text-green-700">Upload</span>
-                                    <span className="text-xs text-gray-500 ml-auto">in-progress</span>
-                                </div>
-                                <Progress value={20} className="w-full bg-green-100" />
-                                <p className="text-xs text-green-600 text-center">
-                                    Upload: 20%
-                                </p>
-                            </div>
-                            <div className="pt-2 border-t border-gray-200">
-                                <p className="text-sm text-gray-700 text-center">
-                                    Gesamt: 40% abgeschlossen
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+
+
 
                 {/* Error Details Section */}
                 {errorItems && errorItems.size > 0 && (

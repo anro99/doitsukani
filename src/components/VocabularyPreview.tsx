@@ -33,8 +33,7 @@ interface VocabularyPreviewProps {
     isLoadingVocabulary?: boolean;
     onLoadMore?: () => void;
 
-    // Live update props (Phase 2)
-    processingItems?: Set<number>;
+    // Error tracking
     errorItems?: Map<number, string>;
 }
 
@@ -45,7 +44,6 @@ export const VocabularyPreview = ({
     displayedPreviewCount = 12,
     isLoadingVocabulary = false,
     onLoadMore,
-    processingItems = new Set(),
     errorItems = new Map()
 }: VocabularyPreviewProps) => {
     // Helper function to get count info for preview display
@@ -55,21 +53,17 @@ export const VocabularyPreview = ({
         return 'Count nicht verfügbar';
     };
 
-    // Helper function to determine item status for live updates
+    // Helper function to determine item status
     const getItemStatus = (vocabulary: Vocabulary) => {
         const hasError = errorItems.has(vocabulary.id);
-        const isProcessing = processingItems.has(vocabulary.id);
         const isCompleted = vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0;
 
-        // Priority: error > processing > completed > default
+        // Priority: error > completed > default
         if (hasError) {
             return {
                 type: 'error' as const,
                 message: errorItems.get(vocabulary.id) || 'Unknown error'
             };
-        }
-        if (isProcessing) {
-            return { type: 'processing' as const };
         }
         if (isCompleted) {
             return { type: 'completed' as const };
@@ -94,18 +88,7 @@ export const VocabularyPreview = ({
                         <span className="break-words">{status.message}</span>
                     </div>
                 );
-            case 'processing':
-                return (
-                    <div
-                        className="flex items-center gap-1 text-blue-500 text-xs mt-2"
-                        data-testid={`processing-indicator-${vocabulary.id}`}
-                        role="status"
-                        aria-label="Currently processing"
-                    >
-                        <span className="animate-spin text-blue-500">⟳</span>
-                        <span>Processing...</span>
-                    </div>
-                );
+
             case 'completed':
                 return (
                     <div

@@ -145,7 +145,7 @@ export async function processVocabularyStreaming(
                         errorCount++;
                         // Skip upload if translation failed
                         const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
-                        const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
+                        const uploadProgress = vocabularyItems.length === 0 ? 0 : Math.round((uploadedCount / vocabularyItems.length) * 100);
                         reportPhases(translationProgress, uploadProgress, currentItem);
                         continue;
                     } else {
@@ -236,7 +236,7 @@ export async function processVocabularyStreaming(
 
                 // Report progress after each item
                 const translationProgress = Math.round(((i + 1) / vocabularyItems.length) * 100);
-                const uploadProgress = translatedCount === 0 ? 0 : Math.round((uploadedCount / translatedCount) * 100);
+                const uploadProgress = vocabularyItems.length === 0 ? 0 : Math.round((uploadedCount / vocabularyItems.length) * 100);
                 reportPhases(translationProgress, uploadProgress, currentItem);
 
                 // Small delay to prevent overwhelming the APIs

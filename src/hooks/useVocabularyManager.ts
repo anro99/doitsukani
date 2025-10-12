@@ -99,24 +99,14 @@ export function useVocabularyManager() {
     const [streamingResult, setStreamingResult] = useState<StreamingCompleteProcessingResult | null>(null);
     const stopSignalRef = useRef({ current: false });
 
-    // Live update states for individual items
-    const [processingItems, setProcessingItems] = useState<Set<number>>(new Set());
+    // Error tracking for display
     const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
-    const [currentProcessingItem, setCurrentProcessingItem] = useState<{ id: number; characters: string; primaryMeaning: string } | null>(null);
 
-    // Live update callback functions
+    // Processing callback functions
     const handleItemProcessing = (item: VocabularyItem, phase: 'translation' | 'upload') => {
         if (!mountedRef.current) return;
 
         console.log(`🔄 Processing item ${item.id} (${item.characters}) - ${phase}`);
-        setProcessingItems(prev => new Set(prev).add(item.id));
-
-        // Set as current processing item
-        setCurrentProcessingItem({
-            id: item.id,
-            characters: item.characters,
-            primaryMeaning: item.meanings.find(m => m.primary)?.meaning || item.meanings[0]?.meaning || ''
-        });
 
         // Remove from error items if it was there before
         setErrorItems(prev => {
@@ -130,16 +120,6 @@ export function useVocabularyManager() {
         if (!mountedRef.current) return;
 
         console.log(`✅ Updated item ${item.id} (${item.characters}):`, result);
-
-        // Remove from processing items
-        setProcessingItems(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(item.id);
-            return newSet;
-        });
-
-        // Clear current processing item if this was it
-        setCurrentProcessingItem(prev => (prev?.id === item.id ? null : prev));
 
         // Remove from error items (in case it was there)
         setErrorItems(prev => {
@@ -191,16 +171,6 @@ export function useVocabularyManager() {
         if (!mountedRef.current) return;
 
         console.error(`❌ Error processing item ${item.id} (${item.characters}):`, error);
-
-        // Remove from processing items
-        setProcessingItems(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(item.id);
-            return newSet;
-        });
-
-        // Clear current processing item if this was it
-        setCurrentProcessingItem(prev => (prev?.id === item.id ? null : prev));
 
         // Add to error items
         setErrorItems(prev => new Map(prev).set(item.id, error.error));
@@ -468,10 +438,8 @@ export function useVocabularyManager() {
         setStreamingResult(null);
         setProgress(0);
 
-        // Clear live update states
-        setProcessingItems(new Set());
+        // Clear error states
         setErrorItems(new Map());
-        setCurrentProcessingItem(null);
     };
 
     const clearErrors = () => {
@@ -528,10 +496,8 @@ export function useVocabularyManager() {
         streamingPhases,
         streamingResult,
 
-        // Live update states
-        processingItems,
+        // Error states
         errorItems,
-        currentProcessingItem,
 
         // Actions
         processTranslations: startProcessing,

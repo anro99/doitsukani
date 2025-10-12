@@ -57,12 +57,12 @@ describe('🔄 Live-Update Vocabulary Preview Integration', () => {
         // This test attempts to test internal hook functionality that is not easily accessible
         // from outside the hook. The live-update functionality works in practice but is
         // difficult to test in unit tests due to the complex internal state management.
-        
+
         // If live-update functionality needs to be tested, consider:
         // 1. Integration tests with full component rendering
         // 2. Manual testing during development
         // 3. End-to-end tests with real API calls
-        
+
         expect(true).toBe(true); // Placeholder to prevent test framework errors
     });
 
@@ -70,7 +70,7 @@ describe('🔄 Live-Update Vocabulary Preview Integration', () => {
         // Similar to above - this tests complex internal hook state that is difficult
         // to test in isolation. The functionality works in practice but requires
         // full integration testing to verify properly.
-        
+
         expect(true).toBe(true); // Placeholder to prevent test framework errors
     });
 });
