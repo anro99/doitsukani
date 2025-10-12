@@ -33,29 +33,39 @@ export const mergeTranslations = (
 ): string[] => {
     const { caseSensitive = false } = options;
 
-    // CRITICAL: DeepL translations are NEVER reduced or modified
-    // They have absolute priority regardless of limits
-    const result = [...primaryTranslations];
-
     // Normalize function for case-insensitive comparison
     const normalize = (str: string) => caseSensitive ? str : str.toLowerCase().trim();
 
-    // Create set of existing primary translations for duplicate detection
-    const existingNormalized = new Set(primaryTranslations.map(normalize));
+    // STEP 1: Remove internal duplicates from primary translations (DeepL)
+    // while preserving order and keeping first occurrence
+    const deduplicatedPrimary: string[] = [];
+    const seenPrimaryNormalized = new Set<string>();
 
-    // Filter secondary translations to avoid duplicates with primary
+    for (const translation of primaryTranslations) {
+        const normalizedTranslation = normalize(translation);
+        if (!seenPrimaryNormalized.has(normalizedTranslation)) {
+            seenPrimaryNormalized.add(normalizedTranslation);
+            deduplicatedPrimary.push(translation);
+        }
+    }
+
+    // CRITICAL: Start with deduplicated primary translations
+    // These have absolute priority regardless of limits
+    const result = [...deduplicatedPrimary];
+
+    // STEP 2: Filter secondary translations to avoid duplicates with deduplicated primary
     const uniqueSecondaryTranslations = secondaryTranslations.filter(
         translation => {
             const normalizedTranslation = normalize(translation);
-            return !existingNormalized.has(normalizedTranslation);
+            return !seenPrimaryNormalized.has(normalizedTranslation);
         }
     );
 
-    // Calculate how many secondary translations we can add
-    const availableSlots = Math.max(0, maxSynonyms - primaryTranslations.length);
+    // STEP 3: Calculate how many secondary translations we can add
+    const availableSlots = Math.max(0, maxSynonyms - deduplicatedPrimary.length);
 
-    // Add secondary translations up to the available slots
-    // If primary already exceeds maxSynonyms, no secondary will be added
+    // STEP 4: Add secondary translations up to the available slots
+    // If deduplicated primary already exceeds maxSynonyms, no secondary will be added
     const secondaryToAdd = uniqueSecondaryTranslations.slice(0, availableSlots);
 
     result.push(...secondaryToAdd);

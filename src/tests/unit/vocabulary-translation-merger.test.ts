@@ -116,6 +116,51 @@ describe('VocabularyTranslationMerger', () => {
 
             expect(result).toEqual(['A', 'B', 'C', 'D', 'E']); // Keine Duplikate
         });
+
+        test('should remove internal duplicates within DeepL translations', () => {
+            const deeplTranslations = ['Großbuchstaben', 'Großbuchstaben', 'Großbuchstaben', 'Versal'];
+            const prebuiltTranslations = ['Majuskel', 'Großbuchstabe'];
+
+            const result = mergeTranslations(deeplTranslations, prebuiltTranslations);
+
+            // Interne DeepL-Duplikate sollten entfernt werden
+            expect(result).toEqual(['Großbuchstaben', 'Versal', 'Majuskel', 'Großbuchstabe']);
+        });
+
+        test('should remove internal duplicates within DeepL translations (case insensitive)', () => {
+            const deeplTranslations = ['Großbuchstaben', 'GROßBUCHSTABEN', 'großbuchstaben', 'Versal'];
+            const prebuiltTranslations = ['Majuskel'];
+
+            const result = mergeTranslations(deeplTranslations, prebuiltTranslations);
+
+            // Nur erste Version von Großbuchstaben behalten (ß und ß sind gleich bei toLowerCase)
+            expect(result).toEqual(['Großbuchstaben', 'Versal', 'Majuskel']);
+        });
+
+        test('should preserve DeepL order when removing duplicates', () => {
+            const deeplTranslations = ['A', 'B', 'A', 'C', 'B', 'D'];
+            const prebuiltTranslations = ['E'];
+
+            const result = mergeTranslations(deeplTranslations, prebuiltTranslations);
+
+            // Erste Vorkommen behalten, Reihenfolge respektieren
+            expect(result).toEqual(['A', 'B', 'C', 'D', 'E']);
+        });
+
+        test('should fix the specific Großbuchstaben problem', () => {
+            // Dies ist das exakte Problem, das der Benutzer berichtet hat
+            const deeplTranslations = ['Großbuchstaben', 'Großbuchstaben', 'Großbuchstaben'];
+            const prebuiltTranslations = ['Versal', 'Majuskel', 'Großbuchstabe', 'hervorragender Text', 'großes Schriftzeichen'];
+
+            const result = mergeTranslations(deeplTranslations, prebuiltTranslations);
+
+            // Nur ein "Großbuchstaben" sollte bleiben
+            expect(result).toEqual([
+                'Großbuchstaben', // Nur einmal von DeepL
+                'Versal', 'Majuskel', 'Großbuchstabe', 'hervorragender Text', 'großes Schriftzeichen' // Alle von prebuilt
+            ]);
+            expect(result).toHaveLength(6); // Statt 8 mit dreifachen Duplikaten
+        });
     });
 
     describe('getPrebuiltTranslations', () => {
