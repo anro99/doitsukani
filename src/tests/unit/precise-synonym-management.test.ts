@@ -109,36 +109,36 @@ describe('🎯 Precise Synonym Management (TDD)', () => {
     });
 
     describe('Step 6: Delete Mode Support', () => {
-        it('should remove specified synonyms in delete mode', () => {
+        it('should remove ALL synonyms in delete mode (DELETE ALL behavior)', () => {
             // Arrange
             const options: SynonymManagementOptions = {
                 synonymMode: 'delete',
                 currentSynonyms: ['Keep1', 'Remove1', 'Keep2', 'Remove2'],
-                translatedSynonyms: ['Remove1', 'Remove2'] // Synonyms to remove
+                translatedSynonyms: ['Remove1', 'Remove2'] // translatedSynonyms are ignored in DELETE mode
             };
 
             // Act
             const result = processPreciseSynonymManagement(options);
 
             // Assert
-            expect(result.finalSynonyms).toEqual(['Keep1', 'Keep2']);
+            expect(result.finalSynonyms).toEqual([]); // DELETE ALL - empty array
             expect(result.needsUpdate).toBe(true);
         });
 
-        it('should handle case-insensitive removal in delete mode', () => {
+        it('should handle delete mode with empty current synonyms', () => {
             // Arrange
             const options: SynonymManagementOptions = {
                 synonymMode: 'delete',
-                currentSynonyms: ['KEEP', 'remove', 'Another'],
-                translatedSynonyms: ['REMOVE', 'another'] // Mixed case
+                currentSynonyms: [], // Already empty
+                translatedSynonyms: ['anything'] // Ignored in DELETE mode
             };
 
             // Act
             const result = processPreciseSynonymManagement(options);
 
             // Assert
-            expect(result.finalSynonyms).toEqual(['KEEP']);
-            expect(result.needsUpdate).toBe(true);
+            expect(result.finalSynonyms).toEqual([]);
+            expect(result.needsUpdate).toBe(false); // No update needed if already empty
         });
     });
 
@@ -160,21 +160,21 @@ describe('🎯 Precise Synonym Management (TDD)', () => {
             expect(result.needsUpdate).toBe(true);
         });
 
-        it('should apply limit in delete mode as well', () => {
+        it('should delete ALL synonyms in delete mode regardless of count', () => {
             // Arrange
             const options: SynonymManagementOptions = {
                 synonymMode: 'delete',
                 currentSynonyms: ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8', 'K9'], // 9 synonyms 
-                translatedSynonyms: [] // Delete nothing, but should still limit to 8
+                translatedSynonyms: [] // Ignored in DELETE mode
             };
 
             // Act
             const result = processPreciseSynonymManagement(options);
 
             // Assert
-            expect(result.finalSynonyms).toHaveLength(8);
-            expect(result.finalSynonyms).toEqual(['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8']);
-            expect(result.needsUpdate).toBe(true); // Should update because we're reducing from 9 to 8
+            expect(result.finalSynonyms).toHaveLength(0); // DELETE ALL - empty array
+            expect(result.finalSynonyms).toEqual([]);
+            expect(result.needsUpdate).toBe(true); // Should update because we're removing all synonyms
         });
     });
 

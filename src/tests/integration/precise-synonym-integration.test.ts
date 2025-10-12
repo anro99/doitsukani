@@ -93,7 +93,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
         expect(result.finalSynonyms).not.toContain('old3');
     });
 
-    test('should handle delete mode correctly', () => {
+    test('should handle delete mode correctly (DELETE ALL behavior)', () => {
         const mapping: StudyMaterialMapping = {
             vocabularyId: 1,
             exists: true,
@@ -101,7 +101,7 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
             currentSynonyms: ['book', 'Buch', 'Band', 'Werk', 'other']
         };
 
-        const translatedSynonyms = ['book', 'Buch']; // Remove these
+        const translatedSynonyms = ['book', 'Buch']; // Ignored in DELETE mode
 
         const result = processPreciseSynonymManagement({
             synonymMode: 'delete',
@@ -110,9 +110,8 @@ describe('🎯 Precise Synonym Management - Integration Tests', () => {
         });
 
         expect(result.needsUpdate).toBe(true);
-        expect(result.finalSynonyms).toEqual(['Band', 'Werk', 'other']);
-        expect(result.finalSynonyms).not.toContain('book');
-        expect(result.finalSynonyms).not.toContain('Buch');
+        expect(result.finalSynonyms).toEqual([]); // DELETE ALL - empty array
+        expect(result.finalSynonyms).toHaveLength(0);
     });
 
     test('should preserve case in duplicates', () => {
