@@ -1,6 +1,8 @@
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
 import { uploadVocabularyBatch } from './vocabulary-wanikani-upload';
 import { CompleteProcessingOptions, ProcessingPhase } from './vocabulary-integration';
+import { mergeTranslations, getPrebuiltTranslations } from './vocabulary-translation-merger';
+import translationsJson from '../translations.json';
 
 // Extended ProcessingPhase interface for unified progress
 export interface UnifiedProcessingPhase extends ProcessingPhase {
@@ -119,7 +121,7 @@ export async function processVocabularyStreaming(
                     translatedSynonyms = []; // Empty array means remove all
                     translatedCount++; // Count as "translated" for progress purposes
                 } else {
-                    // Step 1: Translate (for replace and smart-merge modes)
+                    // Step 1: Translate with DeepL (for replace and smart-merge modes)
                     console.log(`🔄 Translating ${currentItem}...`);
 
                     // Call onItemProcessing callback for translation phase
@@ -148,8 +150,31 @@ export async function processVocabularyStreaming(
                         continue;
                     } else {
                         translatedCount++;
-                        translatedSynonyms = translationResult.translatedSynonyms;
-                        console.log(`✅ Translated ${currentItem}: ${translatedSynonyms.join(', ')}`);
+                        const deeplTranslations = translationResult.translatedSynonyms;
+                        console.log(`✅ DeepL translated ${currentItem}: ${deeplTranslations.join(', ')}`);
+
+                        // 🆕 HYBRID TRANSLATION: Merge DeepL with prebuilt translations
+                        const prebuiltTranslations = getPrebuiltTranslations(
+                            vocabulary.id,
+                            translationsJson as Record<string, string[]>
+                        );
+
+                        if (prebuiltTranslations.length > 0) {
+                            console.log(`📚 Found ${prebuiltTranslations.length} prebuilt translations for ${currentItem}: ${prebuiltTranslations.join(', ')}`);
+
+                            // Merge: DeepL has priority, prebuilt as supplements
+                            translatedSynonyms = mergeTranslations(
+                                deeplTranslations,    // Primary (DeepL) - never reduced
+                                prebuiltTranslations, // Secondary (prebuilt) - trimmed if needed
+                                8                     // WaniKani synonym limit
+                            );
+
+                            console.log(`🔀 Merged translations for ${currentItem}: ${translatedSynonyms.join(', ')} (DeepL: ${deeplTranslations.length}, Prebuilt: ${prebuiltTranslations.length}, Final: ${translatedSynonyms.length})`);
+                        } else {
+                            // No prebuilt translations - use DeepL only
+                            translatedSynonyms = deeplTranslations;
+                            console.log(`🎯 Using DeepL-only translations for ${currentItem}: ${translatedSynonyms.join(', ')}`);
+                        }
                     }
                 }
 
