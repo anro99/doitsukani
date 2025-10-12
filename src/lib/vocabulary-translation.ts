@@ -61,6 +61,35 @@ export async function translateVocabularyMeanings(
 }
 
 /**
+ * Helper function to clean meanings before translation
+ * Removes common English prefixes that cause DeepL to add German articles/prepositions
+ */
+function cleanMeaningForTranslation(meaning: string): string {
+    return meaning
+        .replace(/^To\s+/i, '')     // Remove "To " prefix ("To Insert" → "Insert")
+        .replace(/^A\s+/i, '')      // Remove "A " prefix ("A Book" → "Book")
+        .replace(/^An\s+/i, '')     // Remove "An " prefix ("An Apple" → "Apple")
+        .replace(/^The\s+/i, '')    // Remove "The " prefix ("The House" → "House")
+        .trim();
+}
+
+/**
+ * Helper function to clean DeepL results (fallback for edge cases)
+ * Removes common German prefixes that shouldn't be in WaniKani synonyms
+ */
+function cleanDeepLResult(translation: string): string {
+    return translation
+        .replace(/^zum\s+/i, '')    // Remove "zum " prefix
+        .replace(/^zu\s+/i, '')     // Remove "zu " prefix
+        .replace(/^der\s+/i, '')    // Remove "der " prefix
+        .replace(/^die\s+/i, '')    // Remove "die " prefix
+        .replace(/^das\s+/i, '')    // Remove "das " prefix
+        .replace(/^ein\s+/i, '')    // Remove "ein " prefix
+        .replace(/^eine\s+/i, '')   // Remove "eine " prefix
+        .trim();
+}
+
+/**
  * Helper function to translate multiple meanings
  */
 async function translateMeanings(meanings: string[], deeplToken: string): Promise<string[]> {
@@ -71,9 +100,20 @@ async function translateMeanings(meanings: string[], deeplToken: string): Promis
             continue; // Skip empty meanings
         }
 
-        const translated = await deepl.translateText(deeplToken, meaning.trim(), 'DE');
+        // 🎯 PRE-PROCESSING: Clean the meaning before sending to DeepL
+        const cleanedMeaning = cleanMeaningForTranslation(meaning.trim());
+
+        console.log(`🔄 Translation: "${meaning}" → cleaned: "${cleanedMeaning}"`);
+
+        const translated = await deepl.translateText(deeplToken, cleanedMeaning, 'DE');
+
         if (translated && translated.trim() !== '') {
-            translatedSynonyms.push(translated.trim());
+            // 🧹 POST-PROCESSING: Clean the result as fallback (in case some prefixes remain)
+            const cleanedTranslation = cleanDeepLResult(translated.trim());
+
+            console.log(`✅ Translation result: "${meaning}" → "${cleanedTranslation}" (raw: "${translated}")`);
+
+            translatedSynonyms.push(cleanedTranslation);
         }
     }
 
