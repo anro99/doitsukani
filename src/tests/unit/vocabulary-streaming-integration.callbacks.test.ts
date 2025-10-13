@@ -156,7 +156,7 @@ describe('🔄 Phase 1 Task 2: Streaming Integration Callbacks (TDD)', () => {
             };
 
             // Mock the actual processVocabularyStreaming import to test callback integration
-            const { processVocabularyStreaming } = await import('../../lib/vocabulary-streaming-integration');
+            const { processVocabularyStreaming } = await import('../../features/vocabulary/lib/vocabulary-streaming-integration');
 
             const options: CompleteProcessingOptions = {
                 batchSize: 1,

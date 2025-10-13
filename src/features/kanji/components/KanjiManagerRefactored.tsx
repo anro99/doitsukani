@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { TokenManagement } from '../../../shared/components/TokenManagement';
 import { LevelSelector } from '../../../shared/components/LevelSelector';
+import { ProcessingControls } from './ProcessingControls';
 import { KanjiPreview } from './KanjiPreview';
 import { useKanjiManager } from '../hooks/useKanjiManager';
 
@@ -106,8 +107,8 @@ export const KanjiManagerRefactored = () => {
                 </Card>
             )}
 
-            {/* Processing Controls - TODO: Create shared ProcessingControls component */}
-            {/* {apiToken && filteredKanji.length > 0 && (
+            {/* Processing Controls */}
+            {apiToken && filteredKanji.length > 0 && (
                 <ProcessingControls
                     apiToken={apiToken}
                     deeplToken={deeplToken}
@@ -122,7 +123,7 @@ export const KanjiManagerRefactored = () => {
                     onStopProcessing={handleStopProcessing}
                     itemType="kanji"
                 />
-            )} */}
+            )}
 
             {/* Help text when no API token */}
             {!apiToken && (

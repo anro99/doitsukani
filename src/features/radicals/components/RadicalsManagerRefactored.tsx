@@ -1,6 +1,7 @@
 ﻿import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { TokenManagement } from '../../../shared/components/TokenManagement';
 import { LevelSelector } from '../../../shared/components/LevelSelector';
+import { ProcessingControls } from './ProcessingControls';
 import { RadicalPreview } from './RadicalPreview';
 import { useRadicalsManager } from '../hooks/useRadicalsManager';
 
@@ -90,8 +91,10 @@ export const RadicalsManagerRefactored = () => {
                     currentLevelCount={currentLevelCount}
                     currentLevelCountLoading={currentLevelCountLoading}
                 />
-            )}            {/* Processing Controls - TODO: Create shared ProcessingControls component */}
-            {/* {apiToken && wkRadicals.length > 0 && (
+            )}
+
+            {/* Processing Controls */}
+            {apiToken && wkRadicals.length > 0 && (
                 <ProcessingControls
                     apiToken={apiToken}
                     deeplToken={deeplToken}
@@ -106,7 +109,7 @@ export const RadicalsManagerRefactored = () => {
                     onStopProcessing={handleStopProcessing}
                     itemType="radicals"
                 />
-            )} */}
+            )}
 
             {/* Help text when no API token */}
             {!apiToken && (
