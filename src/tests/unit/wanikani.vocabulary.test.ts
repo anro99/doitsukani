@@ -38,7 +38,7 @@ import {
     getVocabularyStudyMaterials,
     updateVocabularySynonyms,
     createVocabularySynonyms
-} from '../../lib/wanikani';
+} from '../../shared/lib/wanikani';
 
 const mockAxios = axios as any;
 

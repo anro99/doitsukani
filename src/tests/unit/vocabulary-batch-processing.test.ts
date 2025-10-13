@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock external dependencies
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn()
 }));
 
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     updateVocabularySynonyms: vi.fn(),
     createVocabularySynonyms: vi.fn(),
     getVocabularyPreview: vi.fn()
 }));
 
-import * as deepl from '../../lib/deepl';
-import * as wanikani from '../../lib/wanikani';
-import { VocabularyItem } from '../../lib/vocabulary-translation';
+import * as deepl from '../../shared/lib/deepl';
+import * as wanikani from '../../shared/lib/wanikani';
+import { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
 
 const mockedDeepL = vi.mocked(deepl);
 const mockedWaniKani = vi.mocked(wanikani);
@@ -26,7 +26,7 @@ import {
     createProcessingProgress,
     type BatchProcessingOptions,
     type ProcessingProgress
-} from '../../lib/vocabulary-batch-processing'; describe('🔴 Phase A.2: Vocabulary Batch Processing (TDD)', () => {
+} from '../../features/vocabulary/lib/vocabulary-batch-processing'; describe('🔴 Phase A.2: Vocabulary Batch Processing (TDD)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

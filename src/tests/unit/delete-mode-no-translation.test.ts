@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
-import { processVocabularyStreaming } from '../../lib/vocabulary-streaming-integration';
-import { processVocabularyComplete } from '../../lib/vocabulary-integration';
-import { translateVocabularyMeanings } from '../../lib/vocabulary-translation';
-import { uploadVocabularyBatch } from '../../lib/vocabulary-wanikani-upload';
+import { processVocabularyStreaming } from '../../features/vocabulary/lib/vocabulary-streaming-integration';
+import { processVocabularyComplete } from '../../features/vocabulary/lib/vocabulary-integration';
+import { translateVocabularyMeanings } from '../../features/vocabulary/lib/vocabulary-translation';
+import { uploadVocabularyBatch } from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
 
 // Mock the dependencies
-vi.mock('../../lib/vocabulary-translation');
-vi.mock('../../lib/vocabulary-wanikani-upload');
+vi.mock('../../features/vocabulary/lib/vocabulary-translation');
+vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload');
 
 describe('🗑️ DELETE Mode - No Translation Required', () => {
     const mockOptions = {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as wanikaniModule from '../../lib/wanikani';
+import * as wanikaniModule from '../../shared/lib/wanikani';
 
 /**
  * Simplified Study Material ID Fix Validation Tests

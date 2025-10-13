@@ -1,9 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useRadicalsManager } from '../../hooks/useRadicalsManager';
-import { STORAGE_KEYS } from '../../lib/storage';
-import * as wanikaniModule from '../../lib/wanikani';
-import * as deeplModule from '../../lib/deepl';
+import { useRadicalsManager } from '../../features/radicals/hooks/useRadicalsManager';
+import { STORAGE_KEYS } from '../../shared/lib/storage';
+import * as wanikaniModule from '../../shared/lib/wanikani';
+import * as deeplModule from '../../shared/lib/deepl';
 
 // Mock localStorage
 const localStorageMock = {

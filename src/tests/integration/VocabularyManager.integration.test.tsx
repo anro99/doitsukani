@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useVocabularyManager } from '../../hooks/useVocabularyManager';
-import * as wanikaniLib from '../../lib/wanikani';
-import * as storageLib from '../../lib/storage';
+import { useVocabularyManager } from '../../features/vocabulary/hooks/useVocabularyManager';
+import * as wanikaniLib from '../../shared/lib/wanikani';
+import * as storageLib from '../../shared/lib/storage';
 
 // Mock external dependencies
-vi.mock('../../lib/wanikani');
-vi.mock('../../lib/storage');
+vi.mock('../../shared/lib/wanikani');
+vi.mock('../../shared/lib/storage');
 
 const mockedWanikani = vi.mocked(wanikaniLib);
 const mockedStorage = vi.mocked(storageLib);

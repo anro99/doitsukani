@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useVocabularyManager } from '../../hooks/useVocabularyManager';
-import * as wanikaniVocab from '../../lib/wanikani';
-import * as deepl from '../../lib/deepl';
-import * as storage from '../../lib/storage';
+import { useVocabularyManager } from '../../features/vocabulary/hooks/useVocabularyManager';
+import * as wanikaniVocab from '../../shared/lib/wanikani';
+import * as deepl from '../../shared/lib/deepl';
+import * as storage from '../../shared/lib/storage';
 
 // Mock external dependencies
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getVocabulary: vi.fn(),
     getVocabularyCount: vi.fn(),
     getVocabularyPreview: vi.fn(),
@@ -14,12 +14,12 @@ vi.mock('../../lib/wanikani', () => ({
     createVocabularySynonyms: vi.fn()
 }));
 
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn(),
     detectLanguage: vi.fn()
 }));
 
-vi.mock('../../lib/storage', () => ({
+vi.mock('../../shared/lib/storage', () => ({
     saveToken: vi.fn(),
     loadToken: vi.fn(),
     saveValue: vi.fn(),

@@ -1,7 +1,7 @@
 const VOCAB_FILE = "tools/vocab.json";
 
 import * as fs from "fs";
-import { getVocabulary } from "../src/lib/wanikani";
+import { getVocabulary } from "../src/shared/lib/wanikani";
 
 const writeVocab = (vocabMap: Map<string, number>) => {
   const vocabObject = Object.fromEntries(vocabMap.entries());

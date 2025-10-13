@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VocabularyItem } from '../../lib/vocabulary-translation';
+import { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
 import {
     CompleteProcessingOptions,
     VocabularyItemResult,
     VocabularyItemError
-} from '../../lib/vocabulary-integration';
+} from '../../features/vocabulary/lib/vocabulary-integration';
 
 // Mock the dependencies
-vi.mock('../../lib/vocabulary-translation', () => ({
+vi.mock('../../features/vocabulary/lib/vocabulary-translation', () => ({
     translateVocabularyMeanings: vi.fn().mockResolvedValue([
         { vocabularyId: 1, translatedSynonyms: ['dog', 'hund'], error: null }
     ])
 }));
 
-vi.mock('../../lib/vocabulary-wanikani-upload', () => ({
+vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload', () => ({
     uploadVocabularyBatch: vi.fn().mockResolvedValue({
         successful: ['1'],
         failed: [],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Progress, progressAtom, readProgressAtom, writeProgressAtom } from "../../lib/progressreporter";
+import { Progress, progressAtom, readProgressAtom, writeProgressAtom } from "../../shared/lib/progressreporter";
 import { createStore } from "jotai";
 
 describe("ProgressReporter", () => {

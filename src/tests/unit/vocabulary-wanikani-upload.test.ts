@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock external dependencies
-vi.mock('../../lib/wanikani', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../lib/wanikani')>();
+vi.mock('../../shared/lib/wanikani', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../shared/lib/wanikani')>();
     return {
         ...actual,
         getVocabularyStudyMaterials: vi.fn(),
@@ -18,9 +18,9 @@ import {
     uploadVocabularyBatch,
     type StudyMaterialMapping,
     type VocabularyUploadOptions
-} from '../../lib/vocabulary-wanikani-upload';
-import * as wanikani from '../../lib/wanikani';
-import { VocabularyItem } from '../../lib/vocabulary-translation';
+} from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
+import * as wanikani from '../../shared/lib/wanikani';
+import { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
 
 describe('🔴 Phase A.3: WaniKani Upload System (TDD)', () => {
     const mockApiToken = 'test-token';

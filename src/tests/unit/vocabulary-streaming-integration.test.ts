@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock external dependencies
-vi.mock('../../lib/vocabulary-translation', () => ({
+vi.mock('../../features/vocabulary/lib/vocabulary-translation', () => ({
     translateVocabularyMeanings: vi.fn()
 }));
 
-vi.mock('../../lib/vocabulary-wanikani-upload', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../lib/vocabulary-wanikani-upload')>();
+vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../features/vocabulary/lib/vocabulary-wanikani-upload')>();
     return {
         ...actual,
         uploadVocabularyBatch: vi.fn()
     };
 });
 
-import { processVocabularyStreaming } from '../../lib/vocabulary-streaming-integration';
-import { translateVocabularyMeanings } from '../../lib/vocabulary-translation';
-import { uploadVocabularyBatch } from '../../lib/vocabulary-wanikani-upload';
+import { processVocabularyStreaming } from '../../features/vocabulary/lib/vocabulary-streaming-integration';
+import { translateVocabularyMeanings } from '../../features/vocabulary/lib/vocabulary-translation';
+import { uploadVocabularyBatch } from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
 
 describe('🚀 Phase 2: Streaming Vocabulary Integration (TDD)', () => {
     const mockOptions = {

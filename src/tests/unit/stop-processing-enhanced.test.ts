@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useRadicalsManager } from '../../hooks/useRadicalsManager';
+import { useRadicalsManager } from '../../features/radicals/hooks/useRadicalsManager';
 
 // Mock external dependencies
-vi.mock('../../lib/wanikani');
-vi.mock('../../lib/deepl');
-vi.mock('../../lib/contextual-translation');
+vi.mock('../../shared/lib/wanikani');
+vi.mock('../../shared/lib/deepl');
+vi.mock('../../shared/lib/contextual-translation');
 
 describe('Enhanced Stop Processing', () => {
     beforeEach(() => {

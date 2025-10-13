@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import dotenv from "dotenv";
 import { Subject } from "@bachman-dev/wanikani-api-types";
-import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from "../../lib/wanikani";
+import { getRadicals, getRadicalStudyMaterials, createRadicalSynonyms, updateRadicalSynonyms } from "../../shared/lib/wanikani";
 
 // Type alias for better readability
 type WKRadical = Subject & { object: 'radical' };

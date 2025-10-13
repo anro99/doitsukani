@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { processPreciseSynonymManagement } from '../../lib/vocabulary-wanikani-upload';
+import { processPreciseSynonymManagement } from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
 
 describe('🗑️ DELETE Mode Fix - Remove ALL Synonyms', () => {
     it('should remove all synonyms in DELETE mode, even with empty translatedSynonyms', () => {

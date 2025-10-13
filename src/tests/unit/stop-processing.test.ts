@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useRadicalsManager } from '../../hooks/useRadicalsManager';
+import { useRadicalsManager } from '../../features/radicals/hooks/useRadicalsManager';
 
 // Mock the dependencies
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getRadicals: vi.fn().mockResolvedValue([]),
     getRadicalStudyMaterials: vi.fn().mockResolvedValue([]),
     createRadicalSynonyms: vi.fn().mockResolvedValue({}),
     updateRadicalSynonyms: vi.fn().mockResolvedValue({})
 }));
 
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn().mockResolvedValue('translation')
 }));
 
-vi.mock('../../lib/contextual-translation', () => ({
+vi.mock('../../shared/lib/contextual-translation', () => ({
     extractContextFromMnemonic: vi.fn().mockReturnValue('context')
 }));
 

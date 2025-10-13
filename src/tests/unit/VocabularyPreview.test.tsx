@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { VocabularyPreview } from '../../components/VocabularyPreview';
+import { VocabularyPreview } from '../../features/vocabulary/components/VocabularyPreview';
 
 // Mock interface für Vocabulary
 const mockVocabulary = [

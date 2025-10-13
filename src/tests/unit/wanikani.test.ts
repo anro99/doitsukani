@@ -5,7 +5,7 @@ import {
   mergeSynonyms,
   newMaterialWithoutOld,
   oldMaterialRequiringUpdate,
-} from "../../lib/wanikani";
+} from "../../shared/lib/wanikani";
 import {
   DatableString,
   StudyMaterial,

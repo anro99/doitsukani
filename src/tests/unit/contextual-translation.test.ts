@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     extractContextFromMnemonic
-} from "../../lib/contextual-translation";
+} from "../../shared/lib/contextual-translation";
 
 describe("Contextual Translation", () => {
     describe("extractContextFromMnemonic", () => {

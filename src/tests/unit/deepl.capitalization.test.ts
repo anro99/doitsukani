@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { translateText } from "../../lib/deepl";
+import { translateText } from "../../shared/lib/deepl";
 
 // Mock axios to avoid real API calls during testing
 vi.mock("axios", () => ({

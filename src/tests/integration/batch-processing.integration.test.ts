@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, beforeEach } from "vitest";
 import dotenv from "dotenv";
-import { getRadicals, getRadicalStudyMaterials, updateRadicalSynonyms, createRadicalSynonyms } from "../../lib/wanikani";
-import { translateText } from "../../lib/deepl";
+import { getRadicals, getRadicalStudyMaterials, updateRadicalSynonyms, createRadicalSynonyms } from "../../shared/lib/wanikani";
+import { translateText } from "../../shared/lib/deepl";
 
 // Load environment variables
 dotenv.config();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { translateText, translateBatch, getUsage } from "../../lib/deepl";
+import { translateText, translateBatch, getUsage } from "../../shared/lib/deepl";
 import axios from "axios";
 
 // Mock axios for integration testing without external API calls

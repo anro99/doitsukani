@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RadicalsManagerRefactored } from '../../components/RadicalsManagerRefactored';
+import { RadicalsManagerRefactored } from '../../features/radicals/components/RadicalsManagerRefactored';
 
 // Mock child components
-vi.mock('../../components/TokenManagement', () => ({
+vi.mock('../../shared/components/TokenManagement', () => ({
     TokenManagement: ({ apiToken, onApiTokenChange, onDeeplTokenChange }: any) => (
         <div data-testid="token-management">
             <button
@@ -23,7 +23,7 @@ vi.mock('../../components/TokenManagement', () => ({
     )
 }));
 
-vi.mock('../../components/LevelSelector', () => ({
+vi.mock('../../shared/components/LevelSelector', () => ({
     LevelSelector: ({ selectedLevel, onLevelChange }: any) => (
         <div data-testid="level-selector">
             <button
@@ -37,7 +37,7 @@ vi.mock('../../components/LevelSelector', () => ({
     )
 }));
 
-vi.mock('../../components/ProcessingControls', () => ({
+vi.mock('../../features/vocabulary/components/ProcessingControls', () => ({
     ProcessingControls: ({ onStartProcessing, onStopProcessing, isProcessing }: any) => (
         <div data-testid="processing-controls">
             <button
@@ -58,7 +58,7 @@ vi.mock('../../components/ProcessingControls', () => ({
     )
 }));
 
-vi.mock('../../components/RadicalPreview', () => ({
+vi.mock('../../features/radicals/components/RadicalPreview', () => ({
     RadicalPreview: ({ previewRadicals, currentLevelCount }: any) => (
         <div data-testid="radical-preview">
             <div data-testid="radical-count">{previewRadicals ? previewRadicals.length : 0} radicals</div>

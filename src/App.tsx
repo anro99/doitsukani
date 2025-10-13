@@ -6,24 +6,24 @@ import "./App.css";
 
 // Import debug tools for development
 if (process.env.NODE_ENV === 'development') {
-  import('./lib/api-test-tools');
+  import('./shared/lib/api-test-tools');
 }
 
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
+import { Button } from "./shared/components/ui/button";
+import { Input } from "./shared/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./components/ui/tooltip";
+} from "./shared/components/ui/tooltip";
 
-import { upload } from "./lib/wanikani";
-import { ProgressReport } from "./components/progress";
-import { writeProgressAtom } from "./lib/progressreporter";
-import { RadicalsManagerRefactored } from "./components/RadicalsManagerRefactored";
-import { KanjiManagerRefactored } from "./components/KanjiManagerRefactored";
-import { VocabularyManagerRefactored } from "./components/VocabularyManagerRefactored";
+import { upload } from "./shared/lib/wanikani";
+import { ProgressReport } from "./shared/components/progress";
+import { writeProgressAtom } from "./shared/lib/progressreporter";
+import { RadicalsManagerRefactored } from "./features/radicals/components/RadicalsManagerRefactored";
+import { KanjiManagerRefactored } from "./features/kanji/components/KanjiManagerRefactored";
+import { VocabularyManagerRefactored } from "./features/vocabulary/components/VocabularyManagerRefactored";
 
 function App() {
   const [apiToken, setApiToken] = useState("");

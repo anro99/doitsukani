@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { VocabularyManagerRefactored } from '../../components/VocabularyManagerRefactored';
+import { VocabularyManagerRefactored } from '../../features/vocabulary/components/VocabularyManagerRefactored';
 
 // Mock useVocabularyManager hook
-vi.mock('../../hooks/useVocabularyManager', () => ({
+vi.mock('../../features/vocabulary/hooks/useVocabularyManager', () => ({
     useVocabularyManager: vi.fn().mockReturnValue({
         // Settings
         selectedLevel: 1,

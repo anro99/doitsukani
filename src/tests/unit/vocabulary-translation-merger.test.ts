@@ -1,4 +1,4 @@
-import { mergeTranslations, getPrebuiltTranslations } from '../../lib/vocabulary-translation-merger';
+import { mergeTranslations, getPrebuiltTranslations } from '../../features/vocabulary/lib/vocabulary-translation-merger';
 
 describe('VocabularyTranslationMerger', () => {
 

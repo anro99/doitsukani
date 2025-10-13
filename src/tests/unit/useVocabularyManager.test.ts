@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useVocabularyManager } from '../../hooks/useVocabularyManager';
+import { useVocabularyManager } from '../../features/vocabulary/hooks/useVocabularyManager';
 
 // Mock the API functions
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getVocabularyCount: vi.fn().mockResolvedValue(100),
     getVocabularyPreview: vi.fn().mockResolvedValue([]),
     getVocabularyStudyMaterials: vi.fn().mockResolvedValue([]),

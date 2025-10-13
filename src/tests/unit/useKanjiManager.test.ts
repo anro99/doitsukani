@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useKanjiManager } from '../../hooks/useKanjiManager';
-import * as wanikaniLib from '../../lib/wanikani';
-import * as deeplLib from '../../lib/deepl';
-import * as storageLib from '../../lib/storage';
+import { useKanjiManager } from '../../features/kanji/hooks/useKanjiManager';
+import * as wanikaniLib from '../../shared/lib/wanikani';
+import * as deeplLib from '../../shared/lib/deepl';
+import * as storageLib from '../../shared/lib/storage';
 
 // Mock all external dependencies
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getKanjiCount: vi.fn(),
     getKanjiPreview: vi.fn(),
     getKanjiStudyMaterials: vi.fn(),
@@ -14,15 +14,15 @@ vi.mock('../../lib/wanikani', () => ({
     updateKanjiSynonyms: vi.fn(),
 }));
 
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn(),
 }));
 
-vi.mock('../../lib/contextual-translation', () => ({
+vi.mock('../../shared/lib/contextual-translation', () => ({
     extractContextFromMnemonic: vi.fn().mockReturnValue('test context'),
 }));
 
-vi.mock('../../lib/storage', () => ({
+vi.mock('../../shared/lib/storage', () => ({
     loadWanikaniToken: vi.fn(),
     saveWanikaniToken: vi.fn(),
     removeToken: vi.fn(),

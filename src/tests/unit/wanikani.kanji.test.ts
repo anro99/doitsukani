@@ -5,7 +5,7 @@ import {
     getKanjiPreview,
     getKanji,
     getKanjiStudyMaterials,
-} from "../../lib/wanikani";
+} from "../../shared/lib/wanikani";
 
 // Load environment variables
 dotenv.config();

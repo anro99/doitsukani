@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import {
     processPreciseSynonymManagement,
     type SynonymManagementOptions
-} from '../../lib/vocabulary-wanikani-upload';
+} from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
 
 describe('🎯 Precise Synonym Management (TDD)', () => {
     describe('Step 1-2: Initial Setup and Primary Translation', () => {

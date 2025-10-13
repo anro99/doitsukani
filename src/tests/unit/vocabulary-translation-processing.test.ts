@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock DeepL module
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn()
 }));
 
-import * as deepl from '../../lib/deepl';
+import * as deepl from '../../shared/lib/deepl';
 const mockedDeepL = vi.mocked(deepl);
 
 // Import the function and types we just implemented
 import {
     translateVocabularyMeanings,
     VocabularyItem
-} from '../../lib/vocabulary-translation';
+} from '../../features/vocabulary/lib/vocabulary-translation';
 
 describe('🔴 RED Phase: Vocabulary Translation Processing (TDD)', () => {
     beforeEach(() => {
