@@ -75,7 +75,7 @@ function cleanMeaningForTranslation(meaning: string): string {
 
 /**
  * Helper function to clean DeepL results (fallback for edge cases)
- * Removes common German prefixes that shouldn't be in WaniKani synonyms
+ * Removes common German prefixes and punctuation that shouldn't be in WaniKani synonyms
  */
 function cleanDeepLResult(translation: string): string {
     return translation
@@ -86,6 +86,7 @@ function cleanDeepLResult(translation: string): string {
         .replace(/^das\s+/i, '')    // Remove "das " prefix
         .replace(/^ein\s+/i, '')    // Remove "ein " prefix
         .replace(/^eine\s+/i, '')   // Remove "eine " prefix
+        .replace(/[.!?,:;]$/g, '')  // Remove punctuation at the end (., !, ?, :, ;, ,)
         .trim();
 }
 
