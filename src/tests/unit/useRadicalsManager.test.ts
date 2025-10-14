@@ -27,18 +27,18 @@ vi.mock('bottleneck', () => {
 });
 
 // Mock API modules
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getRadicals: vi.fn(),
     getRadicalStudyMaterials: vi.fn(),
     createRadicalSynonyms: vi.fn(),
     updateRadicalSynonyms: vi.fn(),
 }));
 
-vi.mock('../../lib/deepl', () => ({
+vi.mock('../../shared/lib/deepl', () => ({
     translateText: vi.fn(),
 }));
 
-vi.mock('../../lib/contextual-translation', () => ({
+vi.mock('../../shared/lib/contextual-translation', () => ({
     extractContextFromMnemonic: vi.fn().mockReturnValue('test context'),
 }));
 
@@ -109,11 +109,11 @@ describe('useRadicalsManager Hook', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorageMock.getItem.mockReturnValue('');
-        vi.mocked(wanikaniModule.getRadicals).mockResolvedValue(mockRadicals);
-        vi.mocked(wanikaniModule.getRadicalStudyMaterials).mockResolvedValue(mockStudyMaterials);
-        vi.mocked(wanikaniModule.createRadicalSynonyms).mockResolvedValue(mockStudyMaterialResponse);
-        vi.mocked(wanikaniModule.updateRadicalSynonyms).mockResolvedValue(mockStudyMaterialResponse);
-        vi.mocked(deeplModule.translateText).mockResolvedValue('übersetzt');
+        (wanikaniModule.getRadicals as any).mockResolvedValue(mockRadicals);
+        (wanikaniModule.getRadicalStudyMaterials as any).mockResolvedValue(mockStudyMaterials);
+        (wanikaniModule.createRadicalSynonyms as any).mockResolvedValue(mockStudyMaterialResponse);
+        (wanikaniModule.updateRadicalSynonyms as any).mockResolvedValue(mockStudyMaterialResponse);
+        (deeplModule.translateText as any).mockResolvedValue('übersetzt');
     });
 
     afterEach(() => {

@@ -37,7 +37,7 @@ vi.mock('../../shared/components/LevelSelector', () => ({
     )
 }));
 
-vi.mock('../../features/vocabulary/components/ProcessingControls', () => ({
+vi.mock('../../features/radicals/components/ProcessingControls', () => ({
     ProcessingControls: ({ onStartProcessing, onStopProcessing, isProcessing }: any) => (
         <div data-testid="processing-controls">
             <button
@@ -69,7 +69,7 @@ vi.mock('../../features/radicals/components/RadicalPreview', () => ({
 
 // Mock the useRadicalsManager hook
 const mockUseRadicalsManager = vi.fn();
-vi.mock('../../hooks/useRadicalsManager', () => ({
+vi.mock('../../features/radicals/hooks/useRadicalsManager', () => ({
     useRadicalsManager: () => mockUseRadicalsManager()
 }));
 

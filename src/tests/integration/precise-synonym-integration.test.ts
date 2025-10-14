@@ -8,7 +8,7 @@ import { describe, test, expect } from 'vitest';
 import {
     processPreciseSynonymManagement,
     type StudyMaterialMapping
-} from '../../../src/lib/vocabulary-wanikani-upload';
+} from '../../../src/features/vocabulary/lib/vocabulary-wanikani-upload';
 
 describe('🎯 Precise Synonym Management - Integration Tests', () => {
 

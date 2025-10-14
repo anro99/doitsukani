@@ -14,7 +14,7 @@ import * as wanikaniModule from '../../shared/lib/wanikani';
  */
 
 // Mock API modules
-vi.mock('../../lib/wanikani', () => ({
+vi.mock('../../shared/lib/wanikani', () => ({
     getRadicals: vi.fn(),
     getRadicalStudyMaterials: vi.fn(),
     createRadicalSynonyms: vi.fn(),
@@ -40,8 +40,8 @@ describe('Study Material ID Fix Validation - Direct API Tests', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(wanikaniModule.createRadicalSynonyms).mockResolvedValue(mockStudyMaterial);
-        vi.mocked(wanikaniModule.updateRadicalSynonyms).mockResolvedValue(mockStudyMaterial);
+        (wanikaniModule.createRadicalSynonyms as any).mockResolvedValue(mockStudyMaterial);
+        (wanikaniModule.updateRadicalSynonyms as any).mockResolvedValue(mockStudyMaterial);
     });
 
     afterEach(() => {

@@ -10,7 +10,7 @@ vi.mock('../../shared/lib/wanikani', () => ({
 }));
 
 // Mock storage functions
-vi.mock('../../lib/storage', () => ({
+vi.mock('../../shared/lib/storage', () => ({
     loadWanikaniToken: vi.fn(() => 'mock-wanikani-token'),
     saveWanikaniToken: vi.fn(),
     removeToken: vi.fn(),
@@ -50,9 +50,10 @@ describe('useVocabularyManager Hook - Phase 1 Tests', () => {
             expect(result.current.vocabularyCount).toBeGreaterThanOrEqual(0);
         });
 
-        it('should load tokens from storage', () => {
+        it('should load tokens from mocked storage', () => {
             const { result } = renderHook(() => useVocabularyManager());
 
+            // Mocked storage functions return test tokens
             expect(result.current.apiToken).toBe('mock-wanikani-token');
             expect(result.current.deeplToken).toBe('mock-deepl-token');
         });

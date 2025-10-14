@@ -4,16 +4,16 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { processVocabularyStreaming } from '../../../src/lib/vocabulary-streaming-integration';
-import { processVocabularyComplete } from '../../../src/lib/vocabulary-integration';
-import type { VocabularyItem } from '../../../src/lib/vocabulary-translation';
+import { processVocabularyStreaming } from '../../../src/features/vocabulary/lib/vocabulary-streaming-integration';
+import { processVocabularyComplete } from '../../../src/features/vocabulary/lib/vocabulary-integration';
+import type { VocabularyItem } from '../../../src/features/vocabulary/lib/vocabulary-translation';
 
 // Mock external dependencies
-vi.mock('../../../src/lib/vocabulary-translation', () => ({
+vi.mock('../../../src/features/vocabulary/lib/vocabulary-translation', () => ({
     translateVocabularyMeanings: vi.fn()
 }));
 
-vi.mock('../../../src/lib/vocabulary-wanikani-upload', () => ({
+vi.mock('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload', () => ({
     uploadVocabularyBatch: vi.fn(),
     BatchUploadResult: {},
     VocabularyTranslation: {}
@@ -45,8 +45,8 @@ describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
     });
 
     test('streaming integration should use uploadVocabularyBatch (now precise)', async () => {
-        const { translateVocabularyMeanings } = await import('../../../src/lib/vocabulary-translation');
-        const { uploadVocabularyBatch } = await import('../../../src/lib/vocabulary-wanikani-upload');
+        const { translateVocabularyMeanings } = await import('../../../src/features/vocabulary/lib/vocabulary-translation');
+        const { uploadVocabularyBatch } = await import('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload');
 
         // Mock translation success
         vi.mocked(translateVocabularyMeanings).mockResolvedValue({
@@ -97,8 +97,8 @@ describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
     });
 
     test('batch integration should use uploadVocabularyBatch (now precise)', async () => {
-        const { translateVocabularyMeanings } = await import('../../../src/lib/vocabulary-translation');
-        const { uploadVocabularyBatch } = await import('../../../src/lib/vocabulary-wanikani-upload');
+        const { translateVocabularyMeanings } = await import('../../../src/features/vocabulary/lib/vocabulary-translation');
+        const { uploadVocabularyBatch } = await import('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload');
 
         // Mock translation success
         vi.mocked(translateVocabularyMeanings).mockResolvedValue({
@@ -152,7 +152,7 @@ describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
 
     test('should only have precise functions (no legacy)', async () => {
         // Use importOriginal to get the real functions, not mocks
-        const actual = await vi.importActual('../../../src/lib/vocabulary-wanikani-upload') as any;
+        const actual = await vi.importActual('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload') as any;
 
         expect(typeof actual.uploadVocabularyBatch).toBe('function');
         expect(typeof actual.createOrUpdateStudyMaterial).toBe('function');
