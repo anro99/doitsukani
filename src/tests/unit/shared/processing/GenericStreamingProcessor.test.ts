@@ -22,6 +22,7 @@ import type {
     UploadService,
     ProcessingOptions,
     ProcessingProgress,
+    ItemProcessingResult,
 } from '@/shared/processing/types/processing.types';
 
 // ============================================================================
@@ -701,7 +702,7 @@ describe('GenericStreamingProcessor', () => {
             );
 
             // Erwartung: Jedes Item hat processingTime
-            result.successful.forEach((item) => {
+            result.successful.forEach((item: ItemProcessingResult) => {
                 expect(item.processingTime).toBeGreaterThan(0);
             });
 
