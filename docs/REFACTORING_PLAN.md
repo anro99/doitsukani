@@ -1,9 +1,19 @@
 # 🚀 Refactoring Plan: Unified Streaming Architecture
 
-**Status:** 📋 Geplant  
+**Status:** � In Arbeit (Phase 3.1.1)  
 **Ziel:** Kanji und Radicals auf Streaming umstellen + gemeinsame Komponenten extrahieren  
-**Zeitaufwand:** 14-21 Stunden  
-**Letztes Update:** 14. Oktober 2025
+**Zeitaufwand:** 20-25 Stunden (angepasst)  
+**Letztes Update:** 19. Oktober 2025
+
+---
+
+## ⚠️ WICHTIG: TDD-Konformität
+
+**Erkenntnisse aus Phase 3.1 (Vocabulary):**
+- 30 Tests wurden mit `.skip` markiert statt sofort aktualisiert
+- Dies verstößt gegen TDD-Prinzipien (Test-First Approach)
+- **Neue Regel:** Tests MÜSSEN vor/während der Migration aktualisiert werden
+- **Phase 3.1.1** wurde eingefügt: Vocabulary Tests reparieren BEVOR Kanji/Radicals Migration
 
 ---
 
@@ -795,49 +805,95 @@ src/
 
 ---
 
-## 📅 Timeline
+## 📅 Timeline (Aktualisiert)
 
-```mermaid
-gantt
-    title Refactoring Timeline
-    dateFormat HH:mm
-    axisFormat %H:%M
-    
-    section Phase 0
-    Interface Design           :00:00, 3h
-    
-    section Phase 1
-    Generic Tests schreiben    :03:00, 3h
-    
-    section Phase 2
-    Shared Components          :06:00, 4h
-    
-    section Phase 3
-    Feature Adapters           :10:00, 3h
-    
-    section Phase 4
-    Integration Tests          :13:00, 3h
-    
-    section Phase 5
-    Hook Refactoring           :16:00, 3h
-    
-    section Phase 6
-    UI Components              :19:00, 2h
+| Phase | Aufwand | Status | Bemerkung |
+|-------|---------|--------|-----------|
+| **Phase 0** | 1h | ✅ DONE | Interface Design |
+| **Phase 1** | 2h | ✅ DONE | TDD Tests (69 Tests) |
+| **Phase 2** | 3h | ✅ DONE | Shared Components (67/69 passing) |
+| **Phase 3.1** | 3h | ✅ DONE | Vocabulary Migration + Bugfixes |
+| **🔥 Phase 3.1.1** | **2-3h** | 🚧 **IN ARBEIT** | **Vocabulary Tests reparieren (30 .skip → grün)** |
+| **Phase 3.2** | 3h | ⏳ TODO | Kanji Migration |
+| **Phase 3.3** | 3h | ⏳ TODO | Radicals Migration |
+| **Phase 3.4** | 1h | ⏳ TODO | Cleanup (Legacy Code löschen) |
+| **Phase 4** | 2h | ⏳ TODO | Integration Tests (Kanji/Radicals) |
+| **Phase 5** | 1h | ⏳ TODO | Hook Refactoring |
+| **Phase 6** | 1h | ⏳ TODO | UI Updates |
+| **TOTAL** | **22-25h** | ~35% | |
+
+**Zeit investiert:** ~9 Stunden  
+**Zeit verbleibend:** ~13-16 Stunden
+
+---
+
+## 🔥 Phase 3.1.1: Vocabulary Tests reparieren (TDD-Debt beseitigen)
+
+**Dauer:** 2-3 Stunden  
+**Status:** 🚧 IN ARBEIT  
+**Priorität:** 🔴 HÖCHSTE (blockiert Phase 3.2/3.3)
+
+### Problem
+
+30 Tests wurden mit `.skip` markiert, weil sie die alte API mocken:
+```typescript
+// ❌ ALT: Funktions-Mocks
+vi.mock('vocabulary-translation', () => ({
+    translateVocabularyMeanings: vi.fn()
+}));
+
+// ✅ NEU: Service-Mocks
+vi.mock('VocabularyTranslationService', () => ({
+    VocabularyTranslationService: vi.fn().mockImplementation(...)
+}));
 ```
 
-**Geschätzter Zeitaufwand:** 14-21 Stunden  
-**Bei 4h/Tag:** ~4-6 Tage  
-**Bei 8h/Tag:** ~2-3 Tage
+### Betroffene Test-Dateien
+
+1. **vocabulary-streaming-integration.test.ts** (10 Tests .skip)
+   - Übersetzungs-/Upload-Logik
+   - Progress-Tracking
+   - Error-Handling
+
+2. **vocabulary-streaming-integration.callbacks.test.ts** (8 Tests .skip)
+   - onItemProcessing
+   - onItemUpdated
+   - onItemError
+
+3. **delete-mode-no-translation.test.ts** (6 Tests .skip)
+   - DELETE Mode ohne Translation
+   - Direct Upload
+
+4. **migration-test.test.ts** (2 Tests .skip)
+   - Legacy API Kompatibilität
+   - Batch vs Streaming
+
+### Aufgaben
+
+- [ ] **Task 1:** vocabulary-streaming-integration.test.ts auf Service-Mocks umstellen
+- [ ] **Task 2:** callbacks.test.ts auf Service-Mocks umstellen
+- [ ] **Task 3:** delete-mode-no-translation.test.ts auf Service-Mocks umstellen
+- [ ] **Task 4:** migration-test.test.ts entscheiden (umstellen oder löschen)
+- [ ] **Task 5:** Alle `.skip` entfernen, Tests grün bekommen
+- [ ] **Task 6:** Commit: "test: Migrate Vocabulary tests to Service mocks (TDD-debt resolved)"
+
+### Erfolgskriterien
+
+```bash
+npm run test:unit
+# Expected: 550+ passing, 8 skipped (nur pause/resume in GenericStreamingProcessor)
+# NOT: 520 passing, 30 skipped ❌
+```
 
 ---
 
 ## 🚦 Nächster Schritt
 
-**Phase 0 starten**: Interface Design
+**Phase 3.1.1 starten**: Vocabulary Tests reparieren
 
-1. Erstelle `src/shared/processing/types/processing.types.ts`
-2. Definiere alle Interfaces (ProcessableItem, Services, etc.)
-3. Exportiere Types aus `src/shared/processing/index.ts`
-4. Commit mit Message: "feat: Add processing interfaces for unified streaming architecture"
+1. Test-Datei 1: vocabulary-streaming-integration.test.ts
+2. Service-Mocks implementieren (VocabularyTranslationService, WaniKaniUploadService)
+3. `.skip` entfernen, Tests debuggen
+4. Wiederholen für alle 4 Test-Dateien
 
 **Bereit zum Start?** 🚀
