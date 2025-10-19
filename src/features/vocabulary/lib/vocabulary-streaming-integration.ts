@@ -154,7 +154,7 @@ export async function processVocabularyStreaming(
 
     // Track all phases for legacy interface
     const allPhases: StreamingProcessingPhase[] = [];
-    
+
     // Track successful items for live preview updates
     const processedItemIds = new Set<number>();
 
@@ -174,11 +174,11 @@ export async function processVocabularyStreaming(
             name: uploadService.name,
             upload: async (itemId: number, synonyms: string[]) => {
                 const success = await uploadService.upload(itemId, synonyms);
-                
+
                 // Live-Update: Rufe onItemUpdated sofort nach erfolgreichem Upload auf
                 if (success && options.onItemUpdated && !processedItemIds.has(itemId)) {
                     processedItemIds.add(itemId);
-                    
+
                     const originalItem = vocabularyItems.find(v => v.id === itemId);
                     if (originalItem) {
                         try {
@@ -195,7 +195,7 @@ export async function processVocabularyStreaming(
                         }
                     }
                 }
-                
+
                 return success;
             },
             uploadBatch: async (items: Array<{ id: number; synonyms: string[] }>) => {
