@@ -215,13 +215,13 @@ export class WaniKaniUploadService implements UploadService {
     private async makeRequest(
         url: string,
         method: 'GET' | 'POST' | 'PUT',
-        body?: any,
+        body?: Record<string, unknown>,
         retries = 0
     ): Promise<Response> {
         const maxRetries = 3;
 
         try {
-            const options: RequestInit = {
+            const options: Record<string, unknown> = {
                 method,
                 headers: {
                     'Authorization': `Bearer ${this.apiToken}`,

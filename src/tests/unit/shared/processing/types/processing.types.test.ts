@@ -161,11 +161,7 @@ describe('DeleteStrategy', () => {
     const strategy = new DeleteStrategy();
 
     it('sollte leeres Array zurückgeben', () => {
-        const existing = ['Wasser', 'H2O'];
-        const translations = ['Gewässer', 'Flüssigkeit'];
-        const maxSynonyms = 8;
-
-        const result = strategy.merge(existing, translations, maxSynonyms);
+        const result = strategy.merge();
 
         expect(result).toEqual([]);
     });
@@ -330,8 +326,8 @@ describe('Interface Implementations', () => {
         // Mock Implementation
         const mockTranslationService = {
             name: 'MockTranslationService',
-            translate: async (_item: ProcessableItem) => ['test'],
-            translateBatch: async (_items: ProcessableItem[]) => [['test']],
+            translate: async () => ['test'],
+            translateBatch: async () => [['test']],
             isAvailable: () => true,
         };
 
@@ -343,8 +339,8 @@ describe('Interface Implementations', () => {
         // Mock Implementation
         const mockUploadService = {
             name: 'MockUploadService',
-            upload: async (_itemId: number, _synonyms: string[]) => true,
-            uploadBatch: async (_items: Array<{ id: number; synonyms: string[] }>) => [true],
+            upload: async () => true,
+            uploadBatch: async () => [true],
         };
 
         expect(mockUploadService.name).toBe('MockUploadService');
@@ -353,7 +349,7 @@ describe('Interface Implementations', () => {
     it('sollte ErrorHandler Interface implementieren können', () => {
         // Mock Implementation
         const mockErrorHandler = {
-            handle: async (_error: any) => true,
+            handle: async () => true,
             getErrors: () => [],
             clear: () => { },
         };

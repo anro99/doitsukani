@@ -25,7 +25,7 @@ import type { ProcessableItem } from '@/shared/processing/types/processing.types
 /**
  * Mock DeepL API Response
  */
-function mockDeeplResponse(translations: string[]): any {
+function mockDeeplResponse(translations: string[]): { translations: Array<{ text: string; detected_source_lang: string }> } {
     return {
         translations: translations.map(text => ({
             text,

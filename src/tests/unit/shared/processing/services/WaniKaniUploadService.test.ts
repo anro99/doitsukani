@@ -23,7 +23,18 @@ import { WaniKaniUploadService } from '@/shared/processing/services/WaniKaniUplo
 /**
  * Mock WaniKani API Response für Study Material
  */
-function mockStudyMaterialResponse(subjectId: number, synonyms: string[]): any {
+interface StudyMaterialResponse {
+    id: number;
+    object: string;
+    data: {
+        subject_id: number;
+        subject_type: string;
+        meaning_synonyms: string[];
+        created_at: string;
+    };
+}
+
+function mockStudyMaterialResponse(subjectId: number, synonyms: string[]): StudyMaterialResponse {
     return {
         id: 1234567,
         object: 'study_material',
@@ -39,7 +50,20 @@ function mockStudyMaterialResponse(subjectId: number, synonyms: string[]): any {
 /**
  * Mock WaniKani API Collection Response
  */
-function mockCollectionResponse(studyMaterials: any[]): any {
+interface CollectionResponse {
+    object: string;
+    url: string;
+    pages: {
+        next_url: string | null;
+        previous_url: string | null;
+        per_page: number;
+    };
+    total_count: number;
+    data_updated_at: string;
+    data: StudyMaterialResponse[];
+}
+
+function mockCollectionResponse(studyMaterials: StudyMaterialResponse[]): CollectionResponse {
     return {
         object: 'collection',
         url: 'https://api.wanikani.com/v2/study_materials',
@@ -216,7 +240,7 @@ describe('WaniKaniUploadService', () => {
             const results = await batchPromise;
 
             expect(results).toHaveLength(3);
-            expect(results.every(r => r === true)).toBe(true);
+            expect(results.every((r: boolean) => r === true)).toBe(true);
         });
 
         it('sollte Rate Limit Status verfügbar machen', async () => {

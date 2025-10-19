@@ -22,7 +22,6 @@ import type {
     UploadService,
     ProcessingOptions,
     ProcessingProgress,
-    ProcessingResult,
 } from '@/shared/processing/types/processing.types';
 
 // ============================================================================
@@ -575,7 +574,7 @@ describe('GenericStreamingProcessor', () => {
                 maxSynonyms: 8,
             };
 
-            const result = await processor.process(
+            await processor.process(
                 items,
                 mockTranslationService,
                 mockUploadService,
@@ -603,7 +602,7 @@ describe('GenericStreamingProcessor', () => {
                 synonymMode: 'replace',
             };
 
-            const result = await processor.process(
+            await processor.process(
                 items,
                 mockTranslationService,
                 mockUploadService,
@@ -631,7 +630,7 @@ describe('GenericStreamingProcessor', () => {
                 synonymMode: 'delete',
             };
 
-            const result = await processor.process(
+            await processor.process(
                 items,
                 mockTranslationService,
                 mockUploadService,
@@ -702,7 +701,7 @@ describe('GenericStreamingProcessor', () => {
             );
 
             // Erwartung: Jedes Item hat processingTime
-            result.successful.forEach((item: any) => {
+            result.successful.forEach((item) => {
                 expect(item.processingTime).toBeGreaterThan(0);
             });
 

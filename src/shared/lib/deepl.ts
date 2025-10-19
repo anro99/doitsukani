@@ -203,7 +203,7 @@ export const translateBatch = async (
                     try {
                         const translation = await translateText(apiKey, text, targetLang, isPro, 3, context);
                         results.push(translation);
-                    } catch (individualError) {
+                    } catch {
                         // If individual translation also fails, use original text
                         results.push(text);
                     }

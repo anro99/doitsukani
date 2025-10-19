@@ -434,7 +434,7 @@ export class ReplaceStrategy implements SynonymMergeStrategy {
  * Delete Strategy: Entferne alle Synonyme
  */
 export class DeleteStrategy implements SynonymMergeStrategy {
-    merge(_existing: string[], _translations: string[], _maxSynonyms: number): string[] {
+    merge(): string[] {
         return [];
     }
 }
