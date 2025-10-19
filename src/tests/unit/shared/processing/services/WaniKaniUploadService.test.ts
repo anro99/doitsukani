@@ -300,7 +300,12 @@ describe('WaniKaniUploadService', () => {
                 statusText: 'Internal Server Error',
             });
 
-            const result = await service.upload(1, ['test']);
+            const uploadPromise = service.upload(1, ['test']);
+
+            // Advance time for rate limiting and retries
+            await vi.advanceTimersByTimeAsync(10000);
+
+            const result = await uploadPromise;
 
             expect(result).toBe(false);
             // Erwartung: 1 initial + maxRetries attempts
@@ -451,15 +456,21 @@ describe('WaniKaniUploadService', () => {
             const results = await resultsPromise;
 
             expect(results).toHaveLength(3);
-            expect(results.every(r => r === true)).toBe(true);
+            expect(results.every((r: boolean) => r === true)).toBe(true);
         });
 
         it('sollte Batch teilweise erfolgreich sein bei Fehlern', async () => {
             mockFetch
+                // Item 1: Success
                 .mockResolvedValueOnce({ ok: true, json: async () => mockCollectionResponse([]) })
                 .mockResolvedValueOnce({ ok: true, json: async () => mockStudyMaterialResponse(1, []) })
+                // Item 2: Fail (with retries)
                 .mockResolvedValueOnce({ ok: true, json: async () => mockCollectionResponse([]) })
-                .mockResolvedValueOnce({ ok: false, status: 500 })
+                .mockResolvedValueOnce({ ok: false, status: 500 }) // First attempt
+                .mockResolvedValueOnce({ ok: false, status: 500 }) // Retry 1
+                .mockResolvedValueOnce({ ok: false, status: 500 }) // Retry 2
+                .mockResolvedValueOnce({ ok: false, status: 500 }) // Retry 3 (max retries)
+                // Item 3: Success
                 .mockResolvedValueOnce({ ok: true, json: async () => mockCollectionResponse([]) })
                 .mockResolvedValueOnce({ ok: true, json: async () => mockStudyMaterialResponse(3, []) });
 
@@ -471,7 +482,7 @@ describe('WaniKaniUploadService', () => {
 
             const resultsPromise = service.uploadBatch(batch);
 
-            await vi.advanceTimersByTimeAsync(10000);
+            await vi.advanceTimersByTimeAsync(20000); // More time for retries
 
             const results = await resultsPromise;
 

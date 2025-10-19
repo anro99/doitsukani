@@ -8,6 +8,8 @@
 ## Code-Style
 - Verwende TypeScript strict mode
 - Schreibe aussagekräftige Variablennamen
+- Beseitige alle Warnungen und Fehler
+- Nutze ESLint und Prettier
 
 ## Testing
 - Schreibe Tests vor der Implementierung

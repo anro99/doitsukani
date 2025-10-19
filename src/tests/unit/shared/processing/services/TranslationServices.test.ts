@@ -120,10 +120,20 @@ describe('DeeplTranslationService', () => {
                 createTestItem(3, ['test']),
             ];
 
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: async () => mockDeeplResponse(['Hallo', 'Welt', 'Test']),
-            });
+            // Mock gibt für jeden translate() Call die richtige Response
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockDeeplResponse(['Hallo']),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockDeeplResponse(['Welt']),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockDeeplResponse(['Test']),
+                });
 
             const results = await service.translateBatch(items);
 
@@ -159,10 +169,16 @@ describe('DeeplTranslationService', () => {
                 createTestItem(2, ['world', 'earth']),
             ];
 
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: async () => mockDeeplResponse(['Hallo', 'Hi', 'Welt', 'Erde']),
-            });
+            // Mock gibt für jedes Item die richtigen Übersetzungen
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockDeeplResponse(['Hallo', 'Hi']),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockDeeplResponse(['Welt', 'Erde']),
+                });
 
             const results = await service.translateBatch(items);
 
