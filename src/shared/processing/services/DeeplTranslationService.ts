@@ -19,7 +19,7 @@ interface DeepLResponse {
 export class DeeplTranslationService implements TranslationService {
     readonly name = 'DeepL';
 
-    private apiKey: string;
+    protected apiKey: string;
     private cache: Map<string, string> = new Map();
     private readonly API_URL = 'https://api-free.deepl.com/v2/translate';
     private readonly MAX_TEXTS_PER_REQUEST = 50;
