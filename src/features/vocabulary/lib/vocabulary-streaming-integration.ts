@@ -16,6 +16,7 @@ import type {
     ProcessingOptions,
     ProcessingProgress,
     ProcessingResult,
+    UploadService,
 } from '../../../shared/processing/types/processing.types';
 import type { VocabularyItem } from './vocabulary-translation';
 import type { CompleteProcessingOptions } from './vocabulary-integration';
@@ -153,6 +154,9 @@ export async function processVocabularyStreaming(
 
     // Track all phases for legacy interface
     const allPhases: StreamingProcessingPhase[] = [];
+    
+    // Track successful items for live preview updates
+    const processedItemIds = new Set<number>();
 
     try {
         // Setup Services
@@ -164,6 +168,41 @@ export async function processVocabularyStreaming(
         });
 
         const uploadService = new WaniKaniUploadService(options.apiToken);
+
+        // Wrapper um Upload Service für Live-Callbacks
+        const wrappedUploadService: UploadService = {
+            name: uploadService.name,
+            upload: async (itemId: number, synonyms: string[]) => {
+                const success = await uploadService.upload(itemId, synonyms);
+                
+                // Live-Update: Rufe onItemUpdated sofort nach erfolgreichem Upload auf
+                if (success && options.onItemUpdated && !processedItemIds.has(itemId)) {
+                    processedItemIds.add(itemId);
+                    
+                    const originalItem = vocabularyItems.find(v => v.id === itemId);
+                    if (originalItem) {
+                        try {
+                            options.onItemUpdated(originalItem, {
+                                vocabularyId: itemId,
+                                success: true,
+                                translatedSynonyms: synonyms,
+                                uploadedSynonyms: synonyms,
+                                message: 'Successfully processed and uploaded'
+                            });
+                            console.log(`✅ Live-updated preview for ${originalItem.characters}`);
+                        } catch (error) {
+                            console.warn(`⚠️ Callback error in live onItemUpdated for item ${itemId}:`, error);
+                        }
+                    }
+                }
+                
+                return success;
+            },
+            uploadBatch: async (items: Array<{ id: number; synonyms: string[] }>) => {
+                // Delegate to original service
+                return uploadService.uploadBatch(items);
+            }
+        };
 
         // Setup Processor
         const processor = new GenericStreamingProcessor();
@@ -208,33 +247,14 @@ export async function processVocabularyStreaming(
         const result = await processor.process(
             processableItems,
             translationService,
-            uploadService,
+            wrappedUploadService, // Use wrapped service for live callbacks
             processingOptions
         );
 
         console.log('🎯 Processing completed:', result.stats);
 
-        // Post-Processing: Rufe onItemUpdated für alle erfolgreich verarbeiteten Items auf
-        // Dies aktualisiert die Preview mit den echten Daten
-        if (options.onItemUpdated) {
-            for (const itemResult of result.successful) {
-                try {
-                    // Finde das ursprüngliche VocabularyItem
-                    const originalItem = vocabularyItems.find(v => v.id === itemResult.id);
-                    if (originalItem) {
-                        options.onItemUpdated(originalItem, {
-                            vocabularyId: originalItem.id,
-                            success: true,
-                            translatedSynonyms: itemResult.translations,
-                            uploadedSynonyms: itemResult.finalSynonyms,
-                            message: 'Successfully processed and uploaded'
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`⚠️ Callback error in post-processing onItemUpdated for item ${itemResult.id}:`, error);
-                }
-            }
-        }
+        // Note: Post-processing is no longer needed because wrappedUploadService
+        // already called onItemUpdated during processing
 
         // Convert to legacy result format
         return toLegacyResult(result, allPhases);
