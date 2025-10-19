@@ -84,20 +84,20 @@ function toLegacyPhase(progress: ProcessingProgress): StreamingProcessingPhase {
         translationPhase: {
             phase: 'translation',
             status: progress.phase === 'translating' ? 'in-progress' : 'completed',
-            progress: progress.translationProgress,
+            progress: Math.round(progress.translationProgress),
             currentItem: progress.currentItem,
         },
         uploadPhase: {
             phase: 'upload',
             status: progress.phase === 'uploading' ? 'in-progress' :
                 progress.phase === 'complete' ? 'completed' : 'in-progress',
-            progress: progress.uploadProgress,
+            progress: Math.round(progress.uploadProgress),
             currentItem: progress.currentItem,
         },
         overallPhase: {
             phase: 'both',
             status: progress.phase === 'complete' ? 'completed' : 'in-progress',
-            progress: progress.overallProgress,
+            progress: Math.round(progress.overallProgress),
             currentItem: progress.currentItem,
             completedItems: progress.processedCount,
             errorItems: progress.stats.failed,
@@ -213,6 +213,28 @@ export async function processVocabularyStreaming(
         );
 
         console.log('🎯 Processing completed:', result.stats);
+
+        // Post-Processing: Rufe onItemUpdated für alle erfolgreich verarbeiteten Items auf
+        // Dies aktualisiert die Preview mit den echten Daten
+        if (options.onItemUpdated) {
+            for (const itemResult of result.successful) {
+                try {
+                    // Finde das ursprüngliche VocabularyItem
+                    const originalItem = vocabularyItems.find(v => v.id === itemResult.id);
+                    if (originalItem) {
+                        options.onItemUpdated(originalItem, {
+                            vocabularyId: originalItem.id,
+                            success: true,
+                            translatedSynonyms: itemResult.translations,
+                            uploadedSynonyms: itemResult.finalSynonyms,
+                            message: 'Successfully processed and uploaded'
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Callback error in post-processing onItemUpdated for item ${itemResult.id}:`, error);
+                }
+            }
+        }
 
         // Convert to legacy result format
         return toLegacyResult(result, allPhases);
