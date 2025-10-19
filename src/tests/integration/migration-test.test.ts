@@ -44,10 +44,10 @@ describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
         vi.clearAllMocks();
     });
 
-    // TODO Phase 3: Update test to work with GenericStreamingProcessor architecture
+    // LEGACY TEST - Can be removed after Phase 3.4 cleanup
+    // This tests the old uploadVocabularyBatch function integration
     // The new architecture uses VocabularyTranslationService and WaniKaniUploadService
-    // instead of direct uploadVocabularyBatch calls
-    test.skip('streaming integration should use uploadVocabularyBatch (now precise)', async () => {
+    test.skip('[LEGACY] streaming integration should use uploadVocabularyBatch (now precise)', async () => {
         const { translateVocabularyMeanings } = await import('../../../src/features/vocabulary/lib/vocabulary-translation');
         const { uploadVocabularyBatch } = await import('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload');
 
@@ -99,8 +99,9 @@ describe('🚀 Legacy Removal Test - Clean Precise Functions', () => {
         );
     });
 
-    // TODO Phase 3: Update test to work with GenericStreamingProcessor architecture
-    test.skip('batch integration should use uploadVocabularyBatch (now precise)', async () => {
+    // LEGACY TEST - Can be removed after Phase 3.4 cleanup
+    // This tests the old uploadVocabularyBatch function integration
+    test.skip('[LEGACY] batch integration should use uploadVocabularyBatch (now precise)', async () => {
         const { translateVocabularyMeanings } = await import('../../../src/features/vocabulary/lib/vocabulary-translation');
         const { uploadVocabularyBatch } = await import('../../../src/features/vocabulary/lib/vocabulary-wanikani-upload');
 
