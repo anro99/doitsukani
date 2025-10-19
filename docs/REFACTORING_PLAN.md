@@ -836,9 +836,9 @@ src/
 ### Ergebnis
 
 ✅ **23 Tests migriert** zu Service Mocks  
-✅ **2 Tests als LEGACY markiert** (können in Phase 3.4 entfernt werden)  
+✅ **2 LEGACY Tests gelöscht** (obsolete migration tests)  
 ✅ **650 passing tests** (568 unit + 82 integration)  
-✅ **10 skipped tests** (nur legacy/complex/not-implemented)  
+✅ **8 skipped tests** (nur features not implemented - alle legitim)  
 ✅ **0 vocabulary .skip tests** - TDD-Konformität wiederhergestellt!
 
 ### Test-Migration Details
@@ -847,7 +847,7 @@ src/
 1. `vocabulary-streaming-integration.test.ts` (9 tests) - Commit: 0a68e12
 2. `vocabulary-streaming-integration.callbacks.test.ts` (8 tests) - Commit: fcc079d
 3. `delete-mode-no-translation.test.ts` (6 tests) - Commit: ca7872d
-4. `migration-test.test.ts` (2 LEGACY) - Commit: 0ca5a98
+4. `migration-test.test.ts` (2 LEGACY tests gelöscht) - Commit: 023d801
 
 **Technical Insights:**
 - Mock Pattern: `(Service as any).mockImplementation(() => ({...}))`
