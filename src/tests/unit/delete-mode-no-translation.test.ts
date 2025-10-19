@@ -176,7 +176,7 @@ describe('🗑️ DELETE Mode - No Translation Required', () => {
 
             // Assert
             expect(result.translationResults.translations).toHaveLength(2);
-            
+
             // Check that all translations have empty synonyms
             result.translationResults.translations.forEach(translation => {
                 expect(translation.translatedSynonyms).toEqual([]);

@@ -51,13 +51,13 @@ describe('🚀 Vocabulary Streaming Integration (Service-based Mocks)', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Setup default mocks
         mockTranslate = vi.fn()
             .mockResolvedValueOnce(['Katze'])
             .mockResolvedValueOnce(['Hund'])
             .mockResolvedValueOnce(['Vogel']);
-        
+
         mockUpload = vi.fn().mockResolvedValue(true);
         mockUploadBatch = vi.fn().mockResolvedValue([true, true, true]);
 
@@ -121,7 +121,7 @@ describe('🚀 Vocabulary Streaming Integration (Service-based Mocks)', () => {
 
             // Assert
             expect(progressCallback).toHaveBeenCalled();
-            
+
             const lastCall = progressCallback.mock.calls[progressCallback.mock.calls.length - 1][0];
             expect(lastCall).toMatchObject({
                 translationPhase: expect.objectContaining({
@@ -210,7 +210,7 @@ describe('🚀 Vocabulary Streaming Integration (Service-based Mocks)', () => {
         it('should respect stop signal', async () => {
             // Arrange
             const stopSignal = { current: false };
-            
+
             // Stop after first item
             mockTranslate = vi.fn().mockImplementation(async () => {
                 stopSignal.current = true;

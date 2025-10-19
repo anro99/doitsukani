@@ -37,15 +37,15 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Setup callback mocks
         onItemUpdated = vi.fn();
-        
+
         // Setup service mocks
         mockTranslate = vi.fn()
             .mockResolvedValueOnce(['Katze'])
             .mockResolvedValueOnce(['Hund']);
-        
+
         mockUpload = vi.fn().mockResolvedValue(true);
 
         (VocabularyTranslationService as any).mockImplementation(() => ({
@@ -79,7 +79,7 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
 
             // Assert - onItemUpdated should be called for each successful item
             expect(onItemUpdated).toHaveBeenCalledTimes(2);
-            
+
             // First item
             expect(onItemUpdated).toHaveBeenNthCalledWith(
                 1,
@@ -91,7 +91,7 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
                     uploadedSynonyms: ['Katze']
                 })
             );
-            
+
             // Second item
             expect(onItemUpdated).toHaveBeenNthCalledWith(
                 2,
@@ -108,12 +108,12 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
         it('should call onItemUpdated immediately after each upload (live updates)', async () => {
             // Arrange
             const callOrder: string[] = [];
-            
+
             mockUpload = vi.fn().mockImplementation(async (itemId: number) => {
                 callOrder.push(`upload-${itemId}`);
                 return true;
             });
-            
+
             onItemUpdated = vi.fn().mockImplementation((item: VocabularyItem) => {
                 callOrder.push(`callback-${item.id}`);
             });
@@ -196,7 +196,7 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
 
             // Assert - Each item should trigger callback exactly once
             expect(onItemUpdated).toHaveBeenCalledTimes(2);
-            
+
             // Check no duplicates
             const callIds = onItemUpdated.mock.calls.map(call => call[0].id);
             const uniqueIds = [...new Set(callIds)];
@@ -293,7 +293,7 @@ describe('🔄 Vocabulary Streaming Callbacks', () => {
         it('should call both onProgress and onItemUpdated', async () => {
             // Arrange
             const onProgress = vi.fn();
-            
+
             const options = {
                 batchSize: 1,
                 synonymMode: 'smart-merge' as const,

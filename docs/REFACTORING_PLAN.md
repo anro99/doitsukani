@@ -1,9 +1,9 @@
 # 🚀 Refactoring Plan: Unified Streaming Architecture
 
-**Status:** � In Arbeit (Phase 3.1.1)  
+**Status:** ✅ Phase 3.1.1 COMPLETE (35% → 40%)  
 **Ziel:** Kanji und Radicals auf Streaming umstellen + gemeinsame Komponenten extrahieren  
 **Zeitaufwand:** 20-25 Stunden (angepasst)  
-**Letztes Update:** 19. Oktober 2025
+**Letztes Update:** 19. Januar 2025
 
 ---
 
@@ -813,31 +813,58 @@ src/
 | **Phase 1** | 2h | ✅ DONE | TDD Tests (69 Tests) |
 | **Phase 2** | 3h | ✅ DONE | Shared Components (67/69 passing) |
 | **Phase 3.1** | 3h | ✅ DONE | Vocabulary Migration + Bugfixes |
-| **🔥 Phase 3.1.1** | **2-3h** | 🚧 **IN ARBEIT** | **Vocabulary Tests reparieren (30 .skip → grün)** |
+| **Phase 3.1.1** | **2h** | ✅ **DONE** | **Vocabulary Tests repariert (23 Tests migriert, 2 LEGACY)** |
 | **Phase 3.2** | 3h | ⏳ TODO | Kanji Migration |
 | **Phase 3.3** | 3h | ⏳ TODO | Radicals Migration |
 | **Phase 3.4** | 1h | ⏳ TODO | Cleanup (Legacy Code löschen) |
 | **Phase 4** | 2h | ⏳ TODO | Integration Tests (Kanji/Radicals) |
 | **Phase 5** | 1h | ⏳ TODO | Hook Refactoring |
 | **Phase 6** | 1h | ⏳ TODO | UI Updates |
-| **TOTAL** | **22-25h** | ~35% | |
+| **TOTAL** | **22-25h** | ~40% | |
 
-**Zeit investiert:** ~9 Stunden  
-**Zeit verbleibend:** ~13-16 Stunden
+**Zeit investiert:** ~11 Stunden  
+**Zeit verbleibend:** ~11-14 Stunden
 
 ---
 
-## 🔥 Phase 3.1.1: Vocabulary Tests reparieren (TDD-Debt beseitigen)
+## ✅ Phase 3.1.1: Vocabulary Tests repariert (TDD-Debt beseitigt)
 
-**Dauer:** 2-3 Stunden  
-**Status:** 🚧 IN ARBEIT  
-**Priorität:** 🔴 HÖCHSTE (blockiert Phase 3.2/3.3)
+**Dauer:** 2 Stunden  
+**Status:** ✅ DONE  
+**Datum:** 19. Januar 2025
 
-### Problem
+### Ergebnis
 
-30 Tests wurden mit `.skip` markiert, weil sie die alte API mocken:
-```typescript
-// ❌ ALT: Funktions-Mocks
+✅ **23 Tests migriert** zu Service Mocks  
+✅ **2 Tests als LEGACY markiert** (können in Phase 3.4 entfernt werden)  
+✅ **650 passing tests** (568 unit + 82 integration)  
+✅ **10 skipped tests** (nur legacy/complex/not-implemented)  
+✅ **0 vocabulary .skip tests** - TDD-Konformität wiederhergestellt!
+
+### Test-Migration Details
+
+**Migrierte Test-Dateien:**
+1. `vocabulary-streaming-integration.test.ts` (9 tests) - Commit: 0a68e12
+2. `vocabulary-streaming-integration.callbacks.test.ts` (8 tests) - Commit: fcc079d
+3. `delete-mode-no-translation.test.ts` (6 tests) - Commit: ca7872d
+4. `migration-test.test.ts` (2 LEGACY) - Commit: 0ca5a98
+
+**Technical Insights:**
+- Mock Pattern: `(Service as any).mockImplementation(() => ({...}))`
+- DELETE Mode: GenericStreamingProcessor skips translate() for performance
+- Batch Mode: Still uses old `uploadVocabularyBatch` (to be refactored in Phase 3.3)
+
+**Detaillierte Dokumentation:** `docs/development/PHASE_3.1.1_TEST_MIGRATION.md`
+
+---
+
+## 🚀 Phase 3.2: Kanji Migration (NEXT)
+
+**Dauer:** 3 Stunden  
+**Status:** ⏳ TODO  
+**Priorität:** 🟡 HOCH
+
+### Ziel
 vi.mock('vocabulary-translation', () => ({
     translateVocabularyMeanings: vi.fn()
 }));
