@@ -1,349 +1,315 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
-import {
-    CompleteProcessingOptions,
-    VocabularyItemResult,
-    VocabularyItemError
-} from '../../features/vocabulary/lib/vocabulary-integration';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { processVocabularyStreaming } from '../../features/vocabulary/lib/vocabulary-streaming-integration';
+import { VocabularyTranslationService } from '../../features/vocabulary/lib/VocabularyTranslationService';
+import { WaniKaniUploadService } from '../../shared/processing/services/WaniKaniUploadService';
+import type { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
 
-// Mock the dependencies
-vi.mock('../../features/vocabulary/lib/vocabulary-translation', () => ({
-    translateVocabularyMeanings: vi.fn().mockResolvedValue([
-        { vocabularyId: 1, translatedSynonyms: ['dog', 'hund'], error: null }
-    ])
-}));
+// Mock Services
+vi.mock('../../features/vocabulary/lib/VocabularyTranslationService', () => {
+    return {
+        VocabularyTranslationService: vi.fn()
+    };
+});
 
-vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload', () => ({
-    uploadVocabularyBatch: vi.fn().mockResolvedValue({
-        successful: ['1'],
-        failed: [],
-        created: 1,
-        updated: 0,
-        skipped: 0,
-        totalProcessed: 1
-    })
-}));
+vi.mock('../../shared/processing/services/WaniKaniUploadService', () => {
+    return {
+        WaniKaniUploadService: vi.fn()
+    };
+});
 
-// TODO Phase 3: These tests need to be updated to work with GenericStreamingProcessor architecture
-describe.skip('🔄 Phase 1 Task 2: Streaming Integration Callbacks (TDD)', () => {
+describe('🔄 Vocabulary Streaming Callbacks', () => {
+    const mockVocabularyItems: VocabularyItem[] = [
+        {
+            id: 1,
+            characters: '猫',
+            meanings: [{ meaning: 'cat', primary: true }]
+        },
+        {
+            id: 2,
+            characters: '犬',
+            meanings: [{ meaning: 'dog', primary: true }]
+        }
+    ];
+
+    let mockTranslate: Mock;
+    let mockUpload: Mock;
+    let onItemUpdated: Mock;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        
+        // Setup callback mocks
+        onItemUpdated = vi.fn();
+        
+        // Setup service mocks
+        mockTranslate = vi.fn()
+            .mockResolvedValueOnce(['Katze'])
+            .mockResolvedValueOnce(['Hund']);
+        
+        mockUpload = vi.fn().mockResolvedValue(true);
+
+        (VocabularyTranslationService as any).mockImplementation(() => ({
+            name: 'Vocabulary',
+            translate: mockTranslate,
+            translateBatch: vi.fn()
+        }));
+
+        (WaniKaniUploadService as any).mockImplementation(() => ({
+            name: 'WaniKani',
+            upload: mockUpload,
+            uploadBatch: vi.fn().mockResolvedValue([true, true])
+        }));
     });
 
-    describe('VocabularyStreamingOptions Interface Extension', () => {
-        it('should define extended options interface with item-level callbacks', () => {
-            // Test that the extended interface supports item-level callbacks
-            // This is a type test - if it compiles, the interface is correctly defined
-
-            const mockOnItemProcessing = vi.fn();
-            const mockOnItemUpdated = vi.fn();
-            const mockOnItemError = vi.fn();
-
-            const extendedOptions: CompleteProcessingOptions = {
-                // Base options
-                batchSize: 10,
-                synonymMode: 'smart-merge',
-                apiToken: 'test-token',
-                deeplToken: 'test-deepl-token',
-                enableProgressReporting: true,
-                stopOnFirstError: false,
-
-                // New callback options
-                onItemProcessing: mockOnItemProcessing,
-                onItemUpdated: mockOnItemUpdated,
-                onItemError: mockOnItemError
-            };
-
-            // Verify the structure is valid
-            expect(extendedOptions.onItemProcessing).toBeDefined();
-            expect(extendedOptions.onItemUpdated).toBeDefined();
-            expect(extendedOptions.onItemError).toBeDefined();
-            expect(typeof extendedOptions.onItemProcessing).toBe('function');
-            expect(typeof extendedOptions.onItemUpdated).toBe('function');
-            expect(typeof extendedOptions.onItemError).toBe('function');
-        });
-
-        it('should support optional callback parameters', () => {
-            // Test that callbacks are optional in the interface
-            const basicOptions: CompleteProcessingOptions = {
-                batchSize: 10,
-                synonymMode: 'smart-merge',
-                apiToken: 'test-token',
-                deeplToken: 'test-deepl-token',
-                enableProgressReporting: true,
-                stopOnFirstError: false
-            };
-
-            // Should not require callbacks - this test passes if it compiles
-            expect(basicOptions.batchSize).toBe(10);
-        });
-    });
-
-    describe('Callback Function Signatures', () => {
-        it('should define correct onItemProcessing callback signature', () => {
-            const mockCallback = vi.fn();
-
-            // Test the expected signature for onItemProcessing
-            const testVocabularyItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            // Call with expected parameters
-            mockCallback(testVocabularyItem, 'translation');
-            mockCallback(testVocabularyItem, 'upload');
-
-            expect(mockCallback).toHaveBeenCalledWith(testVocabularyItem, 'translation');
-            expect(mockCallback).toHaveBeenCalledWith(testVocabularyItem, 'upload');
-            expect(mockCallback).toHaveBeenCalledTimes(2);
-        });
-
-        it('should define correct onItemUpdated callback signature', () => {
-            const mockCallback = vi.fn();
-
-            const testVocabularyItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            const updateResult: VocabularyItemResult = {
-                vocabularyId: 1,
-                success: true,
-                translatedSynonyms: ['dog', 'hund'],
-                uploadedSynonyms: ['dog', 'hund'],
-                message: 'Successfully processed'
-            };
-
-            // Call with expected parameters
-            mockCallback(testVocabularyItem, updateResult);
-
-            expect(mockCallback).toHaveBeenCalledWith(testVocabularyItem, updateResult);
-            expect(mockCallback).toHaveBeenCalledTimes(1);
-        });
-
-        it('should define correct onItemError callback signature', () => {
-            const mockCallback = vi.fn();
-
-            const testVocabularyItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            const errorResult: VocabularyItemError = {
-                vocabularyId: 1,
-                phase: 'translation',
-                error: 'Translation failed',
-                originalError: new Error('DeepL API error')
-            };
-
-            // Call with expected parameters
-            mockCallback(testVocabularyItem, errorResult);
-
-            expect(mockCallback).toHaveBeenCalledWith(testVocabularyItem, errorResult);
-            expect(mockCallback).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('Callback Integration with processVocabularyStreaming', () => {
-        it('should call onItemProcessing when starting item translation', async () => {
-            const mockOnItemProcessing = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            // Mock the actual processVocabularyStreaming import to test callback integration
-            const { processVocabularyStreaming } = await import('../../features/vocabulary/lib/vocabulary-streaming-integration');
-
-            const options: CompleteProcessingOptions = {
+    describe('onItemUpdated Callback', () => {
+        it('should call onItemUpdated after successful upload', async () => {
+            // Arrange
+            const options = {
                 batchSize: 1,
-                synonymMode: 'smart-merge',
+                synonymMode: 'smart-merge' as const,
                 apiToken: 'test-token',
                 deeplToken: 'test-deepl-token',
                 enableProgressReporting: true,
                 stopOnFirstError: false,
-                onItemProcessing: mockOnItemProcessing
+                onItemUpdated
             };
 
-            // Call the actual function
-            await processVocabularyStreaming([testItem], options);
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options);
 
-            // Verify callback was called for translation phase
-            expect(mockOnItemProcessing).toHaveBeenCalledWith(testItem, 'translation');
+            // Assert - onItemUpdated should be called for each successful item
+            expect(onItemUpdated).toHaveBeenCalledTimes(2);
+            
+            // First item
+            expect(onItemUpdated).toHaveBeenNthCalledWith(
+                1,
+                expect.objectContaining({ id: 1, characters: '猫' }),
+                expect.objectContaining({
+                    vocabularyId: 1,
+                    success: true,
+                    translatedSynonyms: ['Katze'],
+                    uploadedSynonyms: ['Katze']
+                })
+            );
+            
+            // Second item
+            expect(onItemUpdated).toHaveBeenNthCalledWith(
+                2,
+                expect.objectContaining({ id: 2, characters: '犬' }),
+                expect.objectContaining({
+                    vocabularyId: 2,
+                    success: true,
+                    translatedSynonyms: ['Hund'],
+                    uploadedSynonyms: ['Hund']
+                })
+            );
         });
 
-        it('should call onItemProcessing when starting item upload', async () => {
-            const mockOnItemProcessing = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
+        it('should call onItemUpdated immediately after each upload (live updates)', async () => {
+            // Arrange
+            const callOrder: string[] = [];
+            
+            mockUpload = vi.fn().mockImplementation(async (itemId: number) => {
+                callOrder.push(`upload-${itemId}`);
+                return true;
+            });
+            
+            onItemUpdated = vi.fn().mockImplementation((item: VocabularyItem) => {
+                callOrder.push(`callback-${item.id}`);
+            });
+
+            (WaniKaniUploadService as any).mockImplementation(() => ({
+                name: 'WaniKani',
+                upload: mockUpload,
+                uploadBatch: vi.fn()
+            }));
+
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
             };
 
-            // Future implementation: processVocabularyStreaming should call this
-            mockOnItemProcessing(testItem, 'upload');
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options);
 
-            expect(mockOnItemProcessing).toHaveBeenCalledWith(testItem, 'upload');
+            // Assert - Callbacks should happen immediately after upload (streaming)
+            expect(callOrder).toEqual([
+                'upload-1',
+                'callback-1',
+                'upload-2',
+                'callback-2'
+            ]);
         });
 
-        it('should call onItemUpdated after successful processing', async () => {
-            const mockOnItemUpdated = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
+        it('should NOT call onItemUpdated if upload fails', async () => {
+            // Arrange
+            mockUpload = vi.fn()
+                .mockResolvedValueOnce(true)  // First upload succeeds
+                .mockResolvedValueOnce(false); // Second upload fails
+
+            (WaniKaniUploadService as any).mockImplementation(() => ({
+                name: 'WaniKani',
+                upload: mockUpload,
+                uploadBatch: vi.fn()
+            }));
+
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
             };
 
-            const successResult: VocabularyItemResult = {
-                vocabularyId: 1,
-                success: true,
-                translatedSynonyms: ['dog', 'hund'],
-                uploadedSynonyms: ['dog', 'hund'],
-                message: 'Successfully processed'
-            };
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options);
 
-            // Future implementation: processVocabularyStreaming should call this
-            mockOnItemUpdated(testItem, successResult);
-
-            expect(mockOnItemUpdated).toHaveBeenCalledWith(testItem, successResult);
+            // Assert - Only called for successful upload
+            expect(onItemUpdated).toHaveBeenCalledTimes(1);
+            expect(onItemUpdated).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 1 }),
+                expect.anything()
+            );
         });
 
-        it('should call onItemError for translation failures', async () => {
-            const mockOnItemError = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
+        it('should not duplicate onItemUpdated calls', async () => {
+            // Arrange
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
             };
 
-            const errorResult: VocabularyItemError = {
-                vocabularyId: 1,
-                phase: 'translation',
-                error: 'Translation failed',
-                originalError: new Error('DeepL API error')
-            };
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options);
 
-            // Future implementation: processVocabularyStreaming should call this
-            mockOnItemError(testItem, errorResult);
-
-            expect(mockOnItemError).toHaveBeenCalledWith(testItem, errorResult);
-        });
-
-        it('should call onItemError for upload failures', async () => {
-            const mockOnItemError = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            const errorResult: VocabularyItemError = {
-                vocabularyId: 1,
-                phase: 'upload',
-                error: 'Upload failed',
-                originalError: new Error('WaniKani API error')
-            };
-
-            // Future implementation: processVocabularyStreaming should call this
-            mockOnItemError(testItem, errorResult);
-
-            expect(mockOnItemError).toHaveBeenCalledWith(testItem, errorResult);
+            // Assert - Each item should trigger callback exactly once
+            expect(onItemUpdated).toHaveBeenCalledTimes(2);
+            
+            // Check no duplicates
+            const callIds = onItemUpdated.mock.calls.map(call => call[0].id);
+            const uniqueIds = [...new Set(callIds)];
+            expect(callIds.length).toBe(uniqueIds.length);
         });
     });
 
     describe('Callback Error Handling', () => {
-        it('should handle callback errors gracefully without stopping processing', async () => {
-            const faultyCallback = vi.fn().mockImplementation(() => {
-                throw new Error('Callback error');
-            });
+        it('should continue processing if onItemUpdated throws error', async () => {
+            // Arrange
+            onItemUpdated = vi.fn()
+                .mockImplementationOnce(() => {
+                    throw new Error('Callback error');
+                })
+                .mockImplementationOnce(() => {
+                    // Second call succeeds
+                });
 
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
             };
 
-            // Future implementation should catch and log callback errors
-            // but continue processing other items
-            expect(() => {
-                try {
-                    faultyCallback(testItem, 'translation');
-                } catch (error) {
-                    // Should log error but not throw
-                    console.warn('Callback error:', error);
-                }
-            }).not.toThrow();
+            // Act
+            const result = await processVocabularyStreaming(mockVocabularyItems, options);
+
+            // Assert - Processing should continue despite callback error
+            expect(result.success).toBe(true);
+            expect(result.uploadCount).toBe(2);
+            expect(onItemUpdated).toHaveBeenCalledTimes(2);
         });
 
-        it('should provide detailed error information in onItemError callbacks', async () => {
-            const mockOnItemError = vi.fn();
-            const testItem: VocabularyItem = {
-                id: 1,
-                characters: '犬',
-                meanings: [{ meaning: 'dog', primary: true }]
-            };
-
-            const detailedErrorResult: VocabularyItemError = {
-                vocabularyId: 1,
-                phase: 'translation',
-                error: 'Translation failed: Rate limit exceeded',
-                originalError: new Error('DeepL API error'),
-                timestamp: new Date().toISOString(),
-                retryable: true
-            };
-
-            mockOnItemError(testItem, detailedErrorResult);
-
-            // Verify all error details are provided
-            const callArgs = mockOnItemError.mock.calls[0][1];
-            expect(callArgs.vocabularyId).toBe(1);
-            expect(callArgs.phase).toBe('translation');
-            expect(callArgs.error).toContain('Translation failed');
-            expect(callArgs.originalError).toBeInstanceOf(Error);
-            expect(callArgs.timestamp).toBeDefined();
-            expect(typeof callArgs.retryable).toBe('boolean');
-        });
-    });
-
-    describe('Performance Considerations', () => {
-        it('should allow callbacks to be optional for performance', () => {
-            // Test that processing can work without callbacks for better performance
-            const optionsWithoutCallbacks: CompleteProcessingOptions = {
-                batchSize: 10,
-                synonymMode: 'smart-merge',
+        it('should handle callback being undefined gracefully', async () => {
+            // Arrange
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
                 apiToken: 'test-token',
                 deeplToken: 'test-deepl-token',
                 enableProgressReporting: true,
                 stopOnFirstError: false
+                // No callbacks defined
             };
 
-            // Should be valid without any callbacks
-            expect(optionsWithoutCallbacks.batchSize).toBe(10);
+            // Act & Assert - Should not throw
+            await expect(
+                processVocabularyStreaming(mockVocabularyItems, options)
+            ).resolves.toBeDefined();
         });
+    });
 
-        it('should batch callback calls efficiently for large datasets', async () => {
-            // Test concept: callbacks should be called efficiently
-            // Implementation should consider batching or throttling for large datasets
+    describe('DELETE Mode Callbacks', () => {
+        it('should call onItemUpdated with empty synonyms in DELETE mode', async () => {
+            // Arrange
+            mockTranslate = vi.fn().mockResolvedValue([]); // DELETE returns empty
 
-            const mockOnItemProcessing = vi.fn();
-
-            // Simulate processing many items
-            const manyItems = Array.from({ length: 100 }, (_, i) => ({
-                id: i + 1,
-                characters: `item${i + 1}`,
-                meanings: [{ meaning: `meaning${i + 1}`, primary: true }]
+            (VocabularyTranslationService as any).mockImplementation(() => ({
+                name: 'Vocabulary',
+                translate: mockTranslate,
+                translateBatch: vi.fn()
             }));
 
-            // Future implementation should handle this efficiently
-            manyItems.slice(0, 5).forEach(item => {
-                mockOnItemProcessing(item, 'translation');
-            });
+            const options = {
+                batchSize: 1,
+                synonymMode: 'delete' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
+            };
 
-            expect(mockOnItemProcessing).toHaveBeenCalledTimes(5);
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options);
+
+            // Assert
+            expect(onItemUpdated).toHaveBeenCalledTimes(2);
+            expect(onItemUpdated).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 1 }),
+                expect.objectContaining({
+                    translatedSynonyms: [],
+                    uploadedSynonyms: []
+                })
+            );
+        });
+    });
+
+    describe('Progress + Callbacks Integration', () => {
+        it('should call both onProgress and onItemUpdated', async () => {
+            // Arrange
+            const onProgress = vi.fn();
+            
+            const options = {
+                batchSize: 1,
+                synonymMode: 'smart-merge' as const,
+                apiToken: 'test-token',
+                deeplToken: 'test-deepl-token',
+                enableProgressReporting: true,
+                stopOnFirstError: false,
+                onItemUpdated
+            };
+
+            // Act
+            await processVocabularyStreaming(mockVocabularyItems, options, onProgress);
+
+            // Assert
+            expect(onProgress).toHaveBeenCalled();
+            expect(onItemUpdated).toHaveBeenCalledTimes(2);
         });
     });
 });
