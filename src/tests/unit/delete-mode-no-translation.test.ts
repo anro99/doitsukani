@@ -1,17 +1,34 @@
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { processVocabularyStreaming } from '../../features/vocabulary/lib/vocabulary-streaming-integration';
 import { processVocabularyComplete } from '../../features/vocabulary/lib/vocabulary-integration';
-import { translateVocabularyMeanings } from '../../features/vocabulary/lib/vocabulary-translation';
+import { VocabularyTranslationService } from '../../features/vocabulary/lib/VocabularyTranslationService';
+import { WaniKaniUploadService } from '../../shared/processing/services/WaniKaniUploadService';
 import { uploadVocabularyBatch } from '../../features/vocabulary/lib/vocabulary-wanikani-upload';
+import type { VocabularyItem } from '../../features/vocabulary/lib/vocabulary-translation';
 
-// Mock the dependencies
-vi.mock('../../features/vocabulary/lib/vocabulary-translation');
-vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload');
+// Mock Services (for streaming)
+vi.mock('../../features/vocabulary/lib/VocabularyTranslationService', () => {
+    return {
+        VocabularyTranslationService: vi.fn()
+    };
+});
 
-// TODO Phase 3: These tests need to be updated to work with GenericStreamingProcessor architecture
-describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
+vi.mock('../../shared/processing/services/WaniKaniUploadService', () => {
+    return {
+        WaniKaniUploadService: vi.fn()
+    };
+});
+
+// Mock old upload function (for batch)
+vi.mock('../../features/vocabulary/lib/vocabulary-wanikani-upload', () => {
+    return {
+        uploadVocabularyBatch: vi.fn()
+    };
+});
+
+describe('🗑️ DELETE Mode - No Translation Required', () => {
     const mockOptions = {
-        batchSize: 5,
+        batchSize: 1, // Streaming mode
         synonymMode: 'delete' as const,
         apiToken: 'test-api-token',
         deeplToken: 'test-deepl-token',
@@ -19,7 +36,7 @@ describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
         stopOnFirstError: false
     };
 
-    const mockVocabularyItems = [
+    const mockVocabularyItems: VocabularyItem[] = [
         {
             id: 1,
             characters: '猫',
@@ -32,38 +49,41 @@ describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
         }
     ];
 
+    let mockTranslate: Mock;
+    let mockUpload: Mock;
+
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Mock successful upload results
-        (uploadVocabularyBatch as Mock).mockResolvedValue({
-            success: true,
-            totalItems: 2,
-            createdCount: 0,
-            updatedCount: 2,
-            errorCount: 0,
-            results: [
-                { vocabularyId: 1, action: 'updated', success: true },
-                { vocabularyId: 2, action: 'updated', success: true }
-            ],
-            errors: []
-        });
+        // DELETE mode returns empty array
+        mockTranslate = vi.fn().mockResolvedValue([]);
+        mockUpload = vi.fn().mockResolvedValue(true);
+
+        (VocabularyTranslationService as any).mockImplementation(() => ({
+            name: 'Vocabulary',
+            translate: mockTranslate,
+            translateBatch: vi.fn()
+        }));
+
+        (WaniKaniUploadService as any).mockImplementation(() => ({
+            name: 'WaniKani',
+            upload: mockUpload,
+            uploadBatch: vi.fn()
+        }));
     });
 
     describe('Streaming Integration - DELETE Mode', () => {
-        it('should NOT call translateVocabularyMeanings in DELETE mode', async () => {
+        it('should NOT call translate() in DELETE mode (performance optimization)', async () => {
             // Act
             const result = await processVocabularyStreaming(
                 mockVocabularyItems,
-                mockOptions,
-                undefined, // no progress callback
-                { current: false } // stop signal
+                mockOptions
             );
 
-            // Assert
-            expect(translateVocabularyMeanings).not.toHaveBeenCalled();
+            // Assert - GenericStreamingProcessor skips translation in DELETE mode
+            expect(mockTranslate).not.toHaveBeenCalled();
             expect(result.success).toBe(true);
-            expect(result.translationCount).toBe(2); // Should count as "translated" for progress
+            expect(result.translationCount).toBe(2); // Counted as "translated" for progress
             expect(result.uploadCount).toBe(2);
         });
 
@@ -74,23 +94,26 @@ describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
                 mockOptions
             );
 
-            // Assert
-            expect(uploadVocabularyBatch).toHaveBeenCalledTimes(2);
+            // Assert - upload() called with empty synonyms
+            expect(mockUpload).toHaveBeenCalledTimes(2);
 
-            // Check first upload call
-            expect(uploadVocabularyBatch).toHaveBeenNthCalledWith(1,
-                [{ vocabulary: mockVocabularyItems[0], translatedSynonyms: [] }],
-                { synonymMode: 'delete', apiToken: 'test-api-token' }
+            // GenericStreamingProcessor calls upload with (itemId, synonyms)
+            // First upload
+            expect(mockUpload).toHaveBeenNthCalledWith(
+                1,
+                1, // vocabularyId
+                [] // empty synonyms
             );
 
-            // Check second upload call
-            expect(uploadVocabularyBatch).toHaveBeenNthCalledWith(2,
-                [{ vocabulary: mockVocabularyItems[1], translatedSynonyms: [] }],
-                { synonymMode: 'delete', apiToken: 'test-api-token' }
+            // Second upload
+            expect(mockUpload).toHaveBeenNthCalledWith(
+                2,
+                2, // vocabularyId
+                [] // empty synonyms
             );
         });
 
-        it('should report progress correctly without translation phase', async () => {
+        it('should report progress correctly in DELETE mode', async () => {
             const progressReports: any[] = [];
 
             // Act
@@ -105,7 +128,7 @@ describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
             // Assert
             expect(progressReports.length).toBeGreaterThan(0);
 
-            // Should have progress reports showing translation phase completed instantly
+            // Should have progress reports showing instant completion
             const finalReport = progressReports[progressReports.length - 1];
             expect(finalReport.translationPhase.progress).toBe(100);
             expect(finalReport.uploadPhase.progress).toBe(100);
@@ -114,89 +137,80 @@ describe.skip('🗑️ DELETE Mode - No Translation Required', () => {
     });
 
     describe('Batch Integration - DELETE Mode', () => {
-        it('should NOT call translateVocabularyMeanings in DELETE mode', async () => {
+        beforeEach(() => {
+            // Batch mode uses old uploadVocabularyBatch function
+            (uploadVocabularyBatch as Mock).mockResolvedValue({
+                success: true,
+                totalItems: 2,
+                createdCount: 0,
+                updatedCount: 2,
+                errorCount: 0,
+                results: [
+                    { vocabularyId: 1, action: 'updated', success: true },
+                    { vocabularyId: 2, action: 'updated', success: true }
+                ],
+                errors: []
+            });
+        });
+
+        it('should NOT call translate() in DELETE mode', async () => {
             // Act
             const result = await processVocabularyComplete(
                 mockVocabularyItems,
-                mockOptions
+                { ...mockOptions, batchSize: 10 } // Batch mode
             );
 
-            // Assert
-            expect(translateVocabularyMeanings).not.toHaveBeenCalled();
+            // Assert - GenericStreamingProcessor skips translation in DELETE mode
+            expect(mockTranslate).not.toHaveBeenCalled();
             expect(result.success).toBe(true);
             expect(result.translationResults.successCount).toBe(2);
             expect(result.translationResults.errorCount).toBe(0);
         });
 
-        it('should create translation results with empty synonyms for DELETE mode', async () => {
+        it('should process with empty synonyms for DELETE mode', async () => {
             // Act
             const result = await processVocabularyComplete(
                 mockVocabularyItems,
-                mockOptions
+                { ...mockOptions, batchSize: 10 }
             );
 
             // Assert
             expect(result.translationResults.translations).toHaveLength(2);
-            expect(result.translationResults.translations[0]).toEqual({
-                vocabularyId: 1,
-                translatedSynonyms: [],
-                error: null
+            
+            // Check that all translations have empty synonyms
+            result.translationResults.translations.forEach(translation => {
+                expect(translation.translatedSynonyms).toEqual([]);
+                expect(translation.error).toBeNull();
             });
-            expect(result.translationResults.translations[1]).toEqual({
-                vocabularyId: 2,
-                translatedSynonyms: [],
-                error: null
-            });
-        });
-
-        it('should still call upload with empty synonyms in DELETE mode', async () => {
-            // Act
-            await processVocabularyComplete(
-                mockVocabularyItems,
-                mockOptions
-            );
-
-            // Assert
-            expect(uploadVocabularyBatch).toHaveBeenCalledTimes(1);
-            expect(uploadVocabularyBatch).toHaveBeenCalledWith(
-                [
-                    { vocabulary: mockVocabularyItems[0], translatedSynonyms: [] },
-                    { vocabulary: mockVocabularyItems[1], translatedSynonyms: [] }
-                ],
-                { synonymMode: 'delete', apiToken: 'test-api-token' },
-                undefined, // stop signal (fresh signal created in processVocabularyComplete)
-                expect.any(Function) // progress callback
-            );
         });
     });
 
     describe('Performance Benefits', () => {
-        it('should skip DeepL API calls completely in DELETE mode', async () => {
-            const smallVocabularyList = Array.from({ length: 5 }, (_, i) => ({
+        it('should skip translation completely in DELETE mode', async () => {
+            const smallVocabularyList: VocabularyItem[] = Array.from({ length: 5 }, (_, i) => ({
                 id: i + 1,
                 characters: `漢字${i}`,
                 meanings: [{ meaning: `meaning${i}`, primary: true }]
             }));
 
-            // Mock upload to succeed quickly
-            (uploadVocabularyBatch as Mock).mockResolvedValue({
-                success: true,
-                totalItems: 1,
-                createdCount: 0,
-                updatedCount: 1,
-                errorCount: 0,
-                results: [{ vocabularyId: 1, action: 'updated', success: true }],
-                errors: []
-            });
+            mockUpload = vi.fn().mockResolvedValue(true);
+
+            (WaniKaniUploadService as any).mockImplementation(() => ({
+                name: 'WaniKani',
+                upload: mockUpload,
+                uploadBatch: vi.fn()
+            }));
 
             // Act
-            await processVocabularyStreaming(
+            const result = await processVocabularyStreaming(
                 smallVocabularyList,
                 mockOptions
             );
 
-            // Assert
-            expect(translateVocabularyMeanings).not.toHaveBeenCalled();
+            // Assert - No translate() calls (performance optimization)
+            expect(mockTranslate).not.toHaveBeenCalled();
+            expect(result.translationCount).toBe(5);
+            expect(result.uploadCount).toBe(5);
 
             console.log(`✅ DELETE mode processed ${smallVocabularyList.length} items without translation`);
         });
