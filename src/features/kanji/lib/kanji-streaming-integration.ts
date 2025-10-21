@@ -16,6 +16,7 @@ import type {
     ProcessingOptions,
     ProcessingProgress,
     ProcessingResult,
+    ProcessableItem,
 } from '../../../shared/processing/types/processing.types';
 import type { KanjiItem } from './KanjiTranslationService';
 
@@ -63,16 +64,18 @@ export interface StreamingCompleteProcessingResult {
 /**
  * Konvertiert KanjiItem zu ProcessableItem (GenericStreamingProcessor Format)
  */
-function toProcessableItems(kanjiItems: KanjiItem[]): Array<{
-    id: number;
-    meanings: string[];
-    existingSynonyms: string[];
-}> {
+function toProcessableItems(kanjiItems: KanjiItem[]): ProcessableItem[] {
     return kanjiItems.map(item => ({
         id: item.id,
         meanings: [item.primaryMeaning, ...item.alternativeMeanings],
         existingSynonyms: item.currentSynonyms || [],
-    }));
+        // Keep Kanji-specific properties for KanjiTranslationService
+        characters: item.characters,
+        primaryMeaning: item.primaryMeaning,
+        alternativeMeanings: item.alternativeMeanings,
+        meaningMnemonic: item.meaningMnemonic,
+        currentSynonyms: item.currentSynonyms,
+    } as ProcessableItem));
 }
 
 /**

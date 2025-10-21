@@ -50,6 +50,7 @@ export function useKanjiManager() {
     const mountedRef = useRef(true);
 
     useEffect(() => {
+        mountedRef.current = true;  // ✅ Explizit auf true setzen beim Mount
         stopRef.current = false;
         return () => {
             mountedRef.current = false;
@@ -228,8 +229,10 @@ export function useKanjiManager() {
 
             const handleProgress = (phases: StreamingProcessingPhase) => {
                 if (!mountedRef.current) return;
-                setTranslationStatus(` Übersetzung: ${phases.translationPhase.progress}% (${phases.translationPhase.currentItem || ''})`);
-                setUploadStatus(` Upload: ${phases.uploadPhase.progress}% (${phases.uploadPhase.currentItem || ''})`);
+                const translationItem = phases.translationPhase.currentItem ? ` (${phases.translationPhase.currentItem})` : '';
+                const uploadItem = phases.uploadPhase.currentItem ? ` (${phases.uploadPhase.currentItem})` : '';
+                setTranslationStatus(`🌐 Übersetzung: ${phases.translationPhase.progress}%${translationItem}`);
+                setUploadStatus(`📤 Upload: ${phases.uploadPhase.progress}%${uploadItem}`);
                 setProgress(phases.overallPhase.progress);
                 if (phases.overallPhase.completedItems !== undefined) {
                     setUploadStats(prev => ({
@@ -266,6 +269,11 @@ export function useKanjiManager() {
                     setTranslationStatus(` Verarbeitung abgeschlossen: ${result.uploadCount}/${result.totalItems} erfolgreich`);
                     setUploadStatus(` Upload abgeschlossen`);
                     setProgress(100);
+                    
+                    // Reload kanji data to show updated synonyms
+                    if (result.uploadCount > 0) {
+                        setTimeout(() => loadKanjiFromAPI(), 1000);
+                    }
                 } else if (stopRef.current) {
                     setTranslationStatus(` Verarbeitung gestoppt bei ${result.uploadCount}/${result.totalItems}`);
                     setUploadStatus(` Upload gestoppt`);
