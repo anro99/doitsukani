@@ -169,10 +169,12 @@ export class WaniKaniUploadService implements UploadService {
         if (response.status === 429) {
             if (retryCount < 3) {
                 const backoffMs = Math.pow(2, retryCount) * 2000; // 2s, 4s, 8s
-                console.warn(`⚠️ Rate limited (429) for subject ${subjectId}, waiting ${backoffMs}ms before retry ${retryCount + 1}/3`);
+                // Silent retry - only log on final failure
                 await this.sleep(backoffMs);
                 return this.findStudyMaterial(subjectId, retryCount + 1);
             }
+            // All retries exhausted - log error
+            console.error(`❌ Rate limit exceeded (429) for subject ${subjectId} after 3 retries`);
             throw new Error(`Failed to fetch study material after ${retryCount} retries: 429 Too Many Requests`);
         }
 
@@ -252,8 +254,12 @@ export class WaniKaniUploadService implements UploadService {
                 const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 2000;
 
                 if (retries < maxRetries) {
+                    // Silent retry - only log if final attempt fails
                     await this.sleep(waitTime);
                     return this.makeRequest(url, method, body, retries + 1);
+                } else {
+                    // All retries exhausted - log error
+                    console.error(`❌ Rate limit exceeded (429) after ${maxRetries} retries for ${method} ${url}`);
                 }
             }
 
