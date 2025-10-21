@@ -1,9 +1,9 @@
 # 🚀 Refactoring Plan: Unified Streaming Architecture
 
-**Status:** ✅ Phase 3.1.1 COMPLETE (35% → 40%)  
-**Ziel:** Kanji und Radicals auf Streaming umstellen + gemeinsame Komponenten extrahieren  
-**Zeitaufwand:** 20-25 Stunden (angepasst)  
-**Letztes Update:** 19. Januar 2025
+**Status:** ✅ Phase 3.2 COMPLETE (40% → 45%)  
+**Ziel:** Radicals auf Streaming umstellen + Pattern etabliert  
+**Zeitaufwand:** 15-20 Stunden (angepasst)  
+**Letztes Update:** 21. Oktober 2025
 
 ---
 
@@ -924,3 +924,147 @@ npm run test:unit
 4. Wiederholen für alle 4 Test-Dateien
 
 **Bereit zum Start?** 🚀
+
+---
+
+## ✅ Phase 3.2: Kanji Migration (COMPLETE)
+
+**Dauer:** 4 Stunden  
+**Status:** ✅ ABGESCHLOSSEN (21. Oktober 2025)  
+**Commits:** f25fda1, abaf3e0, 508e4d2
+
+### Ergebnisse
+
+✅ **Code-Reduktion:** 897 → 330 Zeilen (-63%)  
+✅ **Tests:** 673 passing (591 unit + 82 integration)  
+✅ **Pattern etabliert:** Wiederverwendbar für Radicals  
+✅ **UI aktualisiert:** 3-phase progress tracking  
+✅ **Keine Regressionen:** Alle Features funktionieren
+
+### Implementierte Komponenten
+
+1. **KanjiTranslationService** (163 Zeilen)
+   - Extends DeeplTranslationService
+   - Contextual translation from mnemonics
+   - Primary + alternative meanings support
+   - Smart synonym management (max 8, 64-byte limit)
+
+2. **kanji-streaming-integration.ts** (210 Zeilen)
+   - GenericStreamingProcessor wrapper
+   - KanjiItem type mapping
+   - 3-phase progress callbacks
+
+3. **kanji-streaming-integration.test.ts** (465 Zeilen)
+   - 23 comprehensive unit tests
+   - Service-based mocks
+   - All scenarios covered
+
+4. **useKanjiManager refactored** (897 → 330 Zeilen)
+   - Removed: Bottleneck, manual loops, rate limiters
+   - Added: processKanjiStreaming(), convertToKanjiItems()
+   - Same public interface (no breaking changes)
+
+5. **ProcessingControls UI updated**
+   - Added 'successful' field to stats
+   - 3-phase progress display
+
+### Detaillierte Dokumentation
+
+Siehe: `docs/development/PHASE_3.2_COMPLETION.md`
+
+---
+
+## 🚀 Phase 3.3: Radicals Migration (NEXT)
+
+**Dauer:** 3-4 Stunden  
+**Status:** ⏳ TODO  
+**Priorität:** 🟡 HOCH
+
+### Ziel
+
+Radicals Feature auf Streaming-Architektur migrieren (analog zu Kanji).
+
+### Vorteile
+
+- Radicals sind **simpler** als Kanji (keine mnemonics, keine alternative meanings)
+- Pattern bereits etabliert durch Phase 3.2
+- Erwartete Code-Reduktion: ~60% (analog zu Kanji)
+- Geschätzter Aufwand: 3-4 Stunden
+
+### Tasks
+
+- [ ] **Task 1:** Create RadicalTranslationService (80 Zeilen)
+- [ ] **Task 2:** Create radical-streaming-integration.ts (180 Zeilen)
+- [ ] **Task 3:** Write unit tests (15-20 tests, ~300 Zeilen)
+- [ ] **Task 4:** Commit streaming infrastructure
+- [ ] **Task 5:** Refactor useRadicalsManager (~600 → 250 Zeilen)
+- [ ] **Task 6:** Update UI (falls nötig)
+- [ ] **Task 7:** Run full test suite
+- [ ] **Task 8:** Documentation & final commit
+
+### Migration-Pattern (aus Phase 3.2 übernommen)
+
+```typescript
+// 1. RadicalTranslationService
+export class RadicalTranslationService extends DeeplTranslationService {
+    async translateItem(radical: RadicalItem): Promise<string[]> {
+        // Simpler als Kanji: keine mnemonics, nur primary meaning
+        const translation = await translateText(radical.primaryMeaning, 'EN', 'DE');
+        return this.cleanTranslations([translation]);
+    }
+}
+
+// 2. radical-streaming-integration.ts
+export async function processRadicalStreaming(
+    radicalItems: RadicalItem[],
+    options: ProcessingOptions,
+    onProgress?: (phases: StreamingProcessingPhase) => void,
+    stopSignal?: { current: boolean }
+): Promise<StreamingCompleteProcessingResult> {
+    const translationService = new RadicalTranslationService(options.deeplToken);
+    const uploadService = new WaniKaniUploadService(options.apiToken);
+    
+    const processor = new GenericStreamingProcessor(
+        translationService,
+        uploadService,
+        { ...options, enableProgressReporting: true }
+    );
+    
+    return processor.process(radicalItems, onProgress, stopSignal);
+}
+
+// 3. useRadicalsManager refactoring
+const startProcessing = async () => {
+    const radicalItems = convertToRadicalItems(filteredRadicals);
+    const result = await processRadicalStreaming(
+        radicalItems,
+        { ...options },
+        handleProgress,
+        stopRef
+    );
+};
+```
+
+### Erfolgskriterien
+
+```bash
+✅ Code-Reduktion: ~60% (analog zu Kanji)
+✅ Tests: 680+ passing
+✅ Keine Regressionen
+✅ Consistent 3-phase progress UI
+```
+
+---
+
+## 📊 Gesamtfortschritt
+
+**Phase 0:** ✅ Interface Design (COMPLETE)  
+**Phase 1:** ✅ GenericStreamingProcessor (COMPLETE)  
+**Phase 2:** ✅ Service Extraction (COMPLETE)  
+**Phase 3.1:** ✅ Vocabulary Migration (COMPLETE)  
+**Phase 3.1.1:** ✅ Vocabulary Test Cleanup (COMPLETE)  
+**Phase 3.2:** ✅ Kanji Migration (COMPLETE)  
+**Phase 3.3:** ⏳ Radicals Migration (NEXT)  
+**Phase 4:** ⏳ Shared Components (TODO)
+
+**Gesamtfortschritt: 45% → 60% (nach Phase 3.3)**
