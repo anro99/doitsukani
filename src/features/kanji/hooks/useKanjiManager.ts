@@ -158,9 +158,9 @@ export function useKanjiManager() {
         setIsLoadingKanji(true);
         setApiError('');
         try {
-            const count = await getKanjiCount(apiToken);
-            setTotalKanjiCount(count);
             const level = selectedLevel === 'all' ? undefined : selectedLevel;
+            const count = await getKanjiCount(apiToken, level);
+            setTotalKanjiCount(count);
             const kanjiData = await getKanjiPreview(apiToken, level, displayedPreviewCount);
             setWkKanji(kanjiData as KanjiSubject[]);
             const kanjiIds = kanjiData.map(k => k.id).join(',');
