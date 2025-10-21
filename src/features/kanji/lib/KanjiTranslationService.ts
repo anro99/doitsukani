@@ -125,8 +125,14 @@ export class KanjiTranslationService extends DeeplTranslationService {
 
                 const cleanedAlt = altTranslation.trim();
                 if (cleanedAlt && cleanedAlt.length > 0) {
-                    translations.push(truncateSynonym(cleanedAlt));
-                    console.log(`✅ Alternative translation for ${kanjiItem.characters}: ${cleanedAlt}`);
+                    const truncatedAlt = truncateSynonym(cleanedAlt);
+                    // Skip duplicates (case-insensitive)
+                    if (!translations.some(t => t.toLowerCase() === truncatedAlt.toLowerCase())) {
+                        translations.push(truncatedAlt);
+                        console.log(`✅ Alternative translation for ${kanjiItem.characters}: ${cleanedAlt}`);
+                    } else {
+                        console.log(`⏭️ Skipped duplicate translation for ${kanjiItem.characters}: ${cleanedAlt}`);
+                    }
                 }
             } catch (error) {
                 console.warn(`⚠️ Alternative translation failed for "${alternativeMeaning}":`, error);
@@ -134,7 +140,7 @@ export class KanjiTranslationService extends DeeplTranslationService {
             }
         }
 
-        console.log(`🎯 Total translations for ${kanjiItem.characters}: ${translations.length}`);
+        console.log(`🎯 Total translations for ${kanjiItem.characters}: ${translations.length} (duplicates removed)`);
         return translations;
     }
 

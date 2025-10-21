@@ -535,5 +535,54 @@ describe('🚀 Kanji Streaming Integration (Service-based Mocks)', () => {
             // Assert
             expect(mockUpload).toHaveBeenCalledWith(400, ['Feuer']);
         });
+
+        it('should remove duplicate translations (case-insensitive)', async () => {
+            // Arrange - Kanji 桟 with "jetty" and "pier" both translating to "Steg"
+            const duplicateTranslationItem: KanjiItem[] = [{
+                id: 2453,
+                characters: '桟',
+                primaryMeaning: 'jetty',
+                alternativeMeanings: ['pier'],
+                meaningMnemonic: 'A wooden platform over water.',
+                currentSynonyms: [],
+                meanings: ['jetty', 'pier'],
+                existingSynonyms: []
+            }];
+
+            // Both translations return "Steg" (duplicate)
+            mockTranslate.mockResolvedValueOnce(['Steg']); // Only one "Steg" after filtering
+            mockUpload.mockResolvedValue(true);
+
+            // Act
+            await processKanjiStreaming(duplicateTranslationItem, mockOptions);
+
+            // Assert - Should only upload one "Steg", not ["Steg", "Steg"]
+            expect(mockUpload).toHaveBeenCalledWith(2453, ['Steg']);
+            expect(mockUpload).toHaveBeenCalledTimes(1);
+        });
+
+        it('should remove duplicates with different capitalization', async () => {
+            // Arrange - Test case-insensitive duplicate filtering
+            const caseInsensitiveDuplicates: KanjiItem[] = [{
+                id: 500,
+                characters: '例',
+                primaryMeaning: 'example',
+                alternativeMeanings: ['EXAMPLE', 'Example'],
+                meaningMnemonic: 'This is an example.',
+                currentSynonyms: [],
+                meanings: ['example', 'EXAMPLE', 'Example'],
+                existingSynonyms: []
+            }];
+
+            // Service should filter case-insensitive duplicates internally
+            mockTranslate.mockResolvedValueOnce(['Beispiel']); // Only one after filtering
+            mockUpload.mockResolvedValue(true);
+
+            // Act
+            await processKanjiStreaming(caseInsensitiveDuplicates, mockOptions);
+
+            // Assert - Should only upload one "Beispiel"
+            expect(mockUpload).toHaveBeenCalledWith(500, ['Beispiel']);
+        });
     });
 });

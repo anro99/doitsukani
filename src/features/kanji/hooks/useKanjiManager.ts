@@ -314,7 +314,7 @@ export function useKanjiManager() {
                     setTranslationStatus(` Verarbeitung abgeschlossen: ${result.uploadCount}/${result.totalItems} erfolgreich`);
                     setUploadStatus(` Upload abgeschlossen`);
                     setProgress(100);
-                    
+
                     // Final reload to ensure everything is in sync (live updates happen during processing)
                     if (result.uploadCount > 0) {
                         setTimeout(() => loadKanjiFromAPI(), 1000);
