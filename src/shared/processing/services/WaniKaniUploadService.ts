@@ -160,10 +160,21 @@ export class WaniKaniUploadService implements UploadService {
     /**
      * Sucht existierendes Study Material für ein Item
      */
-    private async findStudyMaterial(subjectId: number): Promise<StudyMaterialData | null> {
+    private async findStudyMaterial(subjectId: number, retryCount = 0): Promise<StudyMaterialData | null> {
         const url = `${this.API_BASE}/study_materials?subject_ids=${subjectId}`;
 
         const response = await this.makeRequest(url, 'GET');
+
+        // Handle rate limiting with exponential backoff
+        if (response.status === 429) {
+            if (retryCount < 3) {
+                const backoffMs = Math.pow(2, retryCount) * 2000; // 2s, 4s, 8s
+                console.warn(`⚠️ Rate limited (429) for subject ${subjectId}, waiting ${backoffMs}ms before retry ${retryCount + 1}/3`);
+                await this.sleep(backoffMs);
+                return this.findStudyMaterial(subjectId, retryCount + 1);
+            }
+            throw new Error(`Failed to fetch study material after ${retryCount} retries: 429 Too Many Requests`);
+        }
 
         if (!response.ok) {
             throw new Error(`Failed to fetch study material: ${response.status}`);
