@@ -267,8 +267,13 @@ export function useKanjiManager() {
                     setUploadStatus(` Upload abgeschlossen`);
                     setProgress(100);
                 } else if (stopRef.current) {
-                    setTranslationStatus(` Verarbeitung gestoppt`);
+                    setTranslationStatus(` Verarbeitung gestoppt bei ${result.uploadCount}/${result.totalItems}`);
                     setUploadStatus(` Upload gestoppt`);
+                    // Set progress to the actual completion percentage
+                    const finalProgress = result.totalItems > 0
+                        ? Math.round((result.uploadCount / result.totalItems) * 100)
+                        : 0;
+                    setProgress(finalProgress);
                 } else {
                     setTranslationStatus(` Verarbeitung mit Fehlern: ${result.errorCount} Fehler`);
                     setUploadStatus(` Upload mit Fehlern`);
@@ -291,7 +296,8 @@ export function useKanjiManager() {
 
     const stopProcessing = () => {
         stopRef.current = true;
-        setTranslationStatus(' Stoppe Verarbeitung...');
+        setTranslationStatus('⏹️ Stoppe Verarbeitung...');
+        setUploadStatus('⏹️ Warte auf Abschluss des aktuellen Items...');
     };
 
     useEffect(() => {
