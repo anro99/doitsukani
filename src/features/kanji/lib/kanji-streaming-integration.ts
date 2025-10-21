@@ -146,7 +146,7 @@ export async function processKanjiStreaming(
     kanjiItems: KanjiItem[],
     options: {
         batchSize: number;
-        synonymMode: 'smart' | 'replace' | 'delete';
+        synonymMode: 'smart' | 'smart-merge' | 'replace' | 'delete';
         apiToken: string;
         deeplToken: string;
         enableProgressReporting: boolean;

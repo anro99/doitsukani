@@ -332,9 +332,10 @@ export interface ProcessorStatus {
  * Synonym-Modus: Wie sollen neue Synonyme mit existierenden kombiniert werden?
  */
 export type SynonymMode =
-    | 'smart'    // Merge: Behalte existierende + füge neue hinzu (max 8)
-    | 'replace'  // Replace: Ersetze alle existierenden durch neue
-    | 'delete';  // Delete: Entferne alle Synonyme
+    | 'smart'        // Merge: Behalte existierende + füge neue hinzu (max 8)
+    | 'smart-merge'  // Alias für 'smart' (Kompatibilität)
+    | 'replace'      // Replace: Ersetze alle existierenden durch neue
+    | 'delete';      // Delete: Entferne alle Synonyme
 
 /**
  * Optionen für das Processing
@@ -445,6 +446,7 @@ export class DeleteStrategy implements SynonymMergeStrategy {
 export function createMergeStrategy(mode: SynonymMode): SynonymMergeStrategy {
     switch (mode) {
         case 'smart':
+        case 'smart-merge':  // Alias für 'smart'
             return new SmartMergeStrategy();
         case 'replace':
             return new ReplaceStrategy();
