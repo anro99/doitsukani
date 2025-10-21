@@ -976,7 +976,7 @@ Siehe: `docs/development/PHASE_3.2_COMPLETION.md`
 
 ## 🚀 Phase 3.3: Radicals Migration (NEXT)
 
-**Dauer:** 3-4 Stunden  
+**Dauer:** 5 Stunden (angepasst basierend auf Lessons Learned)  
 **Status:** ⏳ TODO  
 **Priorität:** 🟡 HOCH
 
@@ -988,28 +988,119 @@ Radicals Feature auf Streaming-Architektur migrieren (analog zu Kanji).
 
 - Radicals sind **simpler** als Kanji (keine mnemonics, keine alternative meanings)
 - Pattern bereits etabliert durch Phase 3.2
-- Erwartete Code-Reduktion: ~60% (analog zu Kanji)
-- Geschätzter Aufwand: 3-4 Stunden
+- Erwartete Code-Reduktion: ~60% (analog zu Kanji: 748 → 250 Zeilen)
+- Lessons Learned aus Phase 3.2 angewendet
 
-### Tasks
+### 🎓 Lessons Learned aus Phase 3.2
 
-- [ ] **Task 1:** Create RadicalTranslationService (80 Zeilen)
-- [ ] **Task 2:** Create radical-streaming-integration.ts (180 Zeilen)
-- [ ] **Task 3:** Write unit tests (15-20 tests, ~300 Zeilen)
-- [ ] **Task 4:** Commit streaming infrastructure
-- [ ] **Task 5:** Refactor useRadicalsManager (~600 → 250 Zeilen)
-- [ ] **Task 6:** Update UI (falls nötig)
-- [ ] **Task 7:** Run full test suite
-- [ ] **Task 8:** Documentation & final commit
+#### Herausforderungen & Lösungen
+1. **File Size Problem** ⚠️
+   - Problem: useKanjiManager.ts (897 Zeilen) zu groß für `replace_string_in_file`
+   - Lösung: Delete + Recreate Strategy
+   - Für Radicals: useRadicalsManager.ts (~748 Zeilen) → gleiche Strategie
+
+2. **Type Compatibility** ⚠️
+   - Problem: SynonymMode in 3 Files synchron halten
+   - Lösung: Zentrale Type Definition in processing.types.ts
+   - Für Radicals: ✅ Bereits gelöst durch Phase 3.2
+
+3. **API Signature Mismatch** ⚠️
+   - Problem: getKanjiPreview(token, level, limit) vs Arrays
+   - Lösung: Korrekte Parameter-Reihenfolge prüfen
+   - Für Radicals: ⚠️ KRITISCH - getRadicalsPreview API-Signatur vor Start verifizieren
+
+#### Was gut funktionierte ✅
+- Pattern-Wiederverwendung: Vocabulary Pattern perfekt für Kanji
+- TDD-Approach: 23 Tests VOR Integration = keine Regressionen
+- Aggressive Refactoring: Complete file replacement schneller als incremental
+- Type Safety: 'smart-merge' Alias verhindert Breaking Changes
+
+### Tasks (angepasst)
+
+- [ ] **Task 0 (NEU):** Pre-Flight API Check (15min)
+  - Verify getRadicals/getRadicalStudyMaterials/getRadicalsPreview signatures
+  - Check parameter order matches Kanji pattern
+  - Review useRadicalsManager current implementation (748 Zeilen)
+  - Identify potential breaking changes
+
+- [ ] **Task 1:** RadicalTranslationService (45min)
+  - Simpler als Kanji: nur primary meaning, keine mnemonics
+  - Handle nullable characters gracefully
+  - Expected: 60-80 Zeilen (vs. 163 bei Kanji)
+
+- [ ] **Task 2:** radical-streaming-integration.ts (45min)
+  - GenericStreamingProcessor wrapper
+  - RadicalItem type mapping
+  - 3-phase progress callbacks
+  - Expected: 180-200 Zeilen
+
+- [ ] **Task 3:** Unit tests (60min)
+  - 15-20 comprehensive tests
+  - Service-based mocks (fast execution)
+  - Cover: basic flow, error handling, synonym modes, progress
+  - Expected: 300-350 Zeilen
+
+- [ ] **Task 4:** Commit streaming infrastructure (5min)
+
+- [ ] **Task 5a:** Delete old useRadicalsManager.ts (1min)
+  - Strategy: DELETE + RECREATE (wegen 748 Zeilen)
+
+- [ ] **Task 5b:** Create new useRadicalsManager.ts (60min)
+  - Import processRadicalStreaming
+  - Remove: Bottleneck, manual loops, rate limiters
+  - Add: convertToRadicalItems(), handleProgress()
+  - Keep same public interface (no breaking changes)
+  - Expected: 250-280 Zeilen (vs. 748 vorher = -63%)
+
+- [ ] **Task 5c:** Verify API compatibility (30min)
+  - Check RadicalsManagerRefactored.tsx still works
+  - Verify all props match
+  - Test basic flow locally
+
+- [ ] **Task 6:** ProcessingControls UI update (30min, optional)
+  - Check if 'successful' field exists in RadicalUploadStats
+  - Add if missing (analog zu Kanji)
+  - Verify 3-phase progress display
+
+- [ ] **Task 7:** Full test suite (10min)
+  - npm run test:unit → Expected: 680+ passing
+  - npm run test:integration → Expected: 82+ passing
+
+- [ ] **Task 8:** Documentation & commit (20min)
+  - Create docs/development/PHASE_3.3_COMPLETION.md
+  - Update REFACTORING_PLAN.md with completion
+  - Document code reduction metrics
+
+### Zeitaufwand (angepasst)
+
+| Task | Ursprünglich | Angepasst | Begründung |
+|------|-------------|-----------|-----------|
+| Task 0 | - | 15min | Pre-flight checks (NEU) |
+| Task 1 | 60min | 45min | Simpler (keine mnemonics) |
+| Task 2 | 60min | 45min | Pattern etabliert |
+| Task 3 | 90min | 60min | Weniger Tests (15-20 vs. 23) |
+| Task 4 | 5min | 5min | Unverändert |
+| Task 5 | 60min | 90min | DELETE+RECREATE länger |
+| Task 6 | 30min | 30min | Optional |
+| Task 7 | 10min | 10min | Unverändert |
+| Task 8 | 20min | 20min | Unverändert |
+| **TOTAL** | ~6h | **~5h** | **-1h durch Lessons Learned** ✅ |
 
 ### Migration-Pattern (aus Phase 3.2 übernommen)
 
 ```typescript
-// 1. RadicalTranslationService
+// 1. RadicalTranslationService (simpler als Kanji)
 export class RadicalTranslationService extends DeeplTranslationService {
-    async translateItem(radical: RadicalItem): Promise<string[]> {
-        // Simpler als Kanji: keine mnemonics, nur primary meaning
-        const translation = await translateText(radical.primaryMeaning, 'EN', 'DE');
+    async translate(item: ProcessableItem): Promise<string[]> {
+        const radicalItem = item as RadicalItem;
+        
+        // Simple: nur primary meaning übersetzen (keine mnemonics)
+        const translation = await translateText(
+            this.apiKey,
+            radicalItem.primaryMeaning,
+            'DE'
+        );
+        
         return this.cleanTranslations([translation]);
     }
 }
@@ -1033,7 +1124,17 @@ export async function processRadicalStreaming(
     return processor.process(radicalItems, onProgress, stopSignal);
 }
 
-// 3. useRadicalsManager refactoring
+// 3. useRadicalsManager refactoring (DELETE + RECREATE wegen 748 Zeilen)
+const convertToRadicalItems = (radicals: Radical[]): RadicalItem[] => {
+    return radicals.map(r => ({
+        id: r.id,
+        characters: r.characters, // nullable - graceful handling
+        primaryMeaning: r.primaryMeaning,
+        meanings: [r.primaryMeaning],
+        existingSynonyms: r.currentSynonyms
+    }));
+};
+
 const startProcessing = async () => {
     const radicalItems = convertToRadicalItems(filteredRadicals);
     const result = await processRadicalStreaming(
@@ -1048,10 +1149,11 @@ const startProcessing = async () => {
 ### Erfolgskriterien
 
 ```bash
-✅ Code-Reduktion: ~60% (analog zu Kanji)
-✅ Tests: 680+ passing
+✅ Code-Reduktion: 748 → 250 Zeilen (-63%)
+✅ Tests: 680+ passing (600 unit + 82 integration)
 ✅ Keine Regressionen
 ✅ Consistent 3-phase progress UI
+✅ Pattern etabliert für zukünftige Features
 ```
 
 ---
@@ -1063,8 +1165,16 @@ const startProcessing = async () => {
 **Phase 2:** ✅ Service Extraction (COMPLETE)  
 **Phase 3.1:** ✅ Vocabulary Migration (COMPLETE)  
 **Phase 3.1.1:** ✅ Vocabulary Test Cleanup (COMPLETE)  
-**Phase 3.2:** ✅ Kanji Migration (COMPLETE)  
-**Phase 3.3:** ⏳ Radicals Migration (NEXT)  
+**Phase 3.2:** ✅ Kanji Migration (COMPLETE - mit Bugfixes)  
+**Phase 3.3:** ⏳ Radicals Migration (NEXT - ~5h)  
 **Phase 4:** ⏳ Shared Components (TODO)
 
-**Gesamtfortschritt: 45% → 60% (nach Phase 3.3)**
+**Gesamtfortschritt: 45% (nach Phase 3.2)**
+
+### Recent Bug Fixes (Post-Phase 3.2)
+- ✅ **4e67e82**: Level-Filter in useKanjiManager behoben
+- ✅ **76085f3**: mountedRef und translations Lifecycle-Bug behoben
+- ✅ **456bcca**: Rate Limiting Backoff für 429 Fehler
+- ✅ **46632ec**: Live-Preview Updates während Processing
+- ✅ **e1aa232**: Case-insensitive Duplicate Filtering (422 Fehler behoben)
+- ✅ **8687425**: Silent Retries für 429 (Error Log nur bei finalem Fehler)
