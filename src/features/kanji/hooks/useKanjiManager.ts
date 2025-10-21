@@ -207,6 +207,50 @@ export function useKanjiManager() {
         }));
     };
 
+    const handleItemUpdated = (item: KanjiItem, result: { kanjiId: number; success: boolean; uploadedSynonyms?: string[] }) => {
+        if (!mountedRef.current) return;
+
+        console.log(`✅ Updated item ${item.id} (${item.characters}):`, result);
+
+        // 🚀 LIVE UPDATE: Update study materials in real-time
+        if (result.success && result.uploadedSynonyms) {
+            console.log(`🔄 LIVE-UPDATE: Processing update for ${item.characters} (ID: ${item.id}):`, {
+                success: result.success,
+                uploadedSynonyms: result.uploadedSynonyms,
+                currentStudyMaterialsCount: studyMaterials.length
+            });
+
+            setStudyMaterials(prev => {
+                const updated = [...prev];
+                const existingIndex = updated.findIndex(sm => sm.data.subject_id === item.id);
+
+                console.log(`🔍 Looking for study material with subject_id ${item.id}, found at index: ${existingIndex}`);
+
+                if (existingIndex >= 0) {
+                    const oldSynonyms = updated[existingIndex].data.meaning_synonyms;
+                    // Update existing study material
+                    updated[existingIndex] = {
+                        ...updated[existingIndex],
+                        data: {
+                            ...updated[existingIndex].data,
+                            meaning_synonyms: result.uploadedSynonyms || []
+                        }
+                    };
+                    console.log(`🔄 Live-updated study material for ${item.characters}:`, {
+                        old: oldSynonyms,
+                        new: result.uploadedSynonyms,
+                        studyMaterialId: updated[existingIndex].id
+                    });
+                } else {
+                    console.log(`⚠️ No existing study material found for ${item.characters} (ID: ${item.id}) - will be created on next reload`);
+                    console.log(`📊 Available study materials:`, prev.map(sm => ({ id: sm.data.subject_id, synonyms: sm.data.meaning_synonyms })));
+                }
+
+                return updated;
+            });
+        }
+    };
+
     const startProcessing = async () => {
         if (!apiToken || !deeplToken) {
             setApiError('Bitte API-Tokens eingeben');
@@ -251,7 +295,8 @@ export function useKanjiManager() {
                     apiToken: apiToken,
                     deeplToken: deeplToken,
                     enableProgressReporting: true,
-                    stopOnFirstError: false
+                    stopOnFirstError: false,
+                    onItemUpdated: handleItemUpdated
                 },
                 handleProgress,
                 stopRef
@@ -270,7 +315,7 @@ export function useKanjiManager() {
                     setUploadStatus(` Upload abgeschlossen`);
                     setProgress(100);
                     
-                    // Reload kanji data to show updated synonyms
+                    // Final reload to ensure everything is in sync (live updates happen during processing)
                     if (result.uploadCount > 0) {
                         setTimeout(() => loadKanjiFromAPI(), 1000);
                     }

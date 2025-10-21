@@ -145,6 +145,14 @@ function toLegacyResult(
  * @param onProgress - Legacy Progress Callback
  * @param stopSignal - Stop Signal Ref
  */
+export interface KanjiItemResult {
+    kanjiId: number;
+    success: boolean;
+    translatedSynonyms?: string[];
+    uploadedSynonyms?: string[];
+    message?: string;
+}
+
 export async function processKanjiStreaming(
     kanjiItems: KanjiItem[],
     options: {
@@ -154,6 +162,9 @@ export async function processKanjiStreaming(
         deeplToken: string;
         enableProgressReporting: boolean;
         stopOnFirstError: boolean;
+        onItemUpdated?: (item: KanjiItem, result: KanjiItemResult) => void;
+        onItemProcessing?: (item: KanjiItem) => void;
+        onItemError?: (item: KanjiItem, error: Error) => void;
     },
     onProgress?: (phases: StreamingProcessingPhase) => void,
     stopSignal?: { current: boolean }
@@ -163,10 +174,48 @@ export async function processKanjiStreaming(
     // Track all phases for legacy interface
     const allPhases: StreamingProcessingPhase[] = [];
 
+    // Track successful items for live preview updates
+    const processedItemIds = new Set<number>();
+
     try {
         // Setup Services
         const translationService = new KanjiTranslationService(options.deeplToken);
-        const uploadService = new WaniKaniUploadService(options.apiToken);
+        const baseUploadService = new WaniKaniUploadService(options.apiToken);
+
+        // Wrapper um Upload Service für Live-Callbacks
+        const uploadService = {
+            name: baseUploadService.name,
+            upload: async (itemId: number, synonyms: string[]) => {
+                const success = await baseUploadService.upload(itemId, synonyms);
+
+                // Live-Update: Rufe onItemUpdated sofort nach erfolgreichem Upload auf
+                if (success && options.onItemUpdated && !processedItemIds.has(itemId)) {
+                    processedItemIds.add(itemId);
+
+                    const originalItem = kanjiItems.find(k => k.id === itemId);
+                    if (originalItem) {
+                        try {
+                            options.onItemUpdated(originalItem, {
+                                kanjiId: itemId,
+                                success: true,
+                                translatedSynonyms: synonyms,
+                                uploadedSynonyms: synonyms,
+                                message: 'Successfully processed and uploaded'
+                            });
+                            console.log(`✅ Live-updated preview for ${originalItem.characters}`);
+                        } catch (error) {
+                            console.warn(`⚠️ Callback error in live onItemUpdated for item ${itemId}:`, error);
+                        }
+                    }
+                }
+
+                return success;
+            },
+            uploadBatch: async (items: Array<{ id: number; synonyms: string[] }>) => {
+                // Delegate to original service
+                return baseUploadService.uploadBatch(items);
+            }
+        };
 
         // Setup Processor
         const processor = new GenericStreamingProcessor();
