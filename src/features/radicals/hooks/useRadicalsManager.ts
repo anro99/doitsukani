@@ -349,6 +349,11 @@ export function useRadicalsManager() {
     }, [apiToken, selectedLevel]);
 
     const radicalsCount = totalRadicalsCount > 0 ? totalRadicalsCount : filteredRadicals.length;
+    
+    // Derived values für Component-Kompatibilität
+    const previewRadicals = wkRadicals.slice(0, displayedPreviewCount);
+    const currentLevelCount = radicalsCount;
+    const currentLevelCountLoading = isLoadingRadicals;
 
     return {
         selectedLevel,
@@ -358,10 +363,14 @@ export function useRadicalsManager() {
         apiToken,
         handleApiTokenChange,
         deeplToken,
-        handleDeepLTokenChange,
+        handleDeeplTokenChange: handleDeepLTokenChange, // Alias für Component-Kompatibilität
+        wkRadicals, // Export für RadicalsManagerRefactored compatibility
         filteredRadicals,
         radicalsCount,
         displayedPreviewCount,
+        previewRadicals, // Derived: wkRadicals.slice(0, displayedPreviewCount)
+        currentLevelCount, // Alias: radicalsCount
+        currentLevelCountLoading, // Alias: isLoadingRadicals
         isLoadingRadicals,
         apiError,
         isProcessing,
