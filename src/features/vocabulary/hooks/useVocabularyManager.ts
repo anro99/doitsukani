@@ -12,10 +12,9 @@ import {
     StreamingCompleteProcessingResult
 } from '../lib/vocabulary-streaming-integration';
 import {
-    CompleteProcessingOptions,
     VocabularyItemResult,
     VocabularyItemError
-} from '../lib/vocabulary-integration';
+} from '../lib/vocabulary-types';
 import { VocabularyItem } from '../lib/vocabulary-translation';
 
 // Type aliases for better readability
