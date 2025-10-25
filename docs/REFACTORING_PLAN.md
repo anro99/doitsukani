@@ -1,10 +1,10 @@
 # 🚀 Refactoring Plan: Unified Streaming Architecture
 
-**Status:** ✅ Phase 3.4 COMPLETE (60% → 65%)  
+**Status:** ✅ **Phase 5 COMPLETE** (65% → **75%**)  
 **Ziel:** Streaming-Pattern für alle Features etabliert ✅  
-**Legacy Cleanup:** 756 Zeilen Dead Code entfernt ✅  
-**Zeitaufwand:** 22 Stunden (von 26-29h Budget)  
-**Letztes Update:** Januar 2025
+**Legacy Cleanup:** Type-Migration + Code-Deletion complete ✅  
+**Zeitaufwand:** 23 Stunden (von 26-29h Budget)  
+**Letztes Update:** 25. Oktober 2025
 
 ---
 
@@ -818,13 +818,15 @@ src/
 | **Phase 3.2** | 5h | ✅ **DONE** | **Kanji Migration (897→308 lines, -66%)** |
 | **Phase 3.3** | 5h | ✅ **DONE** | **Radicals Migration (747→378 lines, -49%)** |
 | **Phase 3.4** | 1h | ✅ **DONE** | **Cleanup: Dead Code deleted (-756 lines)** |
-| **Phase 4** | 2h | ⏳ TODO | Integration Tests (Kanji/Radicals) |
+| **Phase 3.4.1** | 0.5h | ✅ **DONE** | **Legacy Tests deleted (-1054 lines)** |
+| **Phase 5** | 1h | ✅ **DONE** | **Type-Migration & Cleanup (-607 lines)** |
+| **Phase 6** | 2h | ⚠️ OPTIONAL | UI-Verbesserungen (Shared Components) |
 | **Phase 5** | 1h | ⏳ TODO | Hook Refactoring |
 | **Phase 6** | 1h | ⏳ TODO | UI Updates |
-| **TOTAL** | **26-29h** | ~65% | |
+| **TOTAL** | **26-29h** | ~75% | |
 
-**Zeit investiert:** ~22 Stunden  
-**Zeit verbleibend:** ~4-7 Stunden
+**Zeit investiert:** ~23 Stunden  
+**Zeit verbleibend:** ~3-6 Stunden (optional: UI-Improvements)
 
 ---
 
@@ -1194,13 +1196,90 @@ const startProcessing = async () => {
 **Phase 3.1.1:** ✅ Vocabulary Test Cleanup (COMPLETE)  
 **Phase 3.2:** ✅ Kanji Migration (COMPLETE - mit Bugfixes)  
 **Phase 3.3:** ✅ Radicals Migration (COMPLETE - 5h)  
-**Phase 3.4:** ✅ **Legacy Code Cleanup (COMPLETE - 1h)**  
-**Phase 4:** ⏳ Integration Tests (NEXT - ~2h)  
-**Phase 5:** ⏳ Hook Refactoring (TODO - ~1h)
+**Phase 3.4:** ✅ Legacy Code Cleanup (COMPLETE - 1h)  
+**Phase 3.4.1:** ✅ Legacy Test Cleanup (COMPLETE - 0.5h)  
+**Phase 5:** ✅ **Type-Migration & Cleanup (COMPLETE - 1h)**  
+**Phase 6:** ⚠️ UI-Verbesserungen (OPTIONAL)
 
-**Gesamtfortschritt: 65% (nach Phase 3.4)**
+**Gesamtfortschritt: 75% (nach Phase 5)** 🎉
 
 ---
+
+## ✅ Phase 5: Type-Migration & Cleanup - COMPLETE
+
+**Dauer:** 1 Stunde  
+**Status:** ✅ **DONE**  
+**Datum:** 25. Oktober 2025
+
+### Erreichte Ziele
+
+✅ **607 Zeilen gelöscht netto** (667 deleted - 60 added)  
+✅ **Type-Extraktion**: vocabulary-types.ts erstellt  
+✅ **Legacy Code Deletion**: vocabulary-integration.ts gelöscht (372 Zeilen)  
+✅ **Dev-Tools Cleanup**: 2 obsolete Tools gelöscht (234 Zeilen)  
+✅ **Clean Architecture**: Types vs Implementation separation
+
+### Implementierte Komponenten
+
+1. **vocabulary-types.ts** (58 Zeilen, NEU)
+   - `VocabularyItemResult` - Result type für live updates
+   - `VocabularyItemError` - Error type mit retry info
+   - `VocabularyProcessingOptions` - Focused interface für Streaming
+   - `CompleteProcessingOptions` - Backward compatibility (deprecated)
+
+2. **useVocabularyManager.ts** (REFACTORED)
+   - Imports migriert von vocabulary-integration → vocabulary-types
+   - Clean dependency: Hook importiert nur Types, nicht Functions
+
+3. **delete-mode-no-translation.test.ts** (CLEANED UP)
+   - 2 Legacy Batch Tests entfernt
+   - 4 Streaming Tests behalten
+   - Imports bereinigt
+
+### Gelöschte Dateien
+
+1. **vocabulary-integration.ts** (372 Zeilen)
+   - Legacy batch processing (`processVocabularyComplete`)
+   - Mixed Legacy + Streaming types
+   - Ersetzt durch: vocabulary-types.ts + vocabulary-streaming-integration.ts
+
+2. **api-test-tools.ts** (131 Zeilen)
+   - Dev/Debug-Tool aus früher Entwicklungsphase
+   - Verwendete Legacy-API
+
+3. **stop-functionality-demo.ts** (103 Zeilen)
+   - Demo-Code aus Phase 2
+   - Durch Integration-Tests ersetzt
+
+### Architektur-Verbesserung
+
+**Vorher:**
+```
+vocabulary-integration.ts  ← ❌ Legacy + Streaming MIXED
+├── processVocabularyComplete()  (Legacy)
+├── CompleteProcessingOptions    (Used by Hook)
+└── VocabularyItemResult         (Used by Hook)
+```
+
+**Nachher:**
+```
+vocabulary-types.ts        ← ✅ Pure Types
+├── VocabularyItemResult
+├── VocabularyItemError
+└── VocabularyProcessingOptions
+```
+
+### Test-Ergebnisse
+
+✅ **565/573 Unit Tests** bestehen (-2 legacy batch tests removed)  
+✅ **82/82 Integration Tests** bestehen (unchanged)  
+✅ **Keine neuen Fehler**
+
+### Dokumentation
+
+📄 Siehe: `docs/development/PHASE_5_COMPLETION.md` (vollständiger Report)
+
+------
 
 ## ✅ Phase 3.4: Legacy Code Cleanup - COMPLETE
 
