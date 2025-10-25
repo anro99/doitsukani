@@ -349,9 +349,15 @@ export function useRadicalsManager() {
     }, [apiToken, selectedLevel]);
 
     const radicalsCount = totalRadicalsCount > 0 ? totalRadicalsCount : filteredRadicals.length;
-    
+
     // Derived values für Component-Kompatibilität
-    const previewRadicals = wkRadicals.slice(0, displayedPreviewCount);
+    // previewRadicals muss durch convertToInternalFormat, damit currentSynonyms existiert
+    const previewRadicals = useMemo(() => {
+        if (wkRadicals.length === 0) return [];
+        const slicedRadicals = wkRadicals.slice(0, displayedPreviewCount);
+        return convertToInternalFormat(slicedRadicals, studyMaterials);
+    }, [wkRadicals, studyMaterials, displayedPreviewCount]);
+    
     const currentLevelCount = radicalsCount;
     const currentLevelCountLoading = isLoadingRadicals;
 
