@@ -54,6 +54,7 @@ export interface StreamingProcessingPhase {
 
 export interface StreamingCompleteProcessingResult {
     success: boolean;
+    wasStopped?: boolean;
     totalItems: number;
     translationCount: number;
     uploadCount: number;
@@ -120,6 +121,7 @@ function toLegacyResult(
 ): StreamingCompleteProcessingResult {
     return {
         success: result.stats.failed === 0 && !result.wasStopped,
+        wasStopped: result.wasStopped,
         totalItems: result.stats.total,
         translationCount: result.stats.translatedWithDeepL + result.stats.translatedWithDictionary,
         uploadCount: result.stats.successful,
@@ -161,7 +163,7 @@ export async function processRadicalStreaming(
     radicalItems: RadicalItem[],
     options: {
         batchSize: number;
-        synonymMode: 'smart' | 'smart-merge' | 'replace' | 'delete';
+        synonymMode: 'smart-merge' | 'replace' | 'delete';
         apiToken: string;
         deeplToken: string;
         enableProgressReporting: boolean;

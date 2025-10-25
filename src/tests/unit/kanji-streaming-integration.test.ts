@@ -20,7 +20,7 @@ vi.mock('../../shared/processing/services/WaniKaniUploadService', () => {
 describe('🚀 Kanji Streaming Integration (Service-based Mocks)', () => {
     const mockOptions = {
         batchSize: 1, // Streaming mode
-        synonymMode: 'smart' as const,
+        synonymMode: 'smart-merge' as const,
         apiToken: 'test-api-token',
         deeplToken: 'test-deepl-token',
         enableProgressReporting: true,
@@ -381,7 +381,7 @@ describe('🚀 Kanji Streaming Integration (Service-based Mocks)', () => {
             mockUpload.mockResolvedValue(true);
 
             // Act
-            await processKanjiStreaming(mockKanjiItems, { ...mockOptions, synonymMode: 'smart' });
+            await processKanjiStreaming(mockKanjiItems, { ...mockOptions, synonymMode: 'smart-merge' });
 
             // Assert - Check if processing completed
             expect(mockUpload).toHaveBeenCalled();

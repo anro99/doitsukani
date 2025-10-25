@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Subject, StudyMaterial } from '@bachman-dev/wanikani-api-types';
 import {
-    getRadicals,
     getRadicalStudyMaterials,
     getRadicalCount,
     getRadicalsPreview
@@ -9,7 +8,11 @@ import {
 import { loadWanikaniToken, saveWanikaniToken, removeToken, STORAGE_KEYS, loadDeepLToken, saveDeepLToken } from '../../../shared/lib/storage';
 
 // Streaming Processing (Phase 3.3 - Refactored)
-import { processRadicalStreaming, type StreamingProcessingPhase } from '../lib/radical-streaming-integration';
+import {
+    processRadicalStreaming,
+    type StreamingProcessingPhase,
+    type StreamingCompleteProcessingResult
+} from '../lib/radical-streaming-integration';
 import type { RadicalItem } from '../lib/RadicalTranslationService';
 
 // Type aliases for better readability
@@ -42,7 +45,7 @@ export interface ProcessResult {
     message: string;
 }
 
-export type SynonymMode = 'replace' | 'smart' | 'smart-merge' | 'delete';
+export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export function useRadicalsManager() {
     const stopRef = useRef(false);
@@ -84,6 +87,25 @@ export function useRadicalsManager() {
         skipped: 0,
         successful: 0
     });
+
+    // Streaming processing states (NEW - for ProcessingControls compatibility)
+    const [streamingPhases, setStreamingPhases] = useState<StreamingProcessingPhase | null>(null);
+    const [streamingResult, setStreamingResult] = useState<StreamingCompleteProcessingResult | null>(null);
+    const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
+
+    // Reset processing state when level changes
+    useEffect(() => {
+        console.log('🔄 Level changed, resetting processing state');
+        setStreamingResult(null);
+        setProgress(0);
+        setApiError('');
+        setIsProcessing(false);
+        setStreamingPhases(null);
+        setErrorItems(new Map());
+        setTranslationStatus('');
+        setUploadStatus('');
+    }, [selectedLevel]);
+
     const [wkRadicals, setWkRadicals] = useState<RadicalSubject[]>([]);
     const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([]);
     const [isLoadingRadicals, setIsLoadingRadicals] = useState(false);
@@ -264,6 +286,10 @@ export function useRadicalsManager() {
 
             const handleProgress = (phases: StreamingProcessingPhase) => {
                 if (!mountedRef.current) return;
+
+                // Update streamingPhases state for ProcessingControls
+                setStreamingPhases(phases);
+
                 const translationItem = phases.translationPhase.currentItem ? ` (${phases.translationPhase.currentItem})` : '';
                 const uploadItem = phases.uploadPhase.currentItem ? ` (${phases.uploadPhase.currentItem})` : '';
                 setTranslationStatus(`🌐 Übersetzung: ${phases.translationPhase.progress}%${translationItem}`);
@@ -294,6 +320,10 @@ export function useRadicalsManager() {
             );
 
             if (mountedRef.current) {
+                // Update streamingResult
+                setStreamingResult(result);
+                setProgress(100);
+
                 setUploadStats({
                     created: 0,
                     updated: 0,
@@ -301,24 +331,24 @@ export function useRadicalsManager() {
                     skipped: result.totalItems - result.translationCount,
                     successful: result.uploadCount
                 });
-                if (result.success) {
+
+                if (result.wasStopped) {
+                    console.log('⏹️ Processing stopped by user:', result);
+                    setTranslationStatus(`⏹️ Verarbeitung gestoppt bei ${result.uploadCount}/${result.totalItems}`);
+                    setUploadStatus(`⏹️ Upload gestoppt`);
+                } else if (result.errorCount > 0) {
+                    console.warn('⚠️ Processing completed with errors:', result);
+                    setTranslationStatus(`⚠️ Verarbeitung mit Fehlern: ${result.errorCount} Fehler`);
+                    setUploadStatus(`⚠️ Upload mit Fehlern`);
+                } else {
+                    console.log('✅ Processing completed successfully:', result);
                     setTranslationStatus(`✅ Verarbeitung abgeschlossen: ${result.uploadCount}/${result.totalItems} erfolgreich`);
                     setUploadStatus(`✅ Upload abgeschlossen`);
-                    setProgress(100);
 
+                    // Reload radicals data to show updated synonyms
                     if (result.uploadCount > 0) {
                         setTimeout(() => loadRadicalsFromAPI(), 1000);
                     }
-                } else if (stopRef.current) {
-                    setTranslationStatus(`⏹️ Verarbeitung gestoppt bei ${result.uploadCount}/${result.totalItems}`);
-                    setUploadStatus(`⏹️ Upload gestoppt`);
-                    const finalProgress = result.totalItems > 0
-                        ? Math.round((result.uploadCount / result.totalItems) * 100)
-                        : 0;
-                    setProgress(finalProgress);
-                } else {
-                    setTranslationStatus(`❌ Verarbeitung mit Fehlern: ${result.errorCount} Fehler`);
-                    setUploadStatus(`❌ Upload mit Fehlern`);
                 }
             }
             console.log('✅ Processing completed:', result);
@@ -340,6 +370,21 @@ export function useRadicalsManager() {
         stopRef.current = true;
         setTranslationStatus('⏹️ Stoppe Verarbeitung...');
         setUploadStatus('⏹️ Warte auf Abschluss des aktuellen Items...');
+    };
+
+    const clearResults = () => {
+        console.log('🗑️ Clearing processing results');
+        setStreamingResult(null);
+        setStreamingPhases(null);
+        setErrorItems(new Map());
+        setProgress(0);
+        setTranslationStatus('');
+        setUploadStatus('');
+    };
+
+    const clearErrors = () => {
+        console.log('🗑️ Clearing error items');
+        setErrorItems(new Map());
     };
 
     useEffect(() => {
@@ -387,6 +432,13 @@ export function useRadicalsManager() {
         processTranslations: startProcessing,
         stopProcessing,
         loadRadicalsFromAPI,
-        loadMorePreviewRadicals
+        loadMorePreviewRadicals,
+
+        // NEW: Streaming states for ProcessingControls
+        streamingPhases,
+        streamingResult,
+        errorItems,
+        clearResults,
+        clearErrors,
     };
 }

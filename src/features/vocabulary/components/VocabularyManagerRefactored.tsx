@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { TokenManagement } from '../../../shared/components/TokenManagement';
 import { LevelSelector } from '../../../shared/components/LevelSelector';
-import { ProcessingControls } from './ProcessingControls';
+import { ProcessingControls } from '../../../shared/components/processing/ProcessingControls';
 import { VocabularyPreview } from './VocabularyPreview';
 import { useVocabularyManager } from '../hooks/useVocabularyManager';
 

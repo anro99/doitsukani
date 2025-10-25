@@ -1,15 +1,45 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
-import { Button } from '../../../shared/components/ui/button';
-import { Progress } from '../../../shared/components/ui/progress';
-import { StreamingProcessingPhase, StreamingCompleteProcessingResult } from '../lib/vocabulary-streaming-integration';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
 
-interface UploadStats {
+// ============================================================================
+// Generic Types for Processing Controls
+// ============================================================================
+
+export interface UploadStats {
     created: number;
     updated: number;
     failed: number;
     skipped: number;
     successful: number;
+}
+
+export interface StreamingProcessingPhase {
+    translationPhase: {
+        status: string;
+        progress: number;
+    };
+    uploadPhase: {
+        status: string;
+        progress: number;
+    };
+    overallPhase: {
+        status: string;
+        progress: number;
+        currentItem?: string;
+    };
+}
+
+export interface StreamingCompleteProcessingResult {
+    success: boolean;
+    wasStopped?: boolean;
+    totalItems: number;
+    translationCount: number;
+    uploadCount: number;
+    errorCount: number;
+    processingTime: number;
+    phases?: any[];
 }
 
 interface ProcessingControlsProps {
@@ -24,8 +54,8 @@ interface ProcessingControlsProps {
     uploadStats: UploadStats;
     onStartProcessing: () => void;
     onStopProcessing: () => void;
-    onClearResults?: () => void; // Optional callback to clear processing results
-    itemType?: 'radicals' | 'kanji' | 'vocabulary'; // Optional prop to specify the type
+    onClearResults?: () => void;
+    itemType: 'radicals' | 'kanji' | 'vocabulary';
 
     // Streaming processing props
     streamingPhases?: StreamingProcessingPhase | null;
@@ -36,6 +66,20 @@ interface ProcessingControlsProps {
     onClearErrors?: () => void;
 }
 
+// ============================================================================
+// Shared ProcessingControls Component
+// ============================================================================
+
+/**
+ * Shared ProcessingControls component für Vocabulary, Kanji und Radicals.
+ * 
+ * Features:
+ * - Dual Progress Bars (Translation + Upload)
+ * - Stop/Error/Success State Unterscheidung
+ * - Error Details mit Show More/Less
+ * - Clear Results Button
+ * - Responsive UI mit TailwindCSS
+ */
 export const ProcessingControls = ({
     apiToken,
     deeplToken,
@@ -49,7 +93,7 @@ export const ProcessingControls = ({
     onStartProcessing,
     onStopProcessing,
     onClearResults,
-    itemType = 'radicals', // Default to radicals for backward compatibility
+    itemType,
 
     // Streaming processing props
     streamingPhases,
@@ -65,6 +109,9 @@ export const ProcessingControls = ({
         (synonymMode === 'delete' || deeplToken) &&
         filteredItemsCount > 0 &&
         !isProcessing;
+
+    // Item type display name
+    const itemTypeName = itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals';
 
     return (
         <Card>
@@ -250,10 +297,6 @@ export const ProcessingControls = ({
                     </div>
                 )}
 
-
-
-
-
                 {/* Error Details Section */}
                 {errorItems && errorItems.size > 0 && (
                     <div className="mt-4 p-4 border rounded-lg bg-red-50" data-testid="error-details">
@@ -294,7 +337,7 @@ export const ProcessingControls = ({
                 )}
 
                 <div className="text-sm text-gray-600">
-                    <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals'} werden verarbeitet</p>
+                    <p>📊 <strong>{filteredItemsCount}</strong> {itemTypeName} werden verarbeitet</p>
                     <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
                     <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
                 </div>

@@ -1,7 +1,7 @@
 ﻿import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { TokenManagement } from '../../../shared/components/TokenManagement';
 import { LevelSelector } from '../../../shared/components/LevelSelector';
-import { ProcessingControls } from './ProcessingControls';
+import { ProcessingControls } from '../../../shared/components/processing/ProcessingControls';
 import { RadicalPreview } from './RadicalPreview';
 import { useRadicalsManager } from '../hooks/useRadicalsManager';
 
@@ -26,17 +26,24 @@ export const RadicalsManagerRefactored = () => {
         currentLevelCountLoading,
         previewRadicals,
 
+        // Streaming states (NEW)
+        streamingPhases,
+        streamingResult,
+        errorItems,
+
         // Actions
         handleApiTokenChange,
         handleDeeplTokenChange,
         setSelectedLevel,
         setSynonymMode,
         processTranslations,
-        stopProcessing
+        stopProcessing,
+        clearResults,
+        clearErrors,
     } = useRadicalsManager();
 
     const handleStartProcessing = () => {
-        processTranslations(filteredRadicals);
+        processTranslations();
     };
 
     const handleStopProcessing = () => {
@@ -108,6 +115,11 @@ export const RadicalsManagerRefactored = () => {
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="radicals"
+                    streamingPhases={streamingPhases}
+                    streamingResult={streamingResult}
+                    errorItems={errorItems}
+                    onClearResults={clearResults}
+                    onClearErrors={clearErrors}
                 />
             )}
 

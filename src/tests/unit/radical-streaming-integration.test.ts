@@ -20,7 +20,7 @@ vi.mock('../../shared/processing/services/WaniKaniUploadService', () => {
 describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
     const mockOptions = {
         batchSize: 1, // Streaming mode
-        synonymMode: 'smart' as const,
+        synonymMode: 'smart-merge' as const,
         apiToken: 'test-api-token',
         deeplToken: 'test-deepl-token',
         enableProgressReporting: true,
@@ -435,7 +435,7 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
     describe('Synonym Modes', () => {
         it('should support "smart" mode', async () => {
             // Arrange
-            const optionsSmartMode = { ...mockOptions, synonymMode: 'smart' as const };
+            const optionsSmartMode = { ...mockOptions, synonymMode: 'smart-merge' as const };
             mockTranslate.mockResolvedValueOnce(['Boden']);
             mockUpload.mockResolvedValue(true);
 

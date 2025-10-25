@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { TokenManagement } from '../../../shared/components/TokenManagement';
 import { LevelSelector } from '../../../shared/components/LevelSelector';
-import { ProcessingControls } from './ProcessingControls';
+import { ProcessingControls } from '../../../shared/components/processing/ProcessingControls';
 import { KanjiPreview } from './KanjiPreview';
 import { useKanjiManager } from '../hooks/useKanjiManager';
 
@@ -33,10 +33,17 @@ export const KanjiManagerRefactored = () => {
         uploadStatus,
         uploadStats,
 
+        // Streaming states (NEW)
+        streamingPhases,
+        streamingResult,
+        errorItems,
+
         // Actions
         processTranslations,
         stopProcessing,
-        loadMorePreviewKanji
+        loadMorePreviewKanji,
+        clearResults,
+        clearErrors,
     } = useKanjiManager();
 
     const handleStartProcessing = () => {
@@ -122,6 +129,11 @@ export const KanjiManagerRefactored = () => {
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="kanji"
+                    streamingPhases={streamingPhases}
+                    streamingResult={streamingResult}
+                    errorItems={errorItems}
+                    onClearResults={clearResults}
+                    onClearErrors={clearErrors}
                 />
             )}
 
