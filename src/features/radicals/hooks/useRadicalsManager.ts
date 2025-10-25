@@ -357,7 +357,7 @@ export function useRadicalsManager() {
         const slicedRadicals = wkRadicals.slice(0, displayedPreviewCount);
         return convertToInternalFormat(slicedRadicals, studyMaterials);
     }, [wkRadicals, studyMaterials, displayedPreviewCount]);
-    
+
     const currentLevelCount = radicalsCount;
     const currentLevelCountLoading = isLoadingRadicals;
 
