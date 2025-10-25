@@ -76,10 +76,9 @@ export const ProcessingControls = ({
                     <Button
                         onClick={onStartProcessing}
                         disabled={!canStart}
-                        className={`flex-1 ${
-                            streamingResult?.wasStopped
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : streamingResult?.success
+                        className={`flex-1 ${streamingResult?.wasStopped
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : streamingResult?.success
                                 ? 'bg-green-600 hover:bg-green-700'
                                 : streamingResult && !streamingResult.success
                                     ? 'bg-orange-600 hover:bg-orange-700'
@@ -212,10 +211,9 @@ export const ProcessingControls = ({
 
                 {/* Streaming Processing Result Summary */}
                 {streamingResult && !isProcessing && (
-                    <div className={`p-3 border rounded-lg ${
-                        streamingResult.wasStopped
-                            ? 'bg-blue-50 border-blue-200'
-                            : streamingResult.success
+                    <div className={`p-3 border rounded-lg ${streamingResult.wasStopped
+                        ? 'bg-blue-50 border-blue-200'
+                        : streamingResult.success
                             ? 'bg-green-50 border-green-200'
                             : 'bg-orange-50 border-orange-200'
                         }`}>
@@ -226,10 +224,9 @@ export const ProcessingControls = ({
                                     ? '⏹️'
                                     : streamingResult.success ? '✅' : '⚠️'
                             }</span>
-                            <h4 className={`text-sm font-medium ${
-                                streamingResult.wasStopped
-                                    ? 'text-blue-800'
-                                    : streamingResult.success ? 'text-green-800' : 'text-orange-800'
+                            <h4 className={`text-sm font-medium ${streamingResult.wasStopped
+                                ? 'text-blue-800'
+                                : streamingResult.success ? 'text-green-800' : 'text-orange-800'
                                 }`}>
                                 {streamingResult.wasStopped
                                     ? 'Processing Stopped by User'
@@ -238,17 +235,15 @@ export const ProcessingControls = ({
                             </h4>
                         </div>
 
-                        <div className={`text-xs grid grid-cols-2 gap-2 ${
-                            streamingResult.wasStopped
-                                ? 'text-blue-700'
-                                : streamingResult.success ? 'text-green-700' : 'text-orange-700'
+                        <div className={`text-xs grid grid-cols-2 gap-2 ${streamingResult.wasStopped
+                            ? 'text-blue-700'
+                            : streamingResult.success ? 'text-green-700' : 'text-orange-700'
                             }`}>
                             <div>📊 Items: <strong>{streamingResult.totalItems}</strong></div>
                             <div>⏱️ Time: <strong>{(streamingResult.processingTime / 1000).toFixed(1)}s</strong></div>
                             <div>🔄 Translated: <strong>{streamingResult.translationCount}</strong></div>
                             <div>📤 Uploaded: <strong>{streamingResult.uploadCount}</strong></div>
                             <div>❌ Errors: <strong>{streamingResult.errorCount}</strong></div>
-                            <div>⚡ Mode: <strong>Streaming</strong></div>
                         </div>
 
                         {streamingResult.errorCount > 0 && (
