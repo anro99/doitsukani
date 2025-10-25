@@ -7,6 +7,7 @@ interface RadicalsUploadStats {
     updated: number;
     failed: number;
     skipped: number;
+    successful: number;
 }
 
 interface ProcessingControlsProps {
@@ -131,10 +132,16 @@ export const ProcessingControls = ({
                 )}
 
                 {/* Upload Statistics */}
-                {(uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 || uploadStats.skipped > 0) && (
+                {(uploadStats.successful > 0 || uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 || uploadStats.skipped > 0) && (
                     <div className="space-y-2 pt-4 border-t">
                         <div className="font-medium text-sm">Statistik:</div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
+                            {uploadStats.successful > 0 && (
+                                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                                    <span className="font-medium text-green-900">{uploadStats.successful}</span>
+                                    <span className="text-green-700"> erfolgreich</span>
+                                </div>
+                            )}
                             {uploadStats.created > 0 && (
                                 <div className="p-2 bg-green-50 border border-green-200 rounded">
                                     <span className="font-medium text-green-900">{uploadStats.created}</span>

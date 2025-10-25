@@ -99,7 +99,7 @@ export class RadicalTranslationService extends DeeplTranslationService {
             const cleanedPrimary = primaryTranslation.trim();
             if (cleanedPrimary && cleanedPrimary.length > 0) {
                 translations.push(truncateSynonym(cleanedPrimary));
-                
+
                 // Log mit character (wenn vorhanden) oder ID
                 const displayName = radicalItem.characters || `Radical #${radicalItem.id}`;
                 console.log(`✅ Translation for ${displayName}: ${cleanedPrimary}`);

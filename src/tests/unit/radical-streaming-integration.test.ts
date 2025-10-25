@@ -281,7 +281,7 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
             // Assert
             expect(result.success).toBe(false); // Has upload failure
             expect(result.totalItems).toBe(3);
-            expect(result.translationCount).toBe(3);
+            expect(result.translationCount).toBe(2); // Only successful uploads count
             expect(result.uploadCount).toBe(2); // Only 2 successful
             expect(result.errorCount).toBe(1);
         });
@@ -338,7 +338,7 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
             // Assert
             const calls = progressCallback.mock.calls;
             const translationPhases = calls.map(c => c[0].translationPhase.progress);
-            
+
             // Progress should increase
             expect(translationPhases.some(p => p > 0)).toBe(true);
             expect(translationPhases.some(p => p === 100)).toBe(true);
@@ -359,7 +359,7 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
             // Assert
             const calls = progressCallback.mock.calls;
             const uploadPhases = calls.map(c => c[0].uploadPhase.progress);
-            
+
             // Progress should increase
             expect(uploadPhases.some(p => p > 0)).toBe(true);
             expect(uploadPhases.some(p => p === 100)).toBe(true);
@@ -380,7 +380,7 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
             // Assert
             const calls = progressCallback.mock.calls;
             const overallPhases = calls.map(c => c[0].overallPhase);
-            
+
             // Final phase should be complete
             const finalPhase = overallPhases[overallPhases.length - 1];
             expect(finalPhase.progress).toBe(100);

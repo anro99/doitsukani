@@ -206,7 +206,7 @@ export async function processRadicalStreaming(
                                 uploadedSynonyms: synonyms,
                                 message: 'Successfully processed and uploaded'
                             });
-                            
+
                             // Display name mit nullable characters handling
                             const displayName = originalItem.characters || `Radical #${itemId}`;
                             console.log(`✅ Live-updated preview for ${displayName}`);
