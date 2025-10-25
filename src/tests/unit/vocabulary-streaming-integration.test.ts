@@ -164,10 +164,16 @@ describe('🚀 Vocabulary Streaming Integration (Service-based Mocks)', () => {
     describe('Error Handling', () => {
         it('should handle translation errors gracefully', async () => {
             // Arrange
+            // Item 1: Success
+            // Item 2: Fails 4 times (initial + 3 retries)
+            // Item 3: Success
             mockTranslate = vi.fn()
-                .mockResolvedValueOnce(['Katze'])
-                .mockRejectedValueOnce(new Error('Translation failed'))
-                .mockResolvedValueOnce(['Vogel']);
+                .mockResolvedValueOnce(['Katze']) // Item 1 success
+                .mockRejectedValueOnce(new Error('Translation failed')) // Item 2 fail 1
+                .mockRejectedValueOnce(new Error('Translation failed')) // Item 2 fail 2
+                .mockRejectedValueOnce(new Error('Translation failed')) // Item 2 fail 3
+                .mockRejectedValueOnce(new Error('Translation failed')) // Item 2 fail 4
+                .mockResolvedValueOnce(['Vogel']); // Item 3 success
 
             (VocabularyTranslationService as any).mockImplementation(() => ({
                 name: 'Vocabulary',

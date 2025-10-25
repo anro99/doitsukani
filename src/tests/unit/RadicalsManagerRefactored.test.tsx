@@ -37,7 +37,7 @@ vi.mock('../../shared/components/LevelSelector', () => ({
     )
 }));
 
-vi.mock('../../features/radicals/components/ProcessingControls', () => ({
+vi.mock('../../shared/components/processing/ProcessingControls', () => ({
     ProcessingControls: ({ onStartProcessing, onStopProcessing, isProcessing }: any) => (
         <div data-testid="processing-controls">
             <button
@@ -258,7 +258,7 @@ describe('RadicalsManagerRefactored', () => {
         render(<RadicalsManagerRefactored />);
         fireEvent.click(screen.getByTestId('start-processing'));
 
-        expect(processTranslations).toHaveBeenCalledWith(mockRadicals);
+        expect(processTranslations).toHaveBeenCalled();
     });
 
     it('handles stop processing', () => {

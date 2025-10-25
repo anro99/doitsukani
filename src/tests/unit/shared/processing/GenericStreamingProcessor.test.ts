@@ -141,7 +141,7 @@ describe('GenericStreamingProcessor', () => {
         it('sollte Items erfolgreich in Batches verarbeiten', async () => {
             const items = createTestItems(10);
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 5,
                 onProgress: (progress) => progressUpdates.push(progress),
             };
@@ -171,7 +171,7 @@ describe('GenericStreamingProcessor', () => {
         it('sollte leere Item-Liste handhaben', async () => {
             const items: ProcessableItem[] = [];
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
             };
 
             const result = await processor.process(
@@ -194,7 +194,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', batchSize: 1 }
+                { synonymMode: 'smart-merge', batchSize: 1 }
             );
             expect(result1.successful).toHaveLength(10);
 
@@ -204,7 +204,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', batchSize: 10 }
+                { synonymMode: 'smart-merge', batchSize: 10 }
             );
             expect(result2.successful).toHaveLength(10);
 
@@ -214,7 +214,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', batchSize: 20 }
+                { synonymMode: 'smart-merge', batchSize: 20 }
             );
             expect(result3.successful).toHaveLength(10);
         });
@@ -228,7 +228,7 @@ describe('GenericStreamingProcessor', () => {
         it('sollte 3-Phasen Progress korrekt tracken', async () => {
             const items = createTestItems(5);
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 5,
                 onProgress: (progress) => progressUpdates.push(progress),
             };
@@ -260,7 +260,7 @@ describe('GenericStreamingProcessor', () => {
         it('sollte Progress inkrementell updaten', async () => {
             const items = createTestItems(10);
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
                 onProgress: (progress) => progressUpdates.push(progress),
             };
@@ -283,7 +283,7 @@ describe('GenericStreamingProcessor', () => {
         it('sollte processedCount und totalCount korrekt tracken', async () => {
             const items = createTestItems(7);
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 3,
                 onProgress: (progress) => progressUpdates.push(progress),
             };
@@ -306,7 +306,7 @@ describe('GenericStreamingProcessor', () => {
             mockUploadService.setDelay(10);
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
                 onProgress: (progress) => progressUpdates.push(progress),
             };
@@ -342,7 +342,7 @@ describe('GenericStreamingProcessor', () => {
             });
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 maxRetries: 0, // Keine Retries
             };
 
@@ -372,7 +372,7 @@ describe('GenericStreamingProcessor', () => {
             });
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 maxRetries: 0,
             };
 
@@ -401,7 +401,7 @@ describe('GenericStreamingProcessor', () => {
             });
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 maxRetries: 3,
             };
 
@@ -426,7 +426,7 @@ describe('GenericStreamingProcessor', () => {
             });
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 maxRetries: 2,
             };
 
@@ -453,7 +453,7 @@ describe('GenericStreamingProcessor', () => {
             let processedCount = 0;
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
                 shouldStop: () => processedCount >= 4, // Stop nach 4 Items
                 onProgress: (progress) => {
@@ -480,7 +480,7 @@ describe('GenericStreamingProcessor', () => {
             mockTranslationService.setDelay(50);
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
             };
 
@@ -508,7 +508,7 @@ describe('GenericStreamingProcessor', () => {
             mockTranslationService.setDelay(20);
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
             };
 
@@ -535,7 +535,7 @@ describe('GenericStreamingProcessor', () => {
             mockTranslationService.setDelay(50);
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 batchSize: 2,
             };
 
@@ -571,7 +571,7 @@ describe('GenericStreamingProcessor', () => {
             ];
 
             const options: ProcessingOptions = {
-                synonymMode: 'smart',
+                synonymMode: 'smart-merge',
                 maxSynonyms: 8,
             };
 
@@ -661,7 +661,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart' }
+                { synonymMode: 'smart-merge' }
             );
 
             expect(result.stats.total).toBe(10);
@@ -678,7 +678,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart' }
+                { synonymMode: 'smart-merge' }
             );
 
             // Erwartung: translatedWithDeepL oder translatedWithDictionary
@@ -698,7 +698,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart' }
+                { synonymMode: 'smart-merge' }
             );
 
             // Erwartung: Jedes Item hat processingTime
@@ -719,7 +719,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', batchSize: 5 }
+                { synonymMode: 'smart-merge', batchSize: 5 }
             );
             const endTime = Date.now();
             const actualTime = endTime - startTime;
@@ -746,7 +746,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', ignoreBurned: true }
+                { synonymMode: 'smart-merge', ignoreBurned: true }
             );
 
             expect(result.successful).toHaveLength(2);
@@ -765,7 +765,7 @@ describe('GenericStreamingProcessor', () => {
                 items,
                 mockTranslationService,
                 mockUploadService,
-                { synonymMode: 'smart', onlyWithoutSynonyms: true }
+                { synonymMode: 'smart-merge', onlyWithoutSynonyms: true }
             );
 
             expect(result.successful).toHaveLength(2);

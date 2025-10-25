@@ -288,10 +288,16 @@ describe('🚀 Kanji Streaming Integration (Service-based Mocks)', () => {
     describe('Error Handling', () => {
         it('should handle translation errors gracefully', async () => {
             // Arrange
+            // Item 1: Success
+            mockTranslate.mockResolvedValueOnce(['Katze', 'Katzenartig']);
+            // Item 2: Fails 4 times (initial + 3 retries with maxRetries=3)
             mockTranslate
-                .mockResolvedValueOnce(['Katze', 'Katzenartig'])
                 .mockRejectedValueOnce(new Error('DeepL API error'))
-                .mockResolvedValueOnce(['Vogel', 'Vogelartig']);
+                .mockRejectedValueOnce(new Error('DeepL API error'))
+                .mockRejectedValueOnce(new Error('DeepL API error'))
+                .mockRejectedValueOnce(new Error('DeepL API error'));
+            // Item 3: Success
+            mockTranslate.mockResolvedValueOnce(['Vogel', 'Vogelartig']);
             mockUpload.mockResolvedValue(true);
 
             // Act

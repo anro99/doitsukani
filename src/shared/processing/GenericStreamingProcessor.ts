@@ -233,8 +233,8 @@ export class GenericStreamingProcessor<T extends ProcessableItem> {
             return newSynonyms.slice(0, maxSynonyms);
         }
 
-        // Smart Mode: Merge existing + new
-        if (mode === 'smart') {
+        // Smart-Merge Mode: Merge existing + new
+        if (mode === 'smart-merge') {
             const existing = item.existingSynonyms || [];
             const merged = [...existing];
 

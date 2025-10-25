@@ -24,6 +24,7 @@ const PREVIEW_BATCH_SIZE = 12;
 export interface Radical {
     id: number;
     primaryMeaning: string;
+    meaning: string; // Alias for primaryMeaning (for RadicalPreview compatibility)
     characters: string | null;
     level: number;
     currentSynonyms: string[];
@@ -149,6 +150,7 @@ export function useRadicalsManager() {
             return {
                 id: radical.id,
                 primaryMeaning,
+                meaning: primaryMeaning, // Alias for RadicalPreview compatibility
                 characters: radical.data.characters,
                 level: radical.data.level,
                 currentSynonyms: studyMaterialsMap.get(radical.id)?.data.meaning_synonyms || [],

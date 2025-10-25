@@ -208,10 +208,16 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
 
         it('should handle translation errors gracefully', async () => {
             // Arrange
+            // Item 1: Success
+            mockTranslate.mockResolvedValueOnce(['Boden']);
+            // Item 2: Fails 4 times (initial + 3 retries with maxRetries=3)
             mockTranslate
-                .mockResolvedValueOnce(['Boden']) // Success
-                .mockRejectedValueOnce(new Error('Translation failed')) // Error
-                .mockResolvedValueOnce(['Stock']); // Success
+                .mockRejectedValueOnce(new Error('Translation failed'))
+                .mockRejectedValueOnce(new Error('Translation failed'))
+                .mockRejectedValueOnce(new Error('Translation failed'))
+                .mockRejectedValueOnce(new Error('Translation failed'));
+            // Item 3: Success
+            mockTranslate.mockResolvedValueOnce(['Stock']);
             mockUpload.mockResolvedValue(true);
 
             // Act
@@ -479,10 +485,16 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
     describe('Error Handling', () => {
         it('should continue processing after translation error', async () => {
             // Arrange
+            // Item 1: Fails 4 times (initial + 3 retries)
             mockTranslate
                 .mockRejectedValueOnce(new Error('Translation error'))
-                .mockResolvedValueOnce(['Mund'])
-                .mockResolvedValueOnce(['Stock']);
+                .mockRejectedValueOnce(new Error('Translation error'))
+                .mockRejectedValueOnce(new Error('Translation error'))
+                .mockRejectedValueOnce(new Error('Translation error'));
+            // Item 2: Success
+            mockTranslate.mockResolvedValueOnce(['Mund']);
+            // Item 3: Success
+            mockTranslate.mockResolvedValueOnce(['Stock']);
             mockUpload.mockResolvedValue(true);
 
             // Act
@@ -497,10 +509,16 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
         it('should continue processing after upload error', async () => {
             // Arrange
             mockTranslate.mockResolvedValue(['Test']);
+            // Item 1: Upload succeeds
+            mockUpload.mockResolvedValueOnce(true);
+            // Item 2: Upload fails 4 times (initial + 3 retries)
             mockUpload
-                .mockResolvedValueOnce(true)
                 .mockRejectedValueOnce(new Error('Upload error'))
-                .mockResolvedValueOnce(true);
+                .mockRejectedValueOnce(new Error('Upload error'))
+                .mockRejectedValueOnce(new Error('Upload error'))
+                .mockRejectedValueOnce(new Error('Upload error'));
+            // Item 3: Upload succeeds
+            mockUpload.mockResolvedValueOnce(true);
 
             // Act
             const result = await processRadicalStreaming(mockRadicalItems, mockOptions);
@@ -513,7 +531,23 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
 
         it('should handle network errors', async () => {
             // Arrange
-            mockTranslate.mockRejectedValue(new Error('Network timeout'));
+            // All 3 items fail 4 times each (initial + 3 retries) = 12 total failures
+            mockTranslate
+                // Item 1: 4 failures
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                // Item 2: 4 failures
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                // Item 3: 4 failures
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'))
+                .mockRejectedValueOnce(new Error('Network timeout'));
             mockUpload.mockResolvedValue(true);
 
             // Act
@@ -527,10 +561,20 @@ describe('🚀 Radical Streaming Integration (Service-based Mocks)', () => {
 
         it('should track error count correctly', async () => {
             // Arrange
+            // Item 1: Fails 4 times (initial + 3 retries)
             mockTranslate
                 .mockRejectedValueOnce(new Error('Error 1'))
+                .mockRejectedValueOnce(new Error('Error 1'))
+                .mockRejectedValueOnce(new Error('Error 1'))
+                .mockRejectedValueOnce(new Error('Error 1'));
+            // Item 2: Fails 4 times (initial + 3 retries)
+            mockTranslate
                 .mockRejectedValueOnce(new Error('Error 2'))
-                .mockResolvedValueOnce(['Stock']);
+                .mockRejectedValueOnce(new Error('Error 2'))
+                .mockRejectedValueOnce(new Error('Error 2'))
+                .mockRejectedValueOnce(new Error('Error 2'));
+            // Item 3: Success
+            mockTranslate.mockResolvedValueOnce(['Stock']);
             mockUpload.mockResolvedValue(true);
 
             // Act

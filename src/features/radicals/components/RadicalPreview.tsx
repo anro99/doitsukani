@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
 interface Radical {
     id: number;
     meaning: string;
-    characters?: string;
+    characters: string | null;
     level: number;
     currentSynonyms: string[];
     selected: boolean;

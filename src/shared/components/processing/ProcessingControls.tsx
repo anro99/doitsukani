@@ -114,7 +114,7 @@ export const ProcessingControls = ({
     const itemTypeName = itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals';
 
     return (
-        <Card>
+        <Card data-testid="processing-controls">
             <CardHeader>
                 <CardTitle>🚀 Verarbeitung starten</CardTitle>
             </CardHeader>
@@ -132,6 +132,7 @@ export const ProcessingControls = ({
                                     : ''
                             }`}
                         variant={streamingResult ? "default" : "default"}
+                        data-testid="start-processing"
                     >
                         {isProcessing ? (
                             'Streaming läuft...'
@@ -150,6 +151,7 @@ export const ProcessingControls = ({
                         onClick={onStopProcessing}
                         disabled={!isProcessing}
                         className={isProcessing ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}
+                        data-testid="stop-processing"
                     >
                         {isProcessing ? '⏹️ Stoppen' : 'Stoppen'}
                     </Button>
