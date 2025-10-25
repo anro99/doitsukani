@@ -121,13 +121,9 @@ export const ProcessingControls = ({
 
                 {isProcessing && (
                     <div className="space-y-4">
-                        {/* Streaming Mode - Dual Progress Bars */}
+                        {/* Dual Progress Bars */}
                         {streamingPhases && (
                             <div className="space-y-4">
-                                <div className="text-sm font-medium text-gray-700 text-center">
-                                    🚀 Streaming Mode: Parallel Translation & Upload
-                                </div>
-
                                 {/* Translation Progress */}
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
@@ -301,7 +297,6 @@ export const ProcessingControls = ({
                     <p>📊 <strong>{filteredItemsCount}</strong> {itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals'} werden verarbeitet</p>
                     <p>⚙️ <strong>{synonymMode}</strong> Modus wird verwendet</p>
                     <p>🇩🇪 Übersetzung nach <strong>Deutsch</strong></p>
-                    <p>⚡ <strong>Streaming Mode</strong> - Parallel translation & upload</p>
                 </div>
             </CardContent>
         </Card>
