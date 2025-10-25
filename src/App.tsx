@@ -4,11 +4,6 @@ import { AxiosError } from "axios";
 
 import "./App.css";
 
-// Import debug tools for development
-if (process.env.NODE_ENV === 'development') {
-  import('./shared/lib/api-test-tools');
-}
-
 import { Button } from "./shared/components/ui/button";
 import { Input } from "./shared/components/ui/input";
 import {
