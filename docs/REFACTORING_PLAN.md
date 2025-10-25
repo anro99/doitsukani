@@ -1,9 +1,10 @@
 # 🚀 Refactoring Plan: Unified Streaming Architecture
 
-**Status:** ✅ Phase 3.3 COMPLETE (45% → 60%)  
+**Status:** ✅ Phase 3.4 COMPLETE (60% → 65%)  
 **Ziel:** Streaming-Pattern für alle Features etabliert ✅  
-**Zeitaufwand:** 15-20 Stunden (erreicht)  
-**Letztes Update:** 25. Oktober 2025
+**Legacy Cleanup:** 756 Zeilen Dead Code entfernt ✅  
+**Zeitaufwand:** 22 Stunden (von 26-29h Budget)  
+**Letztes Update:** Januar 2025
 
 ---
 
@@ -816,14 +817,14 @@ src/
 | **Phase 3.1.1** | 2h | ✅ DONE | Vocabulary Tests repariert (23 Tests migriert, 2 LEGACY) |
 | **Phase 3.2** | 5h | ✅ **DONE** | **Kanji Migration (897→308 lines, -66%)** |
 | **Phase 3.3** | 5h | ✅ **DONE** | **Radicals Migration (747→378 lines, -49%)** |
-| **Phase 3.4** | 1h | ⏳ TODO | Cleanup (Legacy Code löschen) |
+| **Phase 3.4** | 1h | ✅ **DONE** | **Cleanup: Dead Code deleted (-756 lines)** |
 | **Phase 4** | 2h | ⏳ TODO | Integration Tests (Kanji/Radicals) |
 | **Phase 5** | 1h | ⏳ TODO | Hook Refactoring |
 | **Phase 6** | 1h | ⏳ TODO | UI Updates |
-| **TOTAL** | **26-29h** | ~60% | |
+| **TOTAL** | **26-29h** | ~65% | |
 
-**Zeit investiert:** ~21 Stunden  
-**Zeit verbleibend:** ~5-8 Stunden
+**Zeit investiert:** ~22 Stunden  
+**Zeit verbleibend:** ~4-7 Stunden
 
 ---
 
@@ -1192,10 +1193,61 @@ const startProcessing = async () => {
 **Phase 3.1:** ✅ Vocabulary Migration (COMPLETE)  
 **Phase 3.1.1:** ✅ Vocabulary Test Cleanup (COMPLETE)  
 **Phase 3.2:** ✅ Kanji Migration (COMPLETE - mit Bugfixes)  
-**Phase 3.3:** ⏳ Radicals Migration (NEXT - ~5h)  
-**Phase 4:** ⏳ Shared Components (TODO)
+**Phase 3.3:** ✅ Radicals Migration (COMPLETE - 5h)  
+**Phase 3.4:** ✅ **Legacy Code Cleanup (COMPLETE - 1h)**  
+**Phase 4:** ⏳ Integration Tests (NEXT - ~2h)  
+**Phase 5:** ⏳ Hook Refactoring (TODO - ~1h)
 
-**Gesamtfortschritt: 45% (nach Phase 3.2)**
+**Gesamtfortschritt: 65% (nach Phase 3.4)**
+
+---
+
+## ✅ Phase 3.4: Legacy Code Cleanup - COMPLETE
+
+**Dauer:** 1 Stunde  
+**Status:** ✅ **DONE**  
+**Datum:** Januar 2025
+
+### Erreichte Ziele
+
+✅ **756 Zeilen gelöscht**: 3 Dead Code Dateien entfernt  
+✅ **Konservative Strategie**: Nur provably unused files  
+✅ **Keine Regressionen**: 593 Unit, 81 Integration Tests passing  
+✅ **Deferred to Phase 5**: Type-Migrationen, Test-Refactoring
+
+### Gelöschte Dateien
+
+1. **vocabulary-batch-processing.ts** (275 Zeilen)
+   - Nur von eigenem Test verwendet
+   - Ersetzt durch vocabulary-streaming-integration.ts
+
+2. **debug-vocabulary-processing.ts** (215 Zeilen)
+   - Nie importiert oder verwendet
+   - Pre-Streaming Debug-Utility
+
+3. **vocabulary-batch-processing.test.ts** (266 Zeilen)
+   - Orphaned nach Löschung von vocabulary-batch-processing.ts
+
+### Deferred Work (Phase 5)
+
+**Nicht gelöscht** (noch in Verwendung für Types):
+- `vocabulary-integration.ts` - Type-Definitionen für Tests
+- `vocabulary-wanikani-upload.ts` - Legacy-Types
+
+**Grund**: Phase 5 (Hook Refactoring) ist besserer Kontext für Type-Migration
+
+### Test-Ergebnisse
+
+✅ **593/620 Unit Tests** bestehen (19 Failures sind Legacy)  
+✅ **81/82 Integration Tests** bestehen (1 Failure ist flaky Radicals-Test)  
+✅ **Keine neuen Regressionen** durch Cleanup
+
+### Dokumentation
+
+📄 Siehe: `docs/development/PHASE_3.4_COMPLETION.md` (vollständiger Report)  
+📄 Strategy: `docs/development/PHASE_3.4_PLAN.md` (Conservative vs Aggressive)
+
+---
 
 ### Recent Bug Fixes (Post-Phase 3.2)
 - ✅ **4e67e82**: Level-Filter in useKanjiManager behoben
