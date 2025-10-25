@@ -19,7 +19,7 @@ import type {
     UploadService,
 } from '../../../shared/processing/types/processing.types';
 import type { VocabularyItem } from './vocabulary-translation';
-import type { CompleteProcessingOptions } from './vocabulary-integration';
+import type { CompleteProcessingOptions } from './vocabulary-types';
 
 // ============================================================================
 // Legacy Interfaces (für Backward Compatibility)
@@ -50,6 +50,7 @@ export interface StreamingProcessingPhase {
 
 export interface StreamingCompleteProcessingResult {
     success: boolean;
+    wasStopped?: boolean;
     totalItems: number;
     translationCount: number;
     uploadCount: number;
@@ -115,6 +116,7 @@ function toLegacyResult(
 ): StreamingCompleteProcessingResult {
     return {
         success: result.stats.failed === 0 && !result.wasStopped,
+        wasStopped: result.wasStopped,
         totalItems: result.stats.total,
         translationCount: result.stats.translatedWithDeepL + result.stats.translatedWithDictionary,
         uploadCount: result.stats.successful,

@@ -13,7 +13,8 @@ import {
 } from '../lib/vocabulary-streaming-integration';
 import {
     VocabularyItemResult,
-    VocabularyItemError
+    VocabularyItemError,
+    CompleteProcessingOptions
 } from '../lib/vocabulary-types';
 import { VocabularyItem } from '../lib/vocabulary-translation';
 
@@ -100,6 +101,17 @@ export function useVocabularyManager() {
 
     // Error tracking for display
     const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
+
+    // Reset processing state when level changes
+    useEffect(() => {
+        console.log('🔄 Level changed, resetting processing state');
+        setStreamingResult(null);
+        setProgress(0);
+        setApiError('');
+        setIsProcessing(false);
+        setStreamingPhases(null);
+        setErrorItems(new Map());
+    }, [selectedLevel]);
 
     // Processing callback functions
     const handleItemProcessing = (item: VocabularyItem, phase: 'translation' | 'upload') => {
@@ -395,15 +407,17 @@ export function useVocabularyManager() {
                 setStreamingResult(result);
                 setProgress(100);
 
-                if (result.success) {
+                if (result.wasStopped) {
+                    console.log('⏹️ Processing stopped by user:', result);
+                } else if (result.errorCount > 0) {
+                    console.warn('⚠️ Streaming processing completed with errors:', result);
+                } else {
                     console.log('✅ Streaming processing completed successfully:', result);
 
                     // Reload vocabulary data to show updated synonyms
                     if (result.uploadCount > 0) {
                         setTimeout(() => loadVocabularyFromAPI(), 1000);
                     }
-                } else {
-                    console.warn('⚠️ Streaming processing completed with errors:', result);
                 }
             }
         } catch (error) {
