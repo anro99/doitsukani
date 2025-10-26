@@ -83,7 +83,7 @@ const Colors = {
     reset: '\x1b[0m',
     bright: '\x1b[1m',
     dim: '\x1b[2m',
-    
+
     // Farben
     black: '\x1b[30m',
     red: '\x1b[31m',
@@ -93,7 +93,7 @@ const Colors = {
     magenta: '\x1b[35m',
     cyan: '\x1b[36m',
     white: '\x1b[37m',
-    
+
     // Hintergründe
     bgRed: '\x1b[41m',
     bgYellow: '\x1b[43m',

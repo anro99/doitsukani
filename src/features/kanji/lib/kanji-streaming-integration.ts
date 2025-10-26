@@ -19,6 +19,7 @@ import type {
     ProcessableItem,
 } from '../../../shared/processing/types/processing.types';
 import type { KanjiItem } from './KanjiTranslationService';
+import { createLogger } from '../../../shared/lib/logger';
 
 // ============================================================================
 // Legacy Interfaces (für Backward Compatibility)
@@ -171,7 +172,10 @@ export async function processKanjiStreaming(
     onProgress?: (phases: StreamingProcessingPhase) => void,
     stopSignal?: { current: boolean }
 ): Promise<StreamingCompleteProcessingResult> {
-    console.log(`🚀 Starting STREAMING processing of ${kanjiItems.length} kanji items (GenericStreamingProcessor)`);
+    const logger = createLogger('KanjiStreamingIntegration');
+    logger.info(`Starting STREAMING processing`, {
+        itemCount: kanjiItems.length,
+    });
 
     // Track all phases for legacy interface
     const allPhases: StreamingProcessingPhase[] = [];
@@ -204,9 +208,15 @@ export async function processKanjiStreaming(
                                 uploadedSynonyms: synonyms,
                                 message: 'Successfully processed and uploaded'
                             });
-                            console.log(`✅ Live-updated preview for ${originalItem.characters}`);
+                            logger.debug(`Live-updated preview`, {
+                                characters: originalItem.characters,
+                                itemId,
+                            });
                         } catch (error) {
-                            console.warn(`⚠️ Callback error in live onItemUpdated for item ${itemId}:`, error);
+                            logger.warn(`Callback error in live onItemUpdated`, {
+                                itemId,
+                                error,
+                            });
                         }
                     }
                 }
@@ -230,14 +240,18 @@ export async function processKanjiStreaming(
             const legacyPhase = toLegacyPhase(progress);
             allPhases.push(legacyPhase);
 
-            console.log(`📊 Progress: ${progress.overallProgress}% (${progress.processedCount}/${progress.totalCount})`);
+            logger.debug(`Progress update`, {
+                overallProgress: progress.overallProgress,
+                processedCount: progress.processedCount,
+                totalCount: progress.totalCount,
+            });
 
             // Call legacy onProgress callback
             if (onProgress) {
                 try {
                     onProgress(legacyPhase);
                 } catch (error) {
-                    console.warn('⚠️ Callback error in onProgress:', error);
+                    logger.warn('Callback error in onProgress', { error });
                 }
             }
         };
@@ -266,13 +280,20 @@ export async function processKanjiStreaming(
             processingOptions
         );
 
-        console.log('🎯 Processing completed:', result.stats);
+        logger.info('Processing completed', {
+            stats: result.stats,
+            itemCount: kanjiItems.length,
+        });
 
         // Convert to legacy result format
         return toLegacyResult(result, allPhases);
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown streaming processing error';
+        logger.error('STREAMING Processing failed', error as Error, {
+            itemCount: kanjiItems.length,
+            errorMessage,
+        });
         console.error('❌ STREAMING Processing failed:', errorMessage);
 
         return {

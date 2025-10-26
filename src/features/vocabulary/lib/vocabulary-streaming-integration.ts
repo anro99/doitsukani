@@ -20,6 +20,7 @@ import type {
 } from '../../../shared/processing/types/processing.types';
 import type { VocabularyItem } from './vocabulary-translation';
 import type { CompleteProcessingOptions } from './vocabulary-types';
+import { createLogger } from '../../../shared/lib/logger';
 
 // ============================================================================
 // Legacy Interfaces (für Backward Compatibility)
@@ -152,7 +153,11 @@ export async function processVocabularyStreaming(
     onProgress?: (phases: StreamingProcessingPhase) => void,
     stopSignal?: { current: boolean }
 ): Promise<StreamingCompleteProcessingResult> {
-    console.log(`🚀 Starting STREAMING processing of ${vocabularyItems.length} vocabulary items (GenericStreamingProcessor)`);
+    const logger = createLogger('VocabularyStreamingIntegration');
+    logger.info(`Starting STREAMING processing`, {
+        itemCount: vocabularyItems.length,
+        synonymMode: options.synonymMode,
+    });
 
     // Track all phases for legacy interface
     const allPhases: StreamingProcessingPhase[] = [];
@@ -191,9 +196,15 @@ export async function processVocabularyStreaming(
                                 uploadedSynonyms: synonyms,
                                 message: 'Successfully processed and uploaded'
                             });
-                            console.log(`✅ Live-updated preview for ${originalItem.characters}`);
+                            logger.debug(`Live-updated preview`, {
+                                characters: originalItem.characters,
+                                itemId,
+                            });
                         } catch (error) {
-                            console.warn(`⚠️ Callback error in live onItemUpdated for item ${itemId}:`, error);
+                            logger.warn(`Callback error in live onItemUpdated`, {
+                                itemId,
+                                error,
+                            });
                         }
                     }
                 }
@@ -217,14 +228,18 @@ export async function processVocabularyStreaming(
             const legacyPhase = toLegacyPhase(progress);
             allPhases.push(legacyPhase);
 
-            console.log(`📊 Progress: ${progress.overallProgress}% (${progress.processedCount}/${progress.totalCount})`);
+            logger.debug(`Progress update`, {
+                overallProgress: progress.overallProgress,
+                processedCount: progress.processedCount,
+                totalCount: progress.totalCount,
+            });
 
             // Call legacy onProgress callback
             if (onProgress) {
                 try {
                     onProgress(legacyPhase);
                 } catch (error) {
-                    console.warn('⚠️ Callback error in onProgress:', error);
+                    logger.warn('Callback error in onProgress', { error });
                 }
             }
         };
@@ -253,7 +268,10 @@ export async function processVocabularyStreaming(
             processingOptions
         );
 
-        console.log('🎯 Processing completed:', result.stats);
+        logger.info('Processing completed', {
+            stats: result.stats,
+            itemCount: vocabularyItems.length,
+        });
 
         // Note: Post-processing is no longer needed because wrappedUploadService
         // already called onItemUpdated during processing
@@ -263,6 +281,10 @@ export async function processVocabularyStreaming(
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown streaming processing error';
+        logger.error('STREAMING Processing failed', error as Error, {
+            itemCount: vocabularyItems.length,
+            errorMessage,
+        });
         console.error('❌ STREAMING Processing failed:', errorMessage);
 
         return {

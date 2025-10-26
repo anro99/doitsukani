@@ -45,7 +45,7 @@ describe('Logger', () => {
 
         it('sollte Logger mit custom minLevel erstellen', () => {
             const logger = new Logger('TestService', LogLevel.WARN);
-            
+
             logger.debug('Debug message');
             logger.info('Info message');
             logger.warn('Warn message');
@@ -235,7 +235,7 @@ describe('Logger', () => {
     describe('Real-World Scenarios', () => {
         it('sollte API-Request loggen', () => {
             const logger = new Logger('WaniKaniAPI');
-            
+
             logger.debug('Sending request', {
                 method: 'GET',
                 url: '/api/subjects',
@@ -250,7 +250,7 @@ describe('Logger', () => {
 
         it('sollte Translation-Progress loggen', () => {
             const logger = new Logger('TranslationService');
-            
+
             logger.info('Translation progress', {
                 completed: 50,
                 total: 100,
@@ -262,7 +262,7 @@ describe('Logger', () => {
 
         it('sollte Rate-Limit-Warning loggen', () => {
             const logger = new Logger('DeepLAPI');
-            
+
             logger.warn('Approaching rate limit', {
                 remaining: 5,
                 limit: 60,
@@ -275,7 +275,7 @@ describe('Logger', () => {
         it('sollte Upload-Fehler loggen', () => {
             const logger = new Logger('UploadService');
             const error = new Error('Network timeout');
-            
+
             logger.error('Upload failed', error, {
                 itemId: 123,
                 retryCount: 3,

@@ -11,6 +11,7 @@ import { DeeplTranslationService } from '../../../shared/processing/services/Dee
 import type { ProcessableItem } from '../../../shared/processing/types/processing.types';
 import { translateText } from '../../../shared/lib/deepl';
 import { extractContextFromMnemonic } from '../../../shared/lib/contextual-translation';
+import { createLogger } from '../../../shared/lib/logger';
 
 // Kanji-specific types
 export interface KanjiItem extends ProcessableItem {
@@ -66,6 +67,8 @@ const truncateSynonym = (str: string): string => {
  * - Byte-Length Truncation (WaniKani 64-byte limit)
  */
 export class KanjiTranslationService extends DeeplTranslationService {
+    private logger = createLogger('KanjiTranslationService');
+
     constructor(apiKey: string) {
         super(apiKey);
     }
@@ -99,10 +102,17 @@ export class KanjiTranslationService extends DeeplTranslationService {
             const cleanedPrimary = primaryTranslation.trim();
             if (cleanedPrimary && cleanedPrimary.length > 0) {
                 translations.push(truncateSynonym(cleanedPrimary));
-                console.log(`✅ Primary translation for ${kanjiItem.characters}: ${cleanedPrimary}`);
+                this.logger.info(`Primary translation`, {
+                    characters: kanjiItem.characters,
+                    translation: cleanedPrimary,
+                });
             }
         } catch (error) {
-            console.warn(`❌ Primary translation failed for "${kanjiItem.primaryMeaning}":`, error);
+            this.logger.warn(`Primary translation failed`, {
+                characters: kanjiItem.characters,
+                primaryMeaning: kanjiItem.primaryMeaning,
+                error,
+            });
             // Continue with alternatives even if primary fails
         }
 
@@ -129,18 +139,31 @@ export class KanjiTranslationService extends DeeplTranslationService {
                     // Skip duplicates (case-insensitive)
                     if (!translations.some(t => t.toLowerCase() === truncatedAlt.toLowerCase())) {
                         translations.push(truncatedAlt);
-                        console.log(`✅ Alternative translation for ${kanjiItem.characters}: ${cleanedAlt}`);
+                        this.logger.debug(`Alternative translation`, {
+                            characters: kanjiItem.characters,
+                            translation: cleanedAlt,
+                        });
                     } else {
-                        console.log(`⏭️ Skipped duplicate translation for ${kanjiItem.characters}: ${cleanedAlt}`);
+                        this.logger.debug(`Skipped duplicate translation`, {
+                            characters: kanjiItem.characters,
+                            duplicate: cleanedAlt,
+                        });
                     }
                 }
             } catch (error) {
-                console.warn(`⚠️ Alternative translation failed for "${alternativeMeaning}":`, error);
+                this.logger.warn(`Alternative translation failed`, {
+                    characters: kanjiItem.characters,
+                    alternativeMeaning,
+                    error,
+                });
                 // Continue with next alternative
             }
         }
 
-        console.log(`🎯 Total translations for ${kanjiItem.characters}: ${translations.length} (duplicates removed)`);
+        this.logger.info(`Total translations`, {
+            characters: kanjiItem.characters,
+            count: translations.length,
+        });
         return translations;
     }
 
@@ -158,7 +181,7 @@ export class KanjiTranslationService extends DeeplTranslationService {
                 const translations = await this.translate(item);
                 results.push(translations);
             } catch (error) {
-                console.warn(`Translation failed for item ${item.id}:`, error);
+                this.logger.warn(`Translation failed for item`, { itemId: item.id, error });
                 results.push([]); // Empty array on error
             }
         }
