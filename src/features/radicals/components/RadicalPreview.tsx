@@ -68,7 +68,7 @@ export const RadicalPreview = ({
             <CardHeader>
                 <CardTitle>👀 Radicals Vorschau</CardTitle>
                 <p className="text-sm text-gray-600">
-                    Zeigt die ersten {displayedPreviewCount} Radicals basierend auf Ihrer Level-Auswahl
+                    Zeigt {Math.min(displayedPreviewCount, previewRadicals.length)} von {previewRadicals.length} geladenen Radicals
                 </p>
                 <p className="text-xs text-gray-500">
                     {getCountInfo()}

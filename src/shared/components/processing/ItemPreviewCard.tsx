@@ -132,15 +132,20 @@ export const PreviewLoadMore = ({
     onLoadMore,
     itemType
 }: PreviewLoadMoreProps) => {
+    // z = angezeigte Items
     const showingCount = Math.min(displayedCount, loadedCount);
-    const remaining = loadedCount - displayedCount;
-    const totalRemaining = totalCount ? totalCount - loadedCount : 0;
+    // w = total count (alle Items im Level)
+    const total = totalCount || loadedCount;
+    // y = verbleibende Items (w - z)
+    const remaining = total - showingCount;
+    // x = Nachlademenge (immer 12)
+    const loadMoreIncrement = 12;
 
     return (
         <div className="mt-4 space-y-2">
             {/* Load More Button */}
             <div className="text-center">
-                {displayedCount < loadedCount ? (
+                {showingCount < total ? (
                     <Button
                         onClick={onLoadMore}
                         disabled={isLoading}
@@ -149,32 +154,14 @@ export const PreviewLoadMore = ({
                     >
                         {isLoading
                             ? 'Lädt...'
-                            : `Weitere 12 ${itemType} anzeigen (${remaining} verbleibend)`}
-                    </Button>
-                ) : totalCount && totalCount > loadedCount ? (
-                    <Button
-                        onClick={onLoadMore}
-                        disabled={isLoading}
-                        variant="outline"
-                        className="w-full md:w-auto"
-                    >
-                        {isLoading
-                            ? `Lädt weitere ${itemType}...`
-                            : `Weitere ${itemType} laden (${totalRemaining} im Level verfügbar)`}
+                            : `Weitere ${loadMoreIncrement} ${itemType} anzeigen (${remaining} verbleiben)`}
                     </Button>
                 ) : null}
             </div>
 
-            {/* Statistics */}
-            <div className="text-center text-sm text-gray-600 space-y-1">
-                <div>
-                    Angezeigt: {showingCount} von {loadedCount} geladenen {itemType}
-                </div>
-                {totalCount && totalCount > loadedCount && (
-                    <div className="text-xs text-gray-500">
-                        ({totalRemaining} weitere {itemType} im Level verfügbar)
-                    </div>
-                )}
+            {/* Statistics - nur eine Zeile! */}
+            <div className="text-center text-sm text-gray-600">
+                Angezeigt: {showingCount} von {total} geladenen {itemType}
             </div>
         </div>
     );

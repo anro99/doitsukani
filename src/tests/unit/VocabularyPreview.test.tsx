@@ -168,8 +168,9 @@ describe('📚 VocabularyPreview Component Tests', () => {
                 />
             );
 
-            expect(screen.getByText('Angezeigt: 2 von 2 geladenen Vocabulary')).toBeInTheDocument();
-            expect(screen.getByText('(18 weitere Vocabulary im Level verfügbar)')).toBeInTheDocument();
+            // Nach neuem Format: totalCount wird verwendet statt loadedCount
+            expect(screen.getByText(/Angezeigt: 2 von 20 geladenen Vocabulary/)).toBeInTheDocument();
+            // Alte zweite Zeile existiert nicht mehr (nur eine Zeile jetzt)
         });
     });
 
