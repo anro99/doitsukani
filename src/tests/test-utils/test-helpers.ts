@@ -16,12 +16,12 @@ import { vi } from 'vitest';
  */
 export async function renderAndWaitForLoading(component: React.ReactElement) {
     const result = render(component);
-    
+
     // Warte bis Loading-Indikator verschwunden ist
     await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
-    
+
     return result;
 }
 
@@ -130,7 +130,7 @@ export async function waitForCondition(
     interval: number = 100
 ): Promise<void> {
     const startTime = Date.now();
-    
+
     while (!condition()) {
         if (Date.now() - startTime > timeout) {
             throw new Error(`Timeout waiting for condition after ${timeout}ms`);

@@ -95,7 +95,7 @@ export function createMockVocabulary(overrides?: Partial<VocabularyPreviewItem>)
  * Erstelle Array von Mock Vocabulary Items
  */
 export function createMockVocabularyList(count: number = 3): VocabularyPreviewItem[] {
-    return Array.from({ length: count }, (_, i) => 
+    return Array.from({ length: count }, (_, i) =>
         createMockVocabulary({
             id: i + 1,
             characters: `字${i + 1}`,
@@ -131,7 +131,7 @@ export function createMockKanji(overrides?: Partial<KanjiPreviewItem>): KanjiPre
  * Erstelle Array von Mock Kanji Items
  */
 export function createMockKanjiList(count: number = 3): KanjiPreviewItem[] {
-    return Array.from({ length: count }, (_, i) => 
+    return Array.from({ length: count }, (_, i) =>
         createMockKanji({
             id: i + 1,
             characters: `字${i + 1}`,
@@ -166,7 +166,7 @@ export function createMockRadical(overrides?: Partial<RadicalPreviewItem>): Radi
  * Erstelle Array von Mock Radical Items
  */
 export function createMockRadicalList(count: number = 3): RadicalPreviewItem[] {
-    return Array.from({ length: count }, (_, i) => 
+    return Array.from({ length: count }, (_, i) =>
         createMockRadical({
             id: i + 1,
             meaning: `meaning${i + 1}`,
