@@ -107,34 +107,48 @@ export const RadicalPreview = ({
                     ))}
                 </div>
 
-                {/* Load More Button */}
-                {onLoadMore && (
-                    <div className="text-center mt-4">
-                        {displayedPreviewCount < previewRadicals.length ? (
-                            <Button
-                                onClick={onLoadMore}
-                                disabled={isLoadingRadicals}
-                                variant="outline"
-                            >
-                                {isLoadingRadicals
-                                    ? 'Lädt...'
-                                    : `Weitere 12 Radicals anzeigen (${previewRadicals.length - displayedPreviewCount} verbleibend)`}
-                            </Button>
-                        ) : previewRadicals.length >= displayedPreviewCount &&
-                          currentLevelCount &&
-                          currentLevelCount > previewRadicals.length ? (
-                            <Button
-                                onClick={onLoadMore}
-                                disabled={isLoadingRadicals}
-                                variant="outline"
-                            >
-                                {isLoadingRadicals
-                                    ? 'Lädt weitere Radicals...'
-                                    : `Weitere Radicals laden (${currentLevelCount - previewRadicals.length} im Level verfügbar)`}
-                            </Button>
-                        ) : null}
-                    </div>
-                )}
+                <div className="space-y-4 mt-4">
+                    {/* Load More Button */}
+                    {onLoadMore && (
+                        <div className="text-center">
+                            {displayedPreviewCount < previewRadicals.length ? (
+                                <Button
+                                    onClick={onLoadMore}
+                                    disabled={isLoadingRadicals}
+                                    variant="outline"
+                                >
+                                    {isLoadingRadicals
+                                        ? 'Lädt...'
+                                        : `Weitere 12 Radicals anzeigen (${previewRadicals.length - displayedPreviewCount} verbleiben)`}
+                                </Button>
+                            ) : previewRadicals.length >= displayedPreviewCount &&
+                                currentLevelCount &&
+                                currentLevelCount > previewRadicals.length ? (
+                                <Button
+                                    onClick={onLoadMore}
+                                    disabled={isLoadingRadicals}
+                                    variant="outline"
+                                >
+                                    {isLoadingRadicals
+                                        ? 'Lädt...'
+                                        : `Weitere 12 Radicals anzeigen (${currentLevelCount - previewRadicals.length} verbleiben)`}
+                                </Button>
+                            ) : null}
+                        </div>
+                    )}
+
+                    {/* Statistics display */}
+                    {(() => {
+                        const showingCount = Math.min(displayedPreviewCount, previewRadicals.length);
+                        const totalCount = currentLevelCount || previewRadicals.length;
+
+                        return (
+                            <div className="text-center text-sm text-gray-600">
+                                Angezeigt: {showingCount} von {totalCount} geladenen Radicals
+                            </div>
+                        );
+                    })()}
+                </div>
             </CardContent>
         </Card>
     );
