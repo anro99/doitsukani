@@ -91,7 +91,7 @@ export const RadicalPreview = ({
                             </div>
 
                             {/* Current Synonyms */}
-                            <SynonymBadges 
+                            <SynonymBadges
                                 label="Aktuelle Synonyme:"
                                 synonyms={radical.currentSynonyms}
                                 variant="current"
@@ -103,7 +103,7 @@ export const RadicalPreview = ({
 
                 {/* Show "Load More" button and statistics */}
                 {onLoadMore && (
-                    <PreviewLoadMore 
+                    <PreviewLoadMore
                         displayedCount={displayedPreviewCount}
                         loadedCount={previewRadicals.length}
                         totalCount={currentLevelCount}

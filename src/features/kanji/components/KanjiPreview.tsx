@@ -98,7 +98,7 @@ export const KanjiPreview = ({
                             </div>
 
                             {/* Current Synonyms */}
-                            <SynonymBadges 
+                            <SynonymBadges
                                 label="Aktuelle Synonyme:"
                                 synonyms={kanji.currentSynonyms}
                                 variant="current"
@@ -110,7 +110,7 @@ export const KanjiPreview = ({
 
                 {/* Show "Load More" button and statistics */}
                 {onLoadMore && (
-                    <PreviewLoadMore 
+                    <PreviewLoadMore
                         displayedCount={displayedPreviewCount}
                         loadedCount={previewKanji.length}
                         totalCount={currentLevelCount}

@@ -79,8 +79,8 @@ export const SynonymBadges = ({
     variant = 'current',
     emptyMessage = 'Keine Synonyme'
 }: SynonymBadgesProps) => {
-    const badgeClass = variant === 'translated' 
-        ? 'text-xs bg-green-100 text-green-800 border-green-200' 
+    const badgeClass = variant === 'translated'
+        ? 'text-xs bg-green-100 text-green-800 border-green-200'
         : 'text-xs';
 
     const badgeVariant = variant === 'translated' ? 'default' : 'secondary';
@@ -147,8 +147,8 @@ export const PreviewLoadMore = ({
                         variant="outline"
                         className="w-full md:w-auto"
                     >
-                        {isLoading 
-                            ? 'Lädt...' 
+                        {isLoading
+                            ? 'Lädt...'
                             : `Weitere 12 ${itemType} anzeigen (${remaining} verbleibend)`}
                     </Button>
                 ) : totalCount && totalCount > loadedCount ? (
@@ -158,8 +158,8 @@ export const PreviewLoadMore = ({
                         variant="outline"
                         className="w-full md:w-auto"
                     >
-                        {isLoading 
-                            ? `Lädt weitere ${itemType}...` 
+                        {isLoading
+                            ? `Lädt weitere ${itemType}...`
                             : `Weitere ${itemType} laden (${totalRemaining} im Level verfügbar)`}
                     </Button>
                 ) : null}

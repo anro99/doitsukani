@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { Badge } from '../../../shared/components/ui/badge';
 import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
-import { 
-    ItemStatusIndicator, 
-    SynonymBadges, 
-    PreviewLoadMore 
+import {
+    ItemStatusIndicator,
+    SynonymBadges,
+    PreviewLoadMore
 } from '../../../shared/components/processing/ItemPreviewCard';
 
 interface Vocabulary {
@@ -157,7 +157,7 @@ export const VocabularyPreview = ({
                             {formatPartsOfSpeech(vocabulary.partsOfSpeech)}
 
                             {/* Current Synonyms */}
-                            <SynonymBadges 
+                            <SynonymBadges
                                 label="Aktuelle Synonyme:"
                                 synonyms={vocabulary.currentSynonyms}
                                 variant="current"
@@ -167,7 +167,7 @@ export const VocabularyPreview = ({
                             {/* Translated Synonyms (if completed) */}
                             {vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0 && (
                                 <>
-                                    <SynonymBadges 
+                                    <SynonymBadges
                                         label="Übersetzte Synonyme:"
                                         synonyms={vocabulary.translatedSynonyms}
                                         variant="translated"
@@ -206,7 +206,7 @@ export const VocabularyPreview = ({
 
                 {/* Show "Load More" button and statistics */}
                 {onLoadMore && (
-                    <PreviewLoadMore 
+                    <PreviewLoadMore
                         displayedCount={displayedPreviewCount}
                         loadedCount={previewVocabulary.length}
                         totalCount={currentLevelCount}
