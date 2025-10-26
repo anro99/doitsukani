@@ -14,7 +14,6 @@ export const RadicalsManagerRefactored = () => {
         wkRadicals,
         isLoadingRadicals,
         apiError,
-        filteredRadicals,
         currentLevelCount,
         currentLevelCountLoading,
         previewRadicals,

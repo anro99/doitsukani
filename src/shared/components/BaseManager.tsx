@@ -33,7 +33,7 @@ export interface BaseManagerProps<TItem> {
 
     // Data
     items: TItem[];
-    itemCount?: number;
+    // itemCount removed - not used in BaseManager
 
     // States
     isLoading: boolean;
@@ -87,7 +87,6 @@ export const BaseManager = <TItem,>({
     apiError,
 
     items,
-    itemCount,
 
     isLoading,
     isProcessing,
