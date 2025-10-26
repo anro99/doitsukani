@@ -1,18 +1,18 @@
 /**
  * Vocabulary Translation Service
  * 
- * Erweitert den DeeplTranslationService mit Vocabulary-spezifischen Features:
+ * Erweitert BaseTranslationService mit Vocabulary-spezifischen Features:
  * - Contextual Dictionary Fallback
  * - Prebuilt Translations Merger
  * - Hybrid Translation Strategy
+ * - Byte-Length Truncation automatisch via BaseTranslationService
  */
 
-import { DeeplTranslationService } from '../../../shared/processing/services/DeeplTranslationService';
+import { BaseTranslationService } from '../../../shared/processing/services/BaseTranslationService';
 import type { ProcessableItem } from '../../../shared/processing/types/processing.types';
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
 import { mergeTranslations, getPrebuiltTranslations } from './vocabulary-translation-merger';
 import translationsJson from '../../../translations.json';
-import { createLogger } from '../../../shared/lib/logger';
 
 /**
  * Vocabulary-specific Translation Service
@@ -21,11 +21,11 @@ import { createLogger } from '../../../shared/lib/logger';
  * - DeepL Translation für alle Meanings
  * - Hybrid Translation: Merge mit prebuilt translations
  * - DELETE Mode Support (skip translation)
+ * - Byte-Length Truncation automatisch via BaseTranslationService
  */
-export class VocabularyTranslationService extends DeeplTranslationService {
+export class VocabularyTranslationService extends BaseTranslationService {
     private usePrebuiltTranslations: boolean;
     private synonymMode: 'smart' | 'replace' | 'delete';
-    private logger = createLogger('VocabularyTranslationService');
 
     constructor(
         apiKey: string,
@@ -34,7 +34,7 @@ export class VocabularyTranslationService extends DeeplTranslationService {
             synonymMode?: 'smart' | 'replace' | 'delete';
         } = {}
     ) {
-        super(apiKey);
+        super(apiKey, 'VocabularyTranslationService');
         this.usePrebuiltTranslations = options.usePrebuiltTranslations ?? true;
         this.synonymMode = options.synonymMode ?? 'smart';
     }
@@ -102,23 +102,5 @@ export class VocabularyTranslationService extends DeeplTranslationService {
         return deeplTranslations;
     }
 
-    /**
-     * Batch translation for vocabulary items
-     */
-    async translateBatch(items: ProcessableItem[]): Promise<string[][]> {
-        // Process sequentially to respect rate limits and maintain order
-        const results: string[][] = [];
-
-        for (const item of items) {
-            try {
-                const translations = await this.translate(item);
-                results.push(translations);
-            } catch (error) {
-                this.logger.warn(`Translation failed for item ${item.id}`, { itemId: item.id, error });
-                results.push([]); // Empty array on error
-            }
-        }
-
-        return results;
-    }
+    // translateBatch() inherited from BaseTranslationService
 }
