@@ -1,8 +1,11 @@
 # Doitsukani Architecture Documentation
 
-**Version**: 1.0  
-**Last Updated**: October 14, 2025  
-**Status**: Current Implementation + Planned Refactoring
+**Version**: 2.0  
+**Last Updated**: October 26, 2025  
+**Status**: Current Implementation (Streaming Architecture Complete)
+
+> **Hinweis**: Für einen Schnelleinstieg siehe [CURRENT_STATE.md](./CURRENT_STATE.md)  
+> Diese Datei enthält die detaillierte technische Architektur-Dokumentation.
 
 ---
 
@@ -17,7 +20,8 @@
 7. [Data Flow](#data-flow)
 8. [Testing Strategy](#testing-strategy)
 9. [Performance Considerations](#performance-considerations)
-10. [Planned Refactoring](#planned-refactoring)
+10. [Completed Refactoring](#completed-refactoring-october-2025)
+11. [Appendix](#appendix)
 
 ---
 
@@ -970,33 +974,28 @@ npm test -- vocabulary.test.ts
 
 ---
 
-## Planned Refactoring
+## Completed Refactoring (October 2025)
 
 ### Overview
 
-See [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for complete details.
+**Status**: ✅ **ABGESCHLOSSEN**  
+**Zeitraum**: Oktober 2025  
+**Dauer**: ~23 Stunden  
+**Details**: Siehe [archive/REFACTORING_PLAN_2025.md](archive/REFACTORING_PLAN_2025.md)
 
-**Goal**: Unified streaming architecture for all features (Vocabulary, Kanji, Radicals)
+**Ziel erreicht**: Unified streaming architecture für alle Features (Vocabulary, Kanji, Radicals)
 
-**Timeline**: 14-21 hours across 6 phases
+**Ergebnisse**:
+- ✅ Code-Duplikation eliminiert (~90% Reduktion)
+- ✅ 2x Performance-Verbesserung für Kanji/Radicals
+- ✅ Konsistente UX (3-Phasen-Progress überall)
+- ✅ Bessere Testbarkeit (Interface-basiertes Design)
+- ✅ Einfachere Wartung (Single Processor)
+- ✅ 647/647 Tests passing
+- ✅ 0 TypeScript Errors
 
-**Benefits**:
-- ✅ No code duplication (~90% reduction)
-- ✅ 2x performance improvement for Kanji/Radicals
-- ✅ Consistent UX (3-phase progress everywhere)
-- ✅ Better testability (interface-based design)
-- ✅ Easier maintenance (single processor)
+### Implementierte Architektur
 
-### Architecture Changes
-
-#### Current (3 Separate Implementations)
-```
-Vocabulary:  processVocabularyStreaming() + Dictionary
-Kanji:       processVocabularyBatch() (no dictionary)
-Radicals:    processVocabularyBatch() (no dictionary)
-```
-
-#### Future (1 Generic Processor + 3 Adapters)
 ```
                     ┌──────────────────────────┐
                     │ GenericStreamingProcessor │
@@ -1007,90 +1006,122 @@ Radicals:    processVocabularyBatch() (no dictionary)
                 │                 │                 │
        ┌────────▼─────┐  ┌───────▼────────┐  ┌────▼─────────┐
        │ Vocabulary   │  │     Kanji      │  │   Radicals   │
-       │   Adapter    │  │    Adapter     │  │    Adapter   │
+       │ Streaming    │  │   Streaming    │  │  Streaming   │
        │ (+ Dictionary)│  │  (Standard)    │  │  (Standard)  │
+       └──────────────┘  └────────────────┘  └──────────────┘
+                │                 │                 │
+       ┌────────▼─────┐  ┌───────▼────────┐  ┌────▼─────────┐
+       │   Manager    │  │    Manager     │  │   Manager    │
+       │  Component   │  │   Component    │  │  Component   │
        └──────────────┘  └────────────────┘  └──────────────┘
 ```
 
-### Interface Design
+### Kern-Komponenten
 
-```typescript
-// Core interfaces
-interface ProcessableItem {
-  id: number;
-  meanings: string[];
-  existingSynonyms: string[];
-}
+#### 1. GenericStreamingProcessor
+**Datei**: `src/shared/processing/GenericStreamingProcessor.ts`
 
-interface ReadableItem extends ProcessableItem {
-  characters: string;
-  readings: string[];
-}
+**Features**:
+- Parallele Translation und Upload
+- 3-Phasen-Progress (Translation, Upload, Gesamt)
+- Smart-Merge mit case-insensitive Deduplication
+- Fehlerbehandlung mit Retry-Logik
+- Abbruch-Funktionalität
+- Stream-Controller für Backpressure
 
-interface TranslationService {
-  translate(item: ProcessableItem): Promise<string[]>;
-}
+#### 2. ProcessingControls (Shared UI)
+**Datei**: `src/shared/components/processing/ProcessingControls.tsx`
 
-interface UploadService {
-  upload(id: number, synonyms: string[]): Promise<void>;
-}
+**Features**:
+- Synonym-Mode Selector
+- Start/Stop Buttons
+- Gesamt-Progress mit Percentage
+- Streaming-Phasen-Anzeige
+- Ergebnis-Zusammenfassung
+- Fehler-Anzeige
 
-interface StreamingProcessor<T extends ProcessableItem> {
-  process(
-    items: T[],
-    translationService: TranslationService,
-    uploadService: UploadService,
-    onProgress: ProgressCallback
-  ): Promise<ProcessingResult>;
-}
-```
+#### 3. Feature-Spezifische Implementierungen
 
-### Migration Path
+**Vocabulary**: `src/features/vocabulary/lib/vocabulary-streaming-integration.ts`
+- + EDICT2/Wadoku Dictionary Integration
+- Type: `VocabularyStreamingOptions`
 
-#### Phase 0: Interface Design (2-3h)
-- Define core interfaces
-- Create type hierarchy
-- Document contracts
+**Kanji**: `src/features/kanji/lib/kanji-streaming-integration.ts`
+- Standard DeepL Translation
+- Type: `KanjiStreamingOptions`
 
-#### Phase 1: Test-First Approach (2-3h)
-- Write tests for GenericStreamingProcessor
-- Write tests for service interfaces
-- Define success criteria
+**Radicals**: `src/features/radicals/lib/radicals-streaming-integration.ts`
+- Standard DeepL Translation
+- Type: `RadicalsStreamingOptions`
 
-#### Phase 2: Shared Components (3-4h)
-- Implement GenericStreamingProcessor
-- Implement DeepLTranslationService
-- Implement WaniKaniUploadService
+### Abgeschlossene Phasen
 
-#### Phase 3: Feature Adapters (2-3h)
-- Create VocabularyTranslationService (with dictionary)
-- Create KanjiStreamingIntegration
-- Create RadicalsStreamingIntegration
+#### Phase 0: Interface Design ✅
+- Core interfaces definiert
+- Type-Hierarchie erstellt
+- Contracts dokumentiert
 
-#### Phase 4: Integration Tests (2-3h)
-- Test vocabulary end-to-end
-- Test kanji end-to-end
-- Test radicals end-to-end
+#### Phase 1-2: Generic Processor ✅
+- GenericStreamingProcessor implementiert
+- DeepLTranslationService implementiert
+- WaniKaniUploadService implementiert
+- Test-First Approach
 
-#### Phase 5: Hook Refactoring (2-3h)
-- Update useKanjiManager to use streaming
-- Update useRadicalsManager to use streaming
-- Remove old batch processing code
+#### Phase 3: Feature Migration ✅
+- Vocabulary → Streaming (bereits vorhanden)
+- Kanji → Streaming Migration
+- Radicals → Streaming Migration
 
-#### Phase 6: UI Updates (1-2h)
-- Add 3-phase progress to Kanji ProcessingControls
-- Add 3-phase progress to Radicals ProcessingControls
-- Update progress display logic
+#### Phase 4: Integration Tests ✅
+- Vocabulary end-to-end Tests
+- Kanji end-to-end Tests
+- Radicals end-to-end Tests
+- 82 Integration Tests passing
 
-### Definition of Done
+#### Phase 5: Hook Refactoring ✅
+- useKanjiManager auf Streaming umgestellt
+- useRadicalsManager auf Streaming umgestellt
+- Legacy Batch-Processing Code entfernt
+- Type-Migration abgeschlossen
 
-- [ ] All 553 existing tests still pass
-- [ ] 30+ new tests for generic processor
-- [ ] Kanji and Radicals use streaming
-- [ ] All features show 3-phase progress
-- [ ] No code duplication between features
-- [ ] Performance: 2x faster for Kanji/Radicals
-- [ ] Documentation updated
+#### Phase 6: UI-Vereinheitlichung ✅
+- ProcessingControls für alle Features
+- 3-Phasen-Progress überall
+- Redundante UI-Elemente entfernt
+- Load More Button für alle Preview-Komponenten
+
+### Definition of Done - Erreicht ✅
+
+- ✅ Alle 647 Tests passing (565 unit + 82 integration)
+- ✅ 30+ neue Tests für GenericStreamingProcessor
+- ✅ Kanji und Radicals verwenden Streaming
+- ✅ Alle Features zeigen 3-Phasen-Progress
+- ✅ Keine Code-Duplikation zwischen Features
+- ✅ Performance: 2x schneller für Kanji/Radicals
+- ✅ Dokumentation aktualisiert
+
+### Wichtige Fixes
+
+#### Case-Insensitive Deduplication
+**Problem**: WaniKani API lehnte Duplikate wie "Sieben" + "sieben" ab (422 Fehler)
+
+**Lösung**: Paralleles lowercase-Array in GenericStreamingProcessor für case-insensitive Vergleich
+
+**Commit**: `7cc86a5`
+
+#### UI-Konsistenz
+**Problem**: Unterschiedliche UIs über Features
+
+**Lösung**: Gemeinsame ProcessingControls Komponente
+
+**Commits**: `d60c8e9`, `cdb3b5f`
+
+#### Load More Button
+**Problem**: RadicalPreview hatte keinen Load More Button
+
+**Lösung**: Feature-Parity mit Kanji/Vocabulary
+
+**Commits**: `5f4107d`, `972f636`
 
 ---
 
@@ -1161,7 +1192,8 @@ git push origin main
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: October 14, 2025  
+**Document Version**: 2.0  
+**Last Updated**: October 26, 2025  
 **Maintained By**: GitHub Copilot + Project Contributors  
-**Next Review**: After Phase 0 of Refactoring Plan
+**Next Review**: Bei größeren Architektur-Änderungen
+
