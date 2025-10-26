@@ -1,6 +1,7 @@
 ﻿import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { Badge } from '../../../shared/components/ui/badge';
 import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
+import { Button } from '../../../shared/components/ui/button';
 
 interface Radical {
     id: number;
@@ -19,14 +20,18 @@ interface RadicalPreviewProps {
     // Count information for preview display
     currentLevelCount?: number;
     currentLevelCountLoading?: boolean;
-    maxPreviewCount?: number;
+    displayedPreviewCount?: number;
+    isLoadingRadicals?: boolean;
+    onLoadMore?: () => void;
 }
 
 export const RadicalPreview = ({
     previewRadicals,
     currentLevelCount,
     currentLevelCountLoading = false,
-    maxPreviewCount = 12
+    displayedPreviewCount = 12,
+    isLoadingRadicals = false,
+    onLoadMore
 }: RadicalPreviewProps) => {
     // Helper function to get count info for preview display
     const getCountInfo = () => {
@@ -41,7 +46,7 @@ export const RadicalPreview = ({
                 <CardHeader>
                     <CardTitle>👀 Radicals Vorschau</CardTitle>
                     <p className="text-sm text-gray-600">
-                        Zeigt die ersten {maxPreviewCount} Radicals basierend auf Ihrer Level-Auswahl
+                        Zeigt die ersten {displayedPreviewCount} Radicals basierend auf Ihrer Level-Auswahl
                     </p>
                     <p className="text-xs text-gray-500">
                         {getCountInfo()}
@@ -63,7 +68,7 @@ export const RadicalPreview = ({
             <CardHeader>
                 <CardTitle>👀 Radicals Vorschau</CardTitle>
                 <p className="text-sm text-gray-600">
-                    Zeigt die ersten {maxPreviewCount} Radicals basierend auf Ihrer Level-Auswahl
+                    Zeigt die ersten {displayedPreviewCount} Radicals basierend auf Ihrer Level-Auswahl
                 </p>
                 <p className="text-xs text-gray-500">
                     {getCountInfo()}
@@ -71,7 +76,7 @@ export const RadicalPreview = ({
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {previewRadicals.slice(0, maxPreviewCount).map((radical: Radical) => (
+                    {previewRadicals.slice(0, displayedPreviewCount).map((radical: Radical) => (
                         <div key={radical.id} className="p-4 border rounded-lg">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-2xl font-bold">
@@ -101,18 +106,35 @@ export const RadicalPreview = ({
                         </div>
                     ))}
                 </div>
-                {(() => {
-                    const showingCount = previewRadicals.length;
 
-                    if (currentLevelCount && currentLevelCount > showingCount) {
-                        return (
-                            <div className="mt-4 text-center text-sm text-gray-600">
-                                ... und {currentLevelCount - showingCount} weitere Radicals
-                            </div>
-                        );
-                    }
-                    return null;
-                })()}
+                {/* Load More Button */}
+                {onLoadMore && (
+                    <div className="text-center mt-4">
+                        {displayedPreviewCount < previewRadicals.length ? (
+                            <Button
+                                onClick={onLoadMore}
+                                disabled={isLoadingRadicals}
+                                variant="outline"
+                            >
+                                {isLoadingRadicals
+                                    ? 'Lädt...'
+                                    : `Weitere 12 Radicals anzeigen (${previewRadicals.length - displayedPreviewCount} verbleibend)`}
+                            </Button>
+                        ) : previewRadicals.length >= displayedPreviewCount &&
+                          currentLevelCount &&
+                          currentLevelCount > previewRadicals.length ? (
+                            <Button
+                                onClick={onLoadMore}
+                                disabled={isLoadingRadicals}
+                                variant="outline"
+                            >
+                                {isLoadingRadicals
+                                    ? 'Lädt weitere Radicals...'
+                                    : `Weitere Radicals laden (${currentLevelCount - previewRadicals.length} im Level verfügbar)`}
+                            </Button>
+                        ) : null}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

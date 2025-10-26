@@ -22,6 +22,7 @@ export const RadicalsManagerRefactored = () => {
         currentLevelCount,
         currentLevelCountLoading,
         previewRadicals,
+        displayedPreviewCount,
 
         // Streaming states (NEW)
         streamingPhases,
@@ -37,6 +38,7 @@ export const RadicalsManagerRefactored = () => {
         stopProcessing,
         clearResults,
         clearErrors,
+        loadMorePreviewRadicals,
     } = useRadicalsManager();
 
     const handleStartProcessing = () => {
@@ -94,6 +96,9 @@ export const RadicalsManagerRefactored = () => {
                     previewRadicals={previewRadicals}
                     currentLevelCount={currentLevelCount}
                     currentLevelCountLoading={currentLevelCountLoading}
+                    displayedPreviewCount={displayedPreviewCount}
+                    isLoadingRadicals={isLoadingRadicals}
+                    onLoadMore={loadMorePreviewRadicals}
                 />
             )}
 

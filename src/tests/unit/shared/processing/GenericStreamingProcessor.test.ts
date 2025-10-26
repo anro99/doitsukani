@@ -607,7 +607,7 @@ describe('GenericStreamingProcessor', () => {
             expect(uploadedItem.synonyms).toContain('Wasser');
             expect(uploadedItem.synonyms).toContain('fluessigkeit');
             // Die lowercase/uppercase Varianten sollten NICHT doppelt drin sein
-            const lowercaseCount = (str: string) => 
+            const lowercaseCount = (str: string) =>
                 uploadedItem.synonyms.filter(s => s.toLowerCase() === str.toLowerCase()).length;
             expect(lowercaseCount('wasser')).toBe(1);
             expect(lowercaseCount('h2o')).toBe(1);
