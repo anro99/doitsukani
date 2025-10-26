@@ -233,15 +233,18 @@ export class GenericStreamingProcessor<T extends ProcessableItem> {
             return newSynonyms.slice(0, maxSynonyms);
         }
 
-        // Smart-Merge Mode: Merge existing + new
+        // Smart-Merge Mode: Merge existing + new (case-insensitive deduplication)
         if (mode === 'smart-merge') {
             const existing = item.existingSynonyms || [];
             const merged = [...existing];
+            const mergedLower = merged.map(s => s.toLowerCase());
 
-            // Add new synonyms that aren't duplicates
+            // Add new synonyms that aren't duplicates (case-insensitive)
             for (const synonym of newSynonyms) {
-                if (!merged.includes(synonym) && merged.length < maxSynonyms) {
+                const synonymLower = synonym.toLowerCase();
+                if (!mergedLower.includes(synonymLower) && merged.length < maxSynonyms) {
                     merged.push(synonym);
+                    mergedLower.push(synonymLower);
                 }
             }
 

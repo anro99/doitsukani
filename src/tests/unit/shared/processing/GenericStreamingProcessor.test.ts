@@ -561,6 +561,59 @@ describe('GenericStreamingProcessor', () => {
             expect(uploadedItem.synonyms).toContain('DE:water');
         });
 
+        it('sollte Smart-Merge mit case-insensitive Deduplizierung machen', async () => {
+            // Custom translation service für diesen Test
+            const customTranslationService: TranslationService<ProcessableItem> = {
+                name: 'CustomMockService',
+                translate: async (_item: ProcessableItem) => {
+                    // Simuliert DeepL returning lowercase versions of existing synonyms + new ones
+                    return ['wasser', 'h2o', 'AQUA', 'fluessigkeit'];
+                },
+                translateBatch: async (items: ProcessableItem[]) => {
+                    return items.map(() => ['wasser', 'h2o', 'AQUA', 'fluessigkeit']);
+                },
+                isAvailable: () => true
+            };
+
+            const items: ProcessableItem[] = [
+                {
+                    id: 1,
+                    meanings: ['water'],
+                    // Existing synonyms mit verschiedenen Kapitalisierungen
+                    existingSynonyms: ['H2O', 'Aqua', 'Wasser'],
+                },
+            ];
+
+            const options: ProcessingOptions = {
+                synonymMode: 'smart-merge',
+                maxSynonyms: 8,
+            };
+
+            await processor.process(
+                items,
+                customTranslationService,
+                mockUploadService,
+                options
+            );
+
+            const uploadedItem = mockUploadService.uploadedItems[0];
+
+            // Erwartung: Keine Duplikate (case-insensitive)
+            // Existing: H2O, Aqua, Wasser
+            // New: wasser (skip - duplicate), h2o (skip), AQUA (skip), fluessigkeit (add)
+            expect(uploadedItem.synonyms).toHaveLength(4); // H2O, Aqua, Wasser, fluessigkeit
+            expect(uploadedItem.synonyms).toContain('H2O');
+            expect(uploadedItem.synonyms).toContain('Aqua');
+            expect(uploadedItem.synonyms).toContain('Wasser');
+            expect(uploadedItem.synonyms).toContain('fluessigkeit');
+            // Die lowercase/uppercase Varianten sollten NICHT doppelt drin sein
+            const lowercaseCount = (str: string) => 
+                uploadedItem.synonyms.filter(s => s.toLowerCase() === str.toLowerCase()).length;
+            expect(lowercaseCount('wasser')).toBe(1);
+            expect(lowercaseCount('h2o')).toBe(1);
+            expect(lowercaseCount('aqua')).toBe(1);
+        });
+
         it('sollte Delete Mode korrekt anwenden', async () => {
             const items: ProcessableItem[] = [
                 {
