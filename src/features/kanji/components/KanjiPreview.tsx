@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { Badge } from '../../../shared/components/ui/badge';
 import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
-import { Button } from '../../../shared/components/ui/button';
+import { SynonymBadges, PreviewLoadMore } from '../../../shared/components/processing/ItemPreviewCard';
 
 interface Kanji {
     id: number;
@@ -96,69 +96,29 @@ export const KanjiPreview = ({
                                     </Badge>
                                 </div>
                             </div>
-                            <div className="text-sm text-gray-600">
-                                <div className="mb-1">
-                                    <span className="font-medium">Aktuelle Synonyme:</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {kanji.currentSynonyms.length > 0 ? kanji.currentSynonyms.map((synonym: string, idx: number) => (
-                                            <Badge key={idx} variant="secondary" className="text-xs">
-                                                {synonym}
-                                            </Badge>
-                                        )) : (
-                                            <span className="text-xs text-gray-400 italic">Keine Synonyme</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+
+                            {/* Current Synonyms */}
+                            <SynonymBadges 
+                                label="Aktuelle Synonyme:"
+                                synonyms={kanji.currentSynonyms}
+                                variant="current"
+                                emptyMessage="Keine Synonyme"
+                            />
                         </div>
                     ))}
                 </div>
 
                 {/* Show "Load More" button and statistics */}
-                <div className="mt-4 space-y-2">
-                    {/* Load More Button */}
-                    {onLoadMore && (
-                        <div className="text-center">
-                            {displayedPreviewCount < previewKanji.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingKanji}
-                                    variant="outline"
-                                    className="w-full md:w-auto"
-                                >
-                                    {isLoadingKanji ? 'Lädt...' : `Weitere 12 Kanji anzeigen (${previewKanji.length - displayedPreviewCount} verbleibend)`}
-                                </Button>
-                            ) : previewKanji.length >= displayedPreviewCount && currentLevelCount && currentLevelCount > previewKanji.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingKanji}
-                                    variant="outline"
-                                    className="w-full md:w-auto"
-                                >
-                                    {isLoadingKanji ? 'Lädt weitere Kanji...' : `Weitere Kanji laden (${currentLevelCount - previewKanji.length} im Level verfügbar)`}
-                                </Button>
-                            ) : null}
-                        </div>
-                    )}
-
-                    {/* Statistics display */}
-                    {(() => {
-                        const showingCount = Math.min(displayedPreviewCount, previewKanji.length);
-
-                        return (
-                            <div className="text-center text-sm text-gray-600 space-y-1">
-                                <div>
-                                    Angezeigt: {showingCount} von {previewKanji.length} geladenen Kanji
-                                </div>
-                                {currentLevelCount && currentLevelCount > previewKanji.length && (
-                                    <div className="text-xs text-gray-500">
-                                        ({currentLevelCount - previewKanji.length} weitere Kanji im Level verfügbar)
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })()}
-                </div>
+                {onLoadMore && (
+                    <PreviewLoadMore 
+                        displayedCount={displayedPreviewCount}
+                        loadedCount={previewKanji.length}
+                        totalCount={currentLevelCount}
+                        isLoading={isLoadingKanji}
+                        onLoadMore={onLoadMore}
+                        itemType="Kanji"
+                    />
+                )}
             </CardContent>
         </Card>
     );

@@ -164,6 +164,7 @@ describe('📚 VocabularyPreview Component Tests', () => {
                     currentLevelCount={20}
                     currentLevelCountLoading={false}
                     displayedPreviewCount={2}
+                    onLoadMore={vi.fn()}
                 />
             );
 

@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { Badge } from '../../../shared/components/ui/badge';
 import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
-import { Button } from '../../../shared/components/ui/button';
+import { 
+    ItemStatusIndicator, 
+    SynonymBadges, 
+    PreviewLoadMore 
+} from '../../../shared/components/processing/ItemPreviewCard';
 
 interface Vocabulary {
     id: number;
@@ -51,57 +55,6 @@ export const VocabularyPreview = ({
         if (currentLevelCountLoading) return 'Lade Count...';
         if (currentLevelCount !== undefined) return `${currentLevelCount} Vocabulary insgesamt`;
         return 'Count nicht verfügbar';
-    };
-
-    // Helper function to determine item status
-    const getItemStatus = (vocabulary: Vocabulary) => {
-        const hasError = errorItems.has(vocabulary.id);
-        const isCompleted = vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0;
-
-        // Priority: error > completed > default
-        if (hasError) {
-            return {
-                type: 'error' as const,
-                message: errorItems.get(vocabulary.id) || 'Unknown error'
-            };
-        }
-        if (isCompleted) {
-            return { type: 'completed' as const };
-        }
-        return { type: 'default' as const };
-    };
-
-    // Helper function to render status indicator
-    const renderStatusIndicator = (vocabulary: Vocabulary) => {
-        const status = getItemStatus(vocabulary);
-
-        switch (status.type) {
-            case 'error':
-                return (
-                    <div
-                        className="flex items-center gap-1 text-red-500 text-xs mt-2"
-                        data-testid={`error-indicator-${vocabulary.id}`}
-                        role="alert"
-                        aria-label={`Processing failed: ${status.message}`}
-                    >
-                        <span className="text-red-500">❌</span>
-                        <span className="break-words">{status.message}</span>
-                    </div>
-                );
-
-            case 'completed':
-                return (
-                    <div
-                        className="flex items-center gap-1 text-green-500 text-xs mt-2"
-                        data-testid={`completed-indicator-${vocabulary.id}`}
-                    >
-                        <span className="text-green-500">✅</span>
-                        <span>Completed</span>
-                    </div>
-                );
-            default:
-                return null;
-        }
     };
 
     // Helper function to format readings
@@ -204,38 +157,25 @@ export const VocabularyPreview = ({
                             {formatPartsOfSpeech(vocabulary.partsOfSpeech)}
 
                             {/* Current Synonyms */}
-                            <div className="text-sm text-gray-600 mt-3">
-                                <div className="mb-1">
-                                    <span className="font-medium">Aktuelle Synonyme:</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {vocabulary.currentSynonyms.length > 0 ? vocabulary.currentSynonyms.map((synonym: string, idx: number) => (
-                                            <Badge key={idx} variant="secondary" className="text-xs">
-                                                {synonym}
-                                            </Badge>
-                                        )) : (
-                                            <span className="text-xs text-gray-400 italic">Keine Synonyme</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            <SynonymBadges 
+                                label="Aktuelle Synonyme:"
+                                synonyms={vocabulary.currentSynonyms}
+                                variant="current"
+                                emptyMessage="Keine Synonyme"
+                            />
 
                             {/* Translated Synonyms (if completed) */}
                             {vocabulary.translatedSynonyms && vocabulary.translatedSynonyms.length > 0 && (
-                                <div className="text-sm text-gray-600 mt-3">
-                                    <div className="mb-1">
-                                        <span className="font-medium text-green-700">Übersetzte Synonyme:</span>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {vocabulary.translatedSynonyms.map((synonym: string, idx: number) => (
-                                                <Badge key={idx} variant="default" className="text-xs bg-green-100 text-green-800 border-green-200">
-                                                    {synonym}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                        <div className="text-xs text-green-600 mt-1">
-                                            {vocabulary.translatedSynonyms.join(', ')}
-                                        </div>
+                                <>
+                                    <SynonymBadges 
+                                        label="Übersetzte Synonyme:"
+                                        synonyms={vocabulary.translatedSynonyms}
+                                        variant="translated"
+                                    />
+                                    <div className="text-xs text-green-600 mt-1">
+                                        {vocabulary.translatedSynonyms.join(', ')}
                                     </div>
-                                </div>
+                                </>
                             )}
 
                             {/* Context Sentences Preview */}
@@ -255,56 +195,26 @@ export const VocabularyPreview = ({
                             )}
 
                             {/* Live Status Indicator (Phase 2) */}
-                            {renderStatusIndicator(vocabulary)}
+                            <ItemStatusIndicator
+                                itemId={vocabulary.id}
+                                translatedSynonyms={vocabulary.translatedSynonyms}
+                                errorItems={errorItems}
+                            />
                         </div>
                     ))}
                 </div>
 
                 {/* Show "Load More" button and statistics */}
-                <div className="mt-4 space-y-2">
-                    {/* Load More Button */}
-                    {onLoadMore && (
-                        <div className="text-center">
-                            {displayedPreviewCount < previewVocabulary.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingVocabulary}
-                                    variant="outline"
-                                    className="w-full md:w-auto"
-                                >
-                                    {isLoadingVocabulary ? 'Lädt...' : `Weitere 12 Vocabulary anzeigen (${previewVocabulary.length - displayedPreviewCount} verbleibend)`}
-                                </Button>
-                            ) : previewVocabulary.length >= displayedPreviewCount && currentLevelCount && currentLevelCount > previewVocabulary.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingVocabulary}
-                                    variant="outline"
-                                    className="w-full md:w-auto"
-                                >
-                                    {isLoadingVocabulary ? 'Lädt weitere Vocabulary...' : `Weitere Vocabulary laden (${currentLevelCount - previewVocabulary.length} im Level verfügbar)`}
-                                </Button>
-                            ) : null}
-                        </div>
-                    )}
-
-                    {/* Statistics display */}
-                    {(() => {
-                        const showingCount = Math.min(displayedPreviewCount, previewVocabulary.length);
-
-                        return (
-                            <div className="text-center text-sm text-gray-600 space-y-1">
-                                <div>
-                                    Angezeigt: {showingCount} von {previewVocabulary.length} geladenen Vocabulary
-                                </div>
-                                {currentLevelCount && currentLevelCount > previewVocabulary.length && (
-                                    <div className="text-xs text-gray-500">
-                                        ({currentLevelCount - previewVocabulary.length} weitere Vocabulary im Level verfügbar)
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })()}
-                </div>
+                {onLoadMore && (
+                    <PreviewLoadMore 
+                        displayedCount={displayedPreviewCount}
+                        loadedCount={previewVocabulary.length}
+                        totalCount={currentLevelCount}
+                        isLoading={isLoadingVocabulary}
+                        onLoadMore={onLoadMore}
+                        itemType="Vocabulary"
+                    />
+                )}
             </CardContent>
         </Card>
     );

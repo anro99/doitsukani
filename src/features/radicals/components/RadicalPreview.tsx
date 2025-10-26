@@ -1,7 +1,7 @@
 ﻿import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/card';
 import { Badge } from '../../../shared/components/ui/badge';
 import { Alert, AlertDescription } from '../../../shared/components/ui/alert';
-import { Button } from '../../../shared/components/ui/button';
+import { SynonymBadges, PreviewLoadMore } from '../../../shared/components/processing/ItemPreviewCard';
 
 interface Radical {
     id: number;
@@ -89,66 +89,29 @@ export const RadicalPreview = ({
                                     </Badge>
                                 </div>
                             </div>
-                            <div className="text-sm text-gray-600">
-                                <div className="mb-1">
-                                    <span className="font-medium">Aktuelle Synonyme:</span>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {radical.currentSynonyms.length > 0 ? radical.currentSynonyms.map((synonym: string, idx: number) => (
-                                            <Badge key={idx} variant="secondary" className="text-xs">
-                                                {synonym}
-                                            </Badge>
-                                        )) : (
-                                            <span className="text-xs text-gray-400 italic">Keine Synonyme</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+
+                            {/* Current Synonyms */}
+                            <SynonymBadges 
+                                label="Aktuelle Synonyme:"
+                                synonyms={radical.currentSynonyms}
+                                variant="current"
+                                emptyMessage="Keine Synonyme"
+                            />
                         </div>
                     ))}
                 </div>
 
-                <div className="space-y-4 mt-4">
-                    {/* Load More Button */}
-                    {onLoadMore && (
-                        <div className="text-center">
-                            {displayedPreviewCount < previewRadicals.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingRadicals}
-                                    variant="outline"
-                                >
-                                    {isLoadingRadicals
-                                        ? 'Lädt...'
-                                        : `Weitere 12 Radicals anzeigen (${previewRadicals.length - displayedPreviewCount} verbleiben)`}
-                                </Button>
-                            ) : previewRadicals.length >= displayedPreviewCount &&
-                                currentLevelCount &&
-                                currentLevelCount > previewRadicals.length ? (
-                                <Button
-                                    onClick={onLoadMore}
-                                    disabled={isLoadingRadicals}
-                                    variant="outline"
-                                >
-                                    {isLoadingRadicals
-                                        ? 'Lädt...'
-                                        : `Weitere 12 Radicals anzeigen (${currentLevelCount - previewRadicals.length} verbleiben)`}
-                                </Button>
-                            ) : null}
-                        </div>
-                    )}
-
-                    {/* Statistics display */}
-                    {(() => {
-                        const showingCount = Math.min(displayedPreviewCount, previewRadicals.length);
-                        const totalCount = currentLevelCount || previewRadicals.length;
-
-                        return (
-                            <div className="text-center text-sm text-gray-600">
-                                Angezeigt: {showingCount} von {totalCount} geladenen Radicals
-                            </div>
-                        );
-                    })()}
-                </div>
+                {/* Show "Load More" button and statistics */}
+                {onLoadMore && (
+                    <PreviewLoadMore 
+                        displayedCount={displayedPreviewCount}
+                        loadedCount={previewRadicals.length}
+                        totalCount={currentLevelCount}
+                        isLoading={isLoadingRadicals}
+                        onLoadMore={onLoadMore}
+                        itemType="Radicals"
+                    />
+                )}
             </CardContent>
         </Card>
     );
