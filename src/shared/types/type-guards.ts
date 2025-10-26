@@ -63,7 +63,7 @@ export function isWaniKaniResponse<T>(
     value: unknown
 ): value is WaniKaniResponse<T> {
     if (!isObject(value)) return false;
-    
+
     return (
         hasProperty(value, 'object') && isString(value.object) &&
         hasProperty(value, 'url') && isString(value.url) &&
@@ -96,13 +96,13 @@ export interface WaniKaniSubject {
 
 export function isWaniKaniSubject(value: unknown): value is WaniKaniSubject {
     if (!isObject(value)) return false;
-    
+
     if (!hasProperty(value, 'id') || !isNumber(value.id)) return false;
     if (!hasProperty(value, 'object') || !isString(value.object)) return false;
     if (!hasProperty(value, 'data') || !isObject(value.data)) return false;
-    
+
     const data = value.data;
-    
+
     return (
         hasProperty(data, 'level') && isNumber(data.level) &&
         hasProperty(data, 'meanings') && isArray(data.meanings)
@@ -115,7 +115,7 @@ export function isWaniKaniSubject(value: unknown): value is WaniKaniSubject {
 function hasVocabularyReadings(data: unknown): boolean {
     if (!isObject(data)) return false;
     if (!hasProperty(data, 'readings')) return false;
-    
+
     return isArray(data.readings) && hasProperty(data, 'parts_of_speech');
 }
 
@@ -125,7 +125,7 @@ function hasVocabularyReadings(data: unknown): boolean {
 function hasKanjiReadings(data: unknown): boolean {
     if (!isObject(data)) return false;
     if (!hasProperty(data, 'readings')) return false;
-    
+
     return isArray(data.readings);
 }
 
@@ -134,7 +134,7 @@ function hasKanjiReadings(data: unknown): boolean {
  */
 export function isVocabularySubject(value: unknown): boolean {
     if (!isWaniKaniSubject(value)) return false;
-    
+
     return (
         value.object === 'vocabulary' &&
         hasVocabularyReadings(value.data)
@@ -146,7 +146,7 @@ export function isVocabularySubject(value: unknown): boolean {
  */
 export function isKanjiSubject(value: unknown): boolean {
     if (!isWaniKaniSubject(value)) return false;
-    
+
     return (
         value.object === 'kanji' &&
         hasKanjiReadings(value.data)
@@ -158,7 +158,7 @@ export function isKanjiSubject(value: unknown): boolean {
  */
 export function isRadicalSubject(value: unknown): boolean {
     if (!isWaniKaniSubject(value)) return false;
-    
+
     return value.object === 'radical';
 }
 
@@ -176,7 +176,7 @@ export function isDeepLResponse(value: unknown): value is DeepLResponse {
     if (!isObject(value)) return false;
     if (!hasProperty(value, 'translations')) return false;
     if (!isArray(value.translations)) return false;
-    
+
     // Prüfe erstes Element falls vorhanden
     if (value.translations.length > 0) {
         const firstTranslation = value.translations[0];
@@ -184,7 +184,7 @@ export function isDeepLResponse(value: unknown): value is DeepLResponse {
         if (!hasProperty(firstTranslation, 'text')) return false;
         if (!isString(firstTranslation.text)) return false;
     }
-    
+
     return true;
 }
 
