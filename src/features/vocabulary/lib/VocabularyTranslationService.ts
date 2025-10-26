@@ -12,6 +12,7 @@ import type { ProcessableItem } from '../../../shared/processing/types/processin
 import { translateVocabularyMeanings, VocabularyItem } from './vocabulary-translation';
 import { mergeTranslations, getPrebuiltTranslations } from './vocabulary-translation-merger';
 import translationsJson from '../../../translations.json';
+import { createLogger } from '../../../shared/lib/logger';
 
 /**
  * Vocabulary-specific Translation Service
@@ -24,6 +25,7 @@ import translationsJson from '../../../translations.json';
 export class VocabularyTranslationService extends DeeplTranslationService {
     private usePrebuiltTranslations: boolean;
     private synonymMode: 'smart' | 'replace' | 'delete';
+    private logger = createLogger('VocabularyTranslationService');
 
     constructor(
         apiKey: string,
@@ -43,7 +45,7 @@ export class VocabularyTranslationService extends DeeplTranslationService {
     async translate(item: ProcessableItem): Promise<string[]> {
         // DELETE Mode: Skip translation completely
         if (this.synonymMode === 'delete') {
-            console.log(`🗑️ DELETE mode: Skipping translation for ${item.id}`);
+            this.logger.info(`DELETE mode: Skipping translation`, { itemId: item.id });
             return [];
         }
 
@@ -54,12 +56,19 @@ export class VocabularyTranslationService extends DeeplTranslationService {
         const translationResult = await translateVocabularyMeanings(vocabItem, this.apiKey);
 
         if (translationResult.error) {
-            console.log(`❌ Translation failed for ${vocabItem.characters}: ${translationResult.error}`);
-            throw new Error(`Translation failed: ${translationResult.error}`);
+            const error = new Error(`Translation failed: ${translationResult.error}`);
+            this.logger.error(`Translation failed for ${vocabItem.characters}`, error, {
+                characters: vocabItem.characters,
+                error: translationResult.error,
+            });
+            throw error;
         }
 
         const deeplTranslations = translationResult.translatedSynonyms;
-        console.log(`✅ DeepL translated ${vocabItem.characters}: ${deeplTranslations.join(', ')}`);
+        this.logger.info(`DeepL translated ${vocabItem.characters}`, {
+            characters: vocabItem.characters,
+            translations: deeplTranslations,
+        });
 
         // Step 2: Merge with prebuilt translations (if enabled)
         if (this.usePrebuiltTranslations) {
@@ -69,7 +78,10 @@ export class VocabularyTranslationService extends DeeplTranslationService {
             );
 
             if (prebuiltTranslations.length > 0) {
-                console.log(`📚 Found ${prebuiltTranslations.length} prebuilt translations for ${vocabItem.characters}`);
+                this.logger.debug(`Found ${prebuiltTranslations.length} prebuilt translations for ${vocabItem.characters}`, {
+                    characters: vocabItem.characters,
+                    count: prebuiltTranslations.length,
+                });
 
                 // Merge: DeepL has priority, prebuilt as supplements
                 const mergedTranslations = mergeTranslations(
@@ -78,7 +90,10 @@ export class VocabularyTranslationService extends DeeplTranslationService {
                     8 // WaniKani synonym limit
                 );
 
-                console.log(`🔀 Merged translations for ${vocabItem.characters}: ${mergedTranslations.join(', ')}`);
+                this.logger.info(`Merged translations for ${vocabItem.characters}`, {
+                    characters: vocabItem.characters,
+                    merged: mergedTranslations,
+                });
                 return mergedTranslations;
             }
         }
@@ -99,7 +114,7 @@ export class VocabularyTranslationService extends DeeplTranslationService {
                 const translations = await this.translate(item);
                 results.push(translations);
             } catch (error) {
-                console.warn(`Translation failed for item ${item.id}:`, error);
+                this.logger.warn(`Translation failed for item ${item.id}`, { itemId: item.id, error });
                 results.push([]); // Empty array on error
             }
         }

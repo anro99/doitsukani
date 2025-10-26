@@ -8,6 +8,7 @@
  */
 
 import type { UploadService } from '../types/processing.types';
+import { createLogger } from '../../lib/logger';
 
 interface StudyMaterialData {
     id: number;
@@ -39,6 +40,7 @@ export class WaniKaniUploadService implements UploadService {
     private apiToken: string;
     private readonly API_BASE = 'https://api.wanikani.com/v2';
     private readonly RATE_LIMIT_MS = 1000; // 1 request per second
+    private readonly logger = createLogger('WaniKaniUploadService');
 
     // Rate limiting
     private lastRequestTime = 0;
@@ -73,7 +75,7 @@ export class WaniKaniUploadService implements UploadService {
                     return await this.createStudyMaterial(itemId, synonyms);
                 }
             } catch (error) {
-                console.error(`Upload failed for item ${itemId}:`, error);
+                this.logger.error(`Upload failed for item ${itemId}`, error as Error);
                 return false;
             }
         });
@@ -174,8 +176,9 @@ export class WaniKaniUploadService implements UploadService {
                 return this.findStudyMaterial(subjectId, retryCount + 1);
             }
             // All retries exhausted - log error
-            console.error(`❌ Rate limit exceeded (429) for subject ${subjectId} after 3 retries`);
-            throw new Error(`Failed to fetch study material after ${retryCount} retries: 429 Too Many Requests`);
+            const error = new Error(`Failed to fetch study material after ${retryCount} retries: 429 Too Many Requests`);
+            this.logger.error(`Rate limit exceeded (429) for subject ${subjectId} after 3 retries`, error, { subjectId, retryCount });
+            throw error;
         }
 
         if (!response.ok) {
@@ -259,7 +262,11 @@ export class WaniKaniUploadService implements UploadService {
                     return this.makeRequest(url, method, body, retries + 1);
                 } else {
                     // All retries exhausted - log error
-                    console.error(`❌ Rate limit exceeded (429) after ${maxRetries} retries for ${method} ${url}`);
+                    this.logger.error(
+                        `Rate limit exceeded (429) after ${maxRetries} retries`,
+                        undefined,
+                        { method, url, retries: maxRetries }
+                    );
                 }
             }
 
