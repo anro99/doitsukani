@@ -125,11 +125,13 @@ describe('RadicalsManagerRefactored', () => {
         expect(screen.getByTestId('token-management')).toBeInTheDocument();
     });
 
-    it('shows help text when no API token is provided', () => {
+    it('shows token input when no API token is provided', () => {
         render(<RadicalsManagerRefactored />);
 
-        expect(screen.getByText('🚀 Erste Schritte')).toBeInTheDocument();
-        expect(screen.getByText('Geben Sie Ihren Wanikani API-Token ein, um zu beginnen.')).toBeInTheDocument();
+        // TokenManagement Mock ist sichtbar
+        expect(screen.getByTestId('token-management')).toBeInTheDocument();
+        // Buttons aus dem Mock
+        expect(screen.getByTestId('set-api-token')).toBeInTheDocument();
     });
 
     it('does not render LevelSelector when no API token', () => {
@@ -198,7 +200,7 @@ describe('RadicalsManagerRefactored', () => {
         });
 
         render(<RadicalsManagerRefactored />);
-        expect(screen.getByText('Lade Radicals von Wanikani...')).toBeInTheDocument();
+        expect(screen.getByText('Lade Radicals von WaniKani...')).toBeInTheDocument();
     });
 
     it('handles API token change', () => {
@@ -368,7 +370,8 @@ describe('RadicalsManagerRefactored', () => {
 
         render(<RadicalsManagerRefactored />);
 
-        expect(screen.queryByText('🚀 Erste Schritte')).not.toBeInTheDocument();
-        expect(screen.queryByText('Geben Sie Ihren Wanikani API-Token ein, um zu beginnen.')).not.toBeInTheDocument();
+        // Mit API Token wird kein Hilfstext angezeigt (war alte "Erste Schritte" Card)
+        // LevelSelector und Preview werden gerendert
+        expect(screen.getByTestId('level-selector')).toBeInTheDocument();
     });
 });

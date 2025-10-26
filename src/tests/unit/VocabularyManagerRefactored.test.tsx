@@ -53,11 +53,14 @@ describe('📚 VocabularyManagerRefactored Component Tests', () => {
             expect(screen.getByText('Automatische deutsche Übersetzungen für WaniKani Vocabulary mit DeepL')).toBeInTheDocument();
         });
 
-        it('should show help text when no API token is provided', () => {
+        it('should show token input when no API token is provided', () => {
             render(<VocabularyManagerRefactored />);
 
-            expect(screen.getByText('🚀 Erste Schritte')).toBeInTheDocument();
-            expect(screen.getByText('Geben Sie Ihren WaniKani API-Token ein, um zu beginnen.')).toBeInTheDocument();
+            // TokenManagement ist sichtbar (ohne data-testid, prüfe Inhalte)
+            expect(screen.getByText('🔑 API-Token Konfiguration')).toBeInTheDocument();
+            expect(screen.getByLabelText(/Wanikani API-Token/i)).toBeInTheDocument();
+            // Level Selector wird NICHT gerendert
+            expect(screen.queryByTestId('level-selector')).not.toBeInTheDocument();
         });
     });
 });
