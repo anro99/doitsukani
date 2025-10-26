@@ -7,14 +7,6 @@ import { Progress } from '../ui/progress';
 // Generic Types for Processing Controls
 // ============================================================================
 
-export interface UploadStats {
-    created: number;
-    updated: number;
-    failed: number;
-    skipped: number;
-    successful: number;
-}
-
 export interface StreamingProcessingPhase {
     translationPhase: {
         status: string;
@@ -49,9 +41,6 @@ interface ProcessingControlsProps {
     filteredItemsCount: number;
     isProcessing: boolean;
     progress: number;
-    translationStatus?: string;
-    uploadStatus?: string;
-    uploadStats: UploadStats;
     onStartProcessing: () => void;
     onStopProcessing: () => void;
     onClearResults?: () => void;
@@ -87,9 +76,6 @@ export const ProcessingControls = ({
     filteredItemsCount,
     isProcessing,
     progress,
-    translationStatus,
-    uploadStatus,
-    uploadStats,
     onStartProcessing,
     onStopProcessing,
     onClearResults,
@@ -114,7 +100,7 @@ export const ProcessingControls = ({
     const itemTypeName = itemType === 'kanji' ? 'Kanji' : itemType === 'vocabulary' ? 'Vocabulary' : 'Radicals';
 
     return (
-        <Card data-testid="processing-controls">
+        <Card>
             <CardHeader>
                 <CardTitle>🚀 Verarbeitung starten</CardTitle>
             </CardHeader>
@@ -132,7 +118,6 @@ export const ProcessingControls = ({
                                     : ''
                             }`}
                         variant={streamingResult ? "default" : "default"}
-                        data-testid="start-processing"
                     >
                         {isProcessing ? (
                             'Streaming läuft...'
@@ -151,7 +136,6 @@ export const ProcessingControls = ({
                         onClick={onStopProcessing}
                         disabled={!isProcessing}
                         className={isProcessing ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}
-                        data-testid="stop-processing"
                     >
                         {isProcessing ? '⏹️ Stoppen' : 'Stoppen'}
                     </Button>
@@ -232,23 +216,6 @@ export const ProcessingControls = ({
                                 <p className="text-sm text-gray-600 text-center">
                                     {progress}% abgeschlossen
                                 </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {translationStatus && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-700">{translationStatus}</p>
-                    </div>
-                )}
-
-                {uploadStatus && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-700">{uploadStatus}</p>
-                        {(uploadStats.created > 0 || uploadStats.updated > 0 || uploadStats.failed > 0 || uploadStats.skipped > 0) && (
-                            <div className="text-xs text-green-600 mt-1">
-                                ✅ Erstellt: {uploadStats.created} | 🔄 Aktualisiert: {uploadStats.updated} | ❌ Fehler: {uploadStats.failed} | ⏭️ Übersprungen: {uploadStats.skipped}
                             </div>
                         )}
                     </div>

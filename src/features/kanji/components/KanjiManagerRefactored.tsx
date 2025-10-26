@@ -29,9 +29,6 @@ export const KanjiManagerRefactored = () => {
         isLoadingKanji,
         isProcessing,
         progress,
-        translationStatus,
-        uploadStatus,
-        uploadStats,
 
         // Streaming states (NEW)
         streamingPhases,
@@ -123,9 +120,6 @@ export const KanjiManagerRefactored = () => {
                     filteredItemsCount={kanjiCount}
                     isProcessing={isProcessing}
                     progress={progress}
-                    translationStatus={translationStatus}
-                    uploadStatus={uploadStatus}
-                    uploadStats={uploadStats}
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="kanji"

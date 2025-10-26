@@ -14,9 +14,6 @@ export const RadicalsManagerRefactored = () => {
         synonymMode,
         isProcessing,
         progress,
-        translationStatus,
-        uploadStatus,
-        uploadStats,
         wkRadicals,
         isLoadingRadicals,
         apiError,
@@ -109,9 +106,6 @@ export const RadicalsManagerRefactored = () => {
                     filteredItemsCount={filteredRadicals.length}
                     isProcessing={isProcessing}
                     progress={progress}
-                    translationStatus={translationStatus}
-                    uploadStatus={uploadStatus}
-                    uploadStats={uploadStats}
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="radicals"

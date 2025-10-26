@@ -29,9 +29,6 @@ export const VocabularyManagerRefactored = () => {
         isLoadingVocabulary,
         isProcessing,
         progress,
-        translationStatus,
-        uploadStatus,
-        uploadStats,
 
         // Streaming processing states
         streamingPhases,
@@ -130,9 +127,6 @@ export const VocabularyManagerRefactored = () => {
                     filteredItemsCount={vocabularyCount}
                     isProcessing={isProcessing}
                     progress={progress}
-                    translationStatus={translationStatus}
-                    uploadStatus={uploadStatus}
-                    uploadStats={uploadStats}
                     onStartProcessing={handleStartProcessing}
                     onStopProcessing={handleStopProcessing}
                     itemType="vocabulary"
