@@ -40,6 +40,11 @@ interface CombinedPreviewProps {
     currentLevelCount?: number;
     currentLevelCountLoading?: boolean;
 
+    /** Per-Type Counts für detaillierte Anzeige */
+    totalRadicals?: number;
+    totalKanji?: number;
+    totalVocabulary?: number;
+
     /** Load More Funktionalität */
     displayedPreviewCount?: number;
     isLoadingItems?: boolean;
@@ -74,41 +79,6 @@ function calculateTypeCounts(items: CombinedItem[]): TypeCounts {
 }
 
 /**
- * Type Counters Component
- * 
- * Zeigt die Anzahl der Items pro Type an
- */
-const TypeCounters = ({ counts }: { counts: TypeCounts }) => {
-    return (
-        <div className="flex flex-wrap gap-3 text-sm">
-            <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="text-gray-700">
-                    Radicals: <span className="font-semibold">{counts.radicals}</span>
-                </span>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-pink-500" />
-                <span className="text-gray-700">
-                    Kanji: <span className="font-semibold">{counts.kanji}</span>
-                </span>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-purple-500" />
-                <span className="text-gray-700">
-                    Vocabulary: <span className="font-semibold">{counts.vocabulary}</span>
-                </span>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-                <span className="text-gray-600">
-                    Total: <span className="font-bold text-gray-900">{counts.total}</span>
-                </span>
-            </div>
-        </div>
-    );
-};
-
-/**
  * Combined Preview Component
  * 
  * Hauptkomponente für die Preview von Mixed Items
@@ -117,6 +87,9 @@ export const CombinedPreview = ({
     previewItems,
     currentLevelCount,
     currentLevelCountLoading = false,
+    totalRadicals = 0,
+    totalKanji = 0,
+    totalVocabulary = 0,
     displayedPreviewCount = 12,
     isLoadingItems = false,
     onLoadMore,
@@ -131,9 +104,8 @@ export const CombinedPreview = ({
     // Calculate type counts für alle geladenen Items
     const loadedCounts = calculateTypeCounts(previewItems);
 
-    // Calculate type counts für angezeigte Items
+    // Slice displayed items für Grid Display
     const displayedItems = previewItems.slice(0, displayedPreviewCount);
-    const displayedCounts = calculateTypeCounts(displayedItems);
 
     // Empty State
     if (previewItems.length === 0) {
@@ -164,25 +136,8 @@ export const CombinedPreview = ({
             <CardHeader>
                 <CardTitle>🎯 Combined Vorschau</CardTitle>
                 <p className="text-sm text-gray-600">
-                    Zeigt {Math.min(displayedPreviewCount, previewItems.length)} von {previewItems.length} geladenen Items
+                    Zeigt {loadedCounts.radicals} von {totalRadicals} Radicals, {loadedCounts.kanji} von {totalKanji} Kanji und {loadedCounts.vocabulary} von {totalVocabulary} Vocabulary
                 </p>
-                <p className="text-xs text-gray-500 mb-3">
-                    {getCountInfo()}
-                </p>
-
-                {/* Type Counters für angezeigte Items */}
-                <div className="mt-3 pt-3 border-t">
-                    <div className="text-xs text-gray-500 mb-2">Angezeigte Items:</div>
-                    <TypeCounters counts={displayedCounts} />
-                </div>
-
-                {/* Type Counters für alle geladenen Items (wenn unterschiedlich) */}
-                {displayedItems.length < previewItems.length && (
-                    <div className="mt-3 pt-3 border-t">
-                        <div className="text-xs text-gray-500 mb-2">Geladene Items (gesamt):</div>
-                        <TypeCounters counts={loadedCounts} />
-                    </div>
-                )}
             </CardHeader>
             <CardContent>
                 {/* Mixed Item Grid */}
@@ -200,7 +155,7 @@ export const CombinedPreview = ({
                         totalCount={currentLevelCount}
                         isLoading={isLoadingItems}
                         onLoadMore={onLoadMore}
-                        itemType="Radicals" // Generic label, wird von PreviewLoadMore als "Items" interpretiert
+                        itemType="Items"
                     />
                 )}
             </CardContent>

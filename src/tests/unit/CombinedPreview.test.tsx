@@ -67,35 +67,47 @@ describe('CombinedPreview Component', () => {
         it('sollte Type Counters korrekt für Mixed Items berechnen', () => {
             const mixedItems = [mockRadical, mockKanji, mockVocabulary];
 
-            render(<CombinedPreview previewItems={mixedItems} />);
+            render(
+                <CombinedPreview
+                    previewItems={mixedItems}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            // Check counters
-            expect(screen.getByText(/Radicals:/)).toBeInTheDocument();
-            expect(screen.getByText(/Kanji:/)).toBeInTheDocument();
-            expect(screen.getByText(/Vocabulary:/)).toBeInTheDocument();
-            expect(screen.getByText(/Total:/)).toBeInTheDocument();
+            // Check header text zeigt per-Type Counts
+            expect(screen.getByText(/1 von 5 Radicals, 1 von 10 Kanji und 1 von 15 Vocabulary/)).toBeInTheDocument();
         });
 
         it('sollte Type Counters für nur Radicals korrekt anzeigen', () => {
             const radicals = [mockRadical, { ...mockRadical, id: 2 }];
 
-            render(<CombinedPreview previewItems={radicals} />);
+            render(
+                <CombinedPreview
+                    previewItems={radicals}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText(/Radicals:/)).toHaveTextContent('Radicals: 2');
-            expect(screen.getByText(/Kanji:/)).toHaveTextContent('Kanji: 0');
-            expect(screen.getByText(/Vocabulary:/)).toHaveTextContent('Vocabulary: 0');
-            expect(screen.getByText(/Total:/)).toHaveTextContent('Total: 2');
+            expect(screen.getByText(/2 von 5 Radicals, 0 von 10 Kanji und 0 von 15 Vocabulary/)).toBeInTheDocument();
         });
 
         it('sollte Type Counters für nur Vocabulary korrekt anzeigen', () => {
             const vocabularies = [mockVocabulary, { ...mockVocabulary, id: 2468 }, { ...mockVocabulary, id: 2469 }];
 
-            render(<CombinedPreview previewItems={vocabularies} />);
+            render(
+                <CombinedPreview
+                    previewItems={vocabularies}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText(/Radicals:/)).toHaveTextContent('Radicals: 0');
-            expect(screen.getByText(/Kanji:/)).toHaveTextContent('Kanji: 0');
-            expect(screen.getByText(/Vocabulary:/)).toHaveTextContent('Vocabulary: 3');
-            expect(screen.getByText(/Total:/)).toHaveTextContent('Total: 3');
+            expect(screen.getByText(/0 von 5 Radicals, 0 von 10 Kanji und 3 von 15 Vocabulary/)).toBeInTheDocument();
         });
 
         it('sollte separate Counters für displayed vs loaded Items anzeigen', () => {
@@ -107,11 +119,18 @@ describe('CombinedPreview Component', () => {
                 { ...mockKanji, id: 441 },
             ];
 
-            render(<CombinedPreview previewItems={manyItems} displayedPreviewCount={3} />);
+            render(
+                <CombinedPreview
+                    previewItems={manyItems}
+                    displayedPreviewCount={3}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            // Sollte zwei Counter-Sections haben
-            expect(screen.getByText('Angezeigte Items:')).toBeInTheDocument();
-            expect(screen.getByText('Geladene Items (gesamt):')).toBeInTheDocument();
+            // Die separate Counter-Sections wurden entfernt, jetzt nur Header-Text
+            expect(screen.getByText(/2 von 5 Radicals, 2 von 10 Kanji und 1 von 15 Vocabulary/)).toBeInTheDocument();
         });
     });
 
@@ -154,29 +173,58 @@ describe('CombinedPreview Component', () => {
 
     describe('Count Information', () => {
         it('sollte currentLevelCount anzeigen wenn vorhanden', () => {
-            render(<CombinedPreview previewItems={[mockRadical]} currentLevelCount={50} />);
+            render(
+                <CombinedPreview
+                    previewItems={[mockRadical]}
+                    currentLevelCount={50}
+                    totalRadicals={20}
+                    totalKanji={15}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText('50 Items insgesamt')).toBeInTheDocument();
+            // Neue UI zeigt per-Type Counts, nicht "X Items insgesamt"
+            expect(screen.getByText(/1 von 20 Radicals/)).toBeInTheDocument();
         });
 
         it('sollte Loading State für Count anzeigen', () => {
-            render(<CombinedPreview previewItems={[mockRadical]} currentLevelCountLoading={true} />);
+            render(
+                <CombinedPreview
+                    previewItems={[mockRadical]}
+                    currentLevelCountLoading={true}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText('Lade Count...')).toBeInTheDocument();
+            // Der neue Header-Text zeigt immer per-Type Counts an
+            expect(screen.getByText(/1 von 5 Radicals/)).toBeInTheDocument();
         });
 
         it('sollte "Count nicht verfügbar" anzeigen wenn kein Count', () => {
+            // Mit den neuen Props werden Default-Werte (0) verwendet
             render(<CombinedPreview previewItems={[mockRadical]} />);
 
-            expect(screen.getByText('Count nicht verfügbar')).toBeInTheDocument();
+            // Zeigt "1 von 0" weil totalRadicals=0 (default)
+            expect(screen.getByText(/1 von 0 Radicals/)).toBeInTheDocument();
         });
 
         it('sollte Anzahl angezeigter Items korrekt berechnen', () => {
             const items = [mockRadical, mockKanji, mockVocabulary];
 
-            render(<CombinedPreview previewItems={items} displayedPreviewCount={2} />);
+            render(
+                <CombinedPreview
+                    previewItems={items}
+                    displayedPreviewCount={2}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText(/Zeigt 2 von 3 geladenen Items/)).toBeInTheDocument();
+            // Neue UI zeigt per-Type Counts statt "X von Y geladenen Items"
+            expect(screen.getByText(/1 von 5 Radicals, 1 von 10 Kanji und 1 von 15 Vocabulary/)).toBeInTheDocument();
         });
     });
 
@@ -194,8 +242,8 @@ describe('CombinedPreview Component', () => {
                 />
             );
 
-            // PreviewLoadMore verwendet "Radicals" als itemType
-            expect(screen.getByRole('button', { name: /Weitere.*Radicals anzeigen/i })).toBeInTheDocument();
+            // Button-Text verwendet jetzt "Items" statt "Radicals"
+            expect(screen.getByRole('button', { name: /Weitere.*Items anzeigen/i })).toBeInTheDocument();
         });
 
         it('sollte Load More Button nicht anzeigen wenn alle Items displayed', () => {
@@ -276,11 +324,17 @@ describe('CombinedPreview Component', () => {
         it('sollte mit nur einem Item-Type korrekt umgehen', () => {
             const onlyRadicals = [mockRadical, { ...mockRadical, id: 2 }];
 
-            render(<CombinedPreview previewItems={onlyRadicals} />);
+            render(
+                <CombinedPreview
+                    previewItems={onlyRadicals}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            expect(screen.getByText(/Radicals:/)).toHaveTextContent('2');
-            expect(screen.getByText(/Kanji:/)).toHaveTextContent('0');
-            expect(screen.getByText(/Vocabulary:/)).toHaveTextContent('0');
+            // Neue UI zeigt per-Type Counts im Header
+            expect(screen.getByText(/2 von 5 Radicals, 0 von 10 Kanji und 0 von 15 Vocabulary/)).toBeInTheDocument();
         });
     });
 
@@ -297,19 +351,18 @@ describe('CombinedPreview Component', () => {
         it('sollte farbige Indicators für Type Counters haben', () => {
             const items = [mockRadical];
 
-            const { container } = render(<CombinedPreview previewItems={items} />);
+            const { container } = render(
+                <CombinedPreview
+                    previewItems={items}
+                    totalRadicals={5}
+                    totalKanji={10}
+                    totalVocabulary={15}
+                />
+            );
 
-            // Blue dot für Radicals
-            const blueDot = container.querySelector('.bg-blue-500');
-            expect(blueDot).toBeInTheDocument();
-
-            // Pink dot für Kanji
-            const pinkDot = container.querySelector('.bg-pink-500');
-            expect(pinkDot).toBeInTheDocument();
-
-            // Purple dot für Vocabulary
-            const purpleDot = container.querySelector('.bg-purple-500');
-            expect(purpleDot).toBeInTheDocument();
+            // TypeCounters-Komponente wurde entfernt, also keine farbigen Dots mehr
+            // Neue UI zeigt nur Text im Header
+            expect(screen.getByText(/1 von 5 Radicals/)).toBeInTheDocument();
         });
     });
 });

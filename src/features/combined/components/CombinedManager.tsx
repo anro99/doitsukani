@@ -38,6 +38,9 @@ export const CombinedManager = () => {
         // Data
         combinedItems,
         totalCount,
+        radicalCount,
+        kanjiCount,
+        vocabularyCount,
         displayedPreviewCount,
 
         // Loading states
@@ -92,6 +95,9 @@ export const CombinedManager = () => {
                     displayedPreviewCount={displayedPreviewCount}
                     isLoadingItems={isLoadingItems}
                     onLoadMore={loadMorePreviewItems}
+                    totalRadicals={radicalCount}
+                    totalKanji={kanjiCount}
+                    totalVocabulary={vocabularyCount}
                 />
             }
         />
