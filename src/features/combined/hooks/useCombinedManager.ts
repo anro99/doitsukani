@@ -17,7 +17,9 @@ import {
     fetchCombinedPreview,
     fetchCombinedSubjects,
     fetchCombinedStudyMaterials,
-    convertToCombinedItem
+    convertToCombinedItem,
+    getCombinedCount,
+    type CombinedCountResult
 } from '../lib/combined-wanikani';
 import { processCombinedStreaming } from '../lib/combined-streaming-integration';
 import type { CombinedItem } from '../types/combined-types';
@@ -137,34 +139,27 @@ export function useCombinedManager(): CombinedManagerState {
         }
     };
 
-    // Filter items by selected level
-    const filteredItems = useMemo(() => {
-        if (!combinedItems || combinedItems.length === 0) return [];
-
-        console.log(`[CombinedManager] 🔄 Filtering ${combinedItems.length} items for level ${selectedLevel}`);
-
-        if (selectedLevel === 'all') {
-            return combinedItems;
+    // Count items by type from loaded items
+    // Hinweis: Keine weitere Filterung nach Level nötig,
+    // da fetchCombinedPreview() bereits gefilterte Items zurückgibt
+    const typeCounts = useMemo(() => {
+        if (!combinedItems || combinedItems.length === 0) {
+            return { radicals: 0, kanji: 0, vocabulary: 0, total: 0 };
         }
 
-        return combinedItems.filter(item => item.level === selectedLevel);
-    }, [combinedItems, selectedLevel]);
+        const radicals = combinedItems.filter(isRadical).length;
+        const kanji = combinedItems.filter(isKanji).length;
+        const vocabulary = combinedItems.filter(isVocabulary).length;
 
-    // Count items by type
-    const typeCounts = useMemo(() => {
-        const radicals = filteredItems.filter(isRadical).length;
-        const kanji = filteredItems.filter(isKanji).length;
-        const vocabulary = filteredItems.filter(isVocabulary).length;
-
-        console.log(`[CombinedManager] 📊 Type counts: R=${radicals}, K=${kanji}, V=${vocabulary}`);
+        console.log(`[CombinedManager] 📊 Loaded items by type: R=${radicals}, K=${kanji}, V=${vocabulary}`);
 
         return {
             radicals,
             kanji,
             vocabulary,
-            total: filteredItems.length
+            total: combinedItems.length
         };
-    }, [filteredItems]);
+    }, [combinedItems]);
 
     // Load items from API
     const loadItemsFromAPI = async () => {
@@ -181,33 +176,40 @@ export function useCombinedManager(): CombinedManagerState {
         try {
             const level = selectedLevel === 'all' ? undefined : selectedLevel;
 
-            console.log(`[CombinedManager] 🔄 Loading combined items for level ${level || 'all'}`);
+            console.log(`[CombinedManager] 🔄 Loading counts for level ${level || 'all'}...`);
 
-            // Load ALL subjects for the level (not just a preview)
-            // WaniKani API has no limit by default, so it fetches all items
-            const allSubjects = await fetchCombinedSubjects(apiToken, {
-                levels: level ? level.toString() : undefined,
-                // No limit - fetch all items for the level
-            });
+            // ✅ Step 1: Load ONLY counts (3 API calls, minimal data)
+            const counts = await getCombinedCount(apiToken, level);
 
-            // Load study materials for all items
+            // Set total counts from API
+            setTotalItemCount(counts.total);
+
+            console.log(`[CombinedManager] ✅ Total: ${counts.total} items (R=${counts.radicals}, K=${counts.kanji}, V=${counts.vocabulary})`);
+
+            // ✅ Step 2: Load ONLY preview items (default: 12 items)
+            console.log(`[CombinedManager] 🔄 Loading preview (${PREVIEW_BATCH_SIZE} items)...`);
+
+            const previewSubjects = await fetchCombinedPreview(
+                apiToken,
+                level,
+                PREVIEW_BATCH_SIZE
+            );
+
+            // Load study materials for preview items only
             let studyMaterials: any[] = [];
-            if (allSubjects.length > 0) {
-                const subjectIds = allSubjects.map((subject) => subject.id);
+            if (previewSubjects.length > 0) {
+                const subjectIds = previewSubjects.map((subject) => subject.id);
                 studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
                 console.log(`[CombinedManager] ✅ Loaded ${studyMaterials.length} study materials`);
             }
 
             // Convert to CombinedItems
-            const allItems = allSubjects.map(subject =>
+            const previewItems = previewSubjects.map(subject =>
                 convertToCombinedItem(subject, studyMaterials)
             );
 
-            console.log(`[CombinedManager] ✅ Loaded ${allItems.length} items`);
-            setCombinedItems(allItems);
-
-            // Set total count
-            setTotalItemCount(allItems.length);
+            console.log(`[CombinedManager] ✅ Preview loaded: ${previewItems.length} of ${counts.total} items`);
+            setCombinedItems(previewItems);
 
         } catch (error) {
             console.error('[CombinedManager] ❌ Error loading items:', error);
@@ -363,7 +365,7 @@ export function useCombinedManager(): CombinedManagerState {
         handleDeepLTokenChange,
 
         // Data
-        combinedItems: filteredItems,
+        combinedItems,
         totalCount: totalItemCount > 0 ? totalItemCount : typeCounts.total,
         radicalCount: typeCounts.radicals,
         kanjiCount: typeCounts.kanji,

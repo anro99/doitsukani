@@ -60,6 +60,150 @@ export interface FetchCombinedOptions {
 }
 
 /**
+ * Result Type für getCombinedCount
+ */
+export interface CombinedCountResult {
+    /** Anzahl Radicals */
+    radicals: number;
+    /** Anzahl Kanji */
+    kanji: number;
+    /** Anzahl Vocabulary */
+    vocabulary: number;
+    /** Gesamtanzahl (radicals + kanji + vocabulary) */
+    total: number;
+}
+
+/**
+ * Get total count of combined items for a level
+ * 
+ * Optimized Strategy:
+ * - Für einzelne Levels (<1000 Items): EINEN Request + client-side counting
+ * - Für "all levels" (>1000 Items): 3 parallele Count-Requests
+ * 
+ * Memory-efficient: Lädt nur 1 Item pro Type für "all", oder max 1000 Items für Level.
+ * 
+ * @param token - WaniKani API Token
+ * @param level - Optional: Specific Level (default: alle Levels)
+ * @returns Promise<CombinedCountResult> - Counts für R/K/V + Total
+ * 
+ * @example
+ * // Get counts for level 1 (fast: 1 request)
+ * const counts = await getCombinedCount(token, 1);
+ * // { radicals: 25, kanji: 18, vocabulary: 37, total: 80 }
+ * 
+ * @example
+ * // Get counts for all levels (3 requests)
+ * const allCounts = await getCombinedCount(token);
+ * // { radicals: 478, kanji: 2136, vocabulary: 6662, total: 9276 }
+ */
+export async function getCombinedCount(
+    token: string,
+    level?: number
+): Promise<CombinedCountResult> {
+    const limiter = new Bottleneck(API_LIMITS);
+
+    console.log(`[CombinedWaniKani] 🔢 Fetching counts for level ${level || 'all'}...`);
+
+    // ✅ Optimierung für einzelne Levels: 1 Request + client-side counting
+    if (level !== undefined) {
+        try {
+            // Single request mit allen Typen, limit=1000 (WaniKani max per page)
+            const url = `https://api.wanikani.com/v2/subjects?types=radical,kanji,vocabulary&levels=${level}&limit=1000`;
+
+            const response = await limiter.schedule(() =>
+                axios.get(url, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+            );
+
+            const collection = response.data as WKCollection;
+
+            // Count by type (client-side, sehr schnell)
+            let radicalCount = 0;
+            let kanjiCount = 0;
+            let vocabularyCount = 0;
+
+            for (const subject of collection.data) {
+                if (subject.object === 'radical') radicalCount++;
+                else if (subject.object === 'kanji') kanjiCount++;
+                else if (subject.object === 'vocabulary') vocabularyCount++;
+            }
+
+            const result: CombinedCountResult = {
+                radicals: radicalCount,
+                kanji: kanjiCount,
+                vocabulary: vocabularyCount,
+                total: collection.total_count,
+            };
+
+            console.log('[CombinedWaniKani] 📊 Counts:', {
+                ...result,
+                level,
+                dataLoaded: collection.data.length,
+                source: '1 API request + client count'
+            });
+
+            return result;
+
+        } catch (error) {
+            console.error('[CombinedWaniKani] ❌ Error fetching counts:', error);
+            throw error;
+        }
+    }
+
+    // ✅ Für "all levels": 3 parallele Count-Requests (da >1000 Items total)
+    // Build URLs für separate Count Requests
+    const baseUrl = 'https://api.wanikani.com/v2/subjects?limit=1';
+
+    const radicalUrl = `${baseUrl}&types=radical`;
+    const kanjiUrl = `${baseUrl}&types=kanji`;
+    const vocabularyUrl = `${baseUrl}&types=vocabulary`;
+
+    try {
+        // Parallele Requests für alle drei Typen
+        const [radicalResponse, kanjiResponse, vocabularyResponse] = await Promise.all([
+            limiter.schedule(() =>
+                axios.get(radicalUrl, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+            ),
+            limiter.schedule(() =>
+                axios.get(kanjiUrl, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+            ),
+            limiter.schedule(() =>
+                axios.get(vocabularyUrl, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+            ),
+        ]);
+
+        const radicalCount = (radicalResponse.data as WKCollection).total_count;
+        const kanjiCount = (kanjiResponse.data as WKCollection).total_count;
+        const vocabularyCount = (vocabularyResponse.data as WKCollection).total_count;
+
+        const result: CombinedCountResult = {
+            radicals: radicalCount,
+            kanji: kanjiCount,
+            vocabulary: vocabularyCount,
+            total: radicalCount + kanjiCount + vocabularyCount,
+        };
+
+        console.log('[CombinedWaniKani] 📊 Counts:', {
+            ...result,
+            level: 'all',
+            source: '3 parallel API requests'
+        });
+
+        return result;
+    } catch (error) {
+        console.error('[CombinedWaniKani] ❌ Error fetching counts:', error);
+        throw error;
+    }
+}
+
+/**
  * Fetches Combined Subjects (Radicals, Kanji, Vocabulary) von WaniKani API
  * 
  * Verwendet das Subjects Endpoint mit types=radical,kanji,vocabulary
