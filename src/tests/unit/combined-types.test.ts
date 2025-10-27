@@ -78,7 +78,7 @@ describe('Combined Types - Type Guards', () => {
 
         it('sollte Type Narrowing ermöglichen', () => {
             const item: CombinedItem = mockRadical;
-            
+
             if (isRadical(item)) {
                 // TypeScript sollte hier wissen, dass item vom Typ CombinedRadical ist
                 expect(item.primaryMeaning).toBe('Ground');
@@ -106,7 +106,7 @@ describe('Combined Types - Type Guards', () => {
 
         it('sollte Type Narrowing ermöglichen', () => {
             const item: CombinedItem = mockKanji;
-            
+
             if (isKanji(item)) {
                 expect(item.primaryMeaning).toBe('One');
                 expect(item.alternativeMeanings).toBeDefined();
@@ -133,7 +133,7 @@ describe('Combined Types - Type Guards', () => {
 
         it('sollte Type Narrowing ermöglichen', () => {
             const item: CombinedItem = mockVocabulary;
-            
+
             if (isVocabulary(item)) {
                 expect(item.primaryMeaning).toBe('One');
                 expect(item.alternativeMeanings).toBeDefined();
@@ -271,7 +271,7 @@ describe('Combined Types - Helper Functions', () => {
             expect(combined.level).toBe(1);
             expect(combined.selected).toBe(false);
             expect(combined.translatedSynonyms).toEqual([]);
-            
+
             if (isRadical(combined)) {
                 expect(combined.primaryMeaning).toBe('Ground');
                 expect(combined.meanings).toEqual(['Ground']);
@@ -298,7 +298,7 @@ describe('Combined Types - Helper Functions', () => {
             expect(combined.characters).toBe('一');
             expect(combined.level).toBe(1);
             expect(combined.selected).toBe(false);
-            
+
             if (isKanji(combined)) {
                 expect(combined.primaryMeaning).toBe('One');
                 expect(combined.alternativeMeanings).toEqual(['Singular']);
@@ -326,7 +326,7 @@ describe('Combined Types - Helper Functions', () => {
             expect(combined.characters).toBe('一つ');
             expect(combined.level).toBe(1);
             expect(combined.selected).toBe(false);
-            
+
             if (isVocabulary(combined)) {
                 expect(combined.primaryMeaning).toBe('One Thing');
                 expect(combined.alternativeMeanings).toEqual(['A Single Item']);
@@ -349,7 +349,7 @@ describe('Combined Types - Helper Functions', () => {
 
             expect(isRadical(combined)).toBe(true);
             expect(combined.characters).toBeNull();
-            
+
             if (isRadical(combined)) {
                 expect(combined.primaryMeaning).toBe('Fins');
             }
@@ -405,37 +405,37 @@ describe('Combined Types - Integration mit Type System', () => {
 
     it('sollte Type Guards in switch-case verwenden können', () => {
         const items: CombinedItem[] = [
-            { 
-                type: 'radical', 
-                id: 1, 
-                characters: '一', 
-                level: 1, 
-                selected: false, 
-                translatedSynonyms: [], 
+            {
+                type: 'radical',
+                id: 1,
+                characters: '一',
+                level: 1,
+                selected: false,
+                translatedSynonyms: [],
                 primaryMeaning: 'Ground',
                 meanings: ['Ground'],
                 existingSynonyms: [],
             },
-            { 
-                type: 'kanji', 
-                id: 440, 
-                characters: '一', 
-                level: 1, 
-                selected: false, 
-                translatedSynonyms: [], 
-                primaryMeaning: 'One', 
+            {
+                type: 'kanji',
+                id: 440,
+                characters: '一',
+                level: 1,
+                selected: false,
+                translatedSynonyms: [],
+                primaryMeaning: 'One',
                 alternativeMeanings: [],
                 meanings: ['One'],
                 existingSynonyms: [],
             },
-            { 
-                type: 'vocabulary', 
-                id: 2467, 
-                characters: '一', 
-                level: 1, 
-                selected: false, 
-                translatedSynonyms: [], 
-                primaryMeaning: 'One', 
+            {
+                type: 'vocabulary',
+                id: 2467,
+                characters: '一',
+                level: 1,
+                selected: false,
+                translatedSynonyms: [],
+                primaryMeaning: 'One',
                 alternativeMeanings: [],
                 meanings: ['One'],
                 existingSynonyms: [],
