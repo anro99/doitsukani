@@ -48,13 +48,13 @@ const API_LIMITS = {
 export interface FetchCombinedOptions {
     /** Level-Filter (z.B. "1", "1,2,3", "1-10") */
     levels?: string;
-    
+
     /** Maximale Anzahl Items (für Preview) */
     limit?: number;
-    
+
     /** Offset für Pagination */
     offset?: number;
-    
+
     /** Progress Callback */
     setProgress?: SetProgress;
 }
@@ -85,37 +85,37 @@ export async function fetchCombinedSubjects(
     options: FetchCombinedOptions = {}
 ): Promise<WKSubject[]> {
     const limiter = new Bottleneck(API_LIMITS);
-    
+
     // Build API URL with query parameters
     const params = new URLSearchParams();
     params.append('types', 'radical,kanji,vocabulary');
-    
+
     if (options.levels) {
         params.append('levels', options.levels);
     }
-    
+
     if (options.limit) {
         params.append('limit', options.limit.toString());
     }
-    
+
     if (options.offset) {
         params.append('offset', options.offset.toString());
     }
-    
+
     const url = `https://api.wanikani.com/v2/subjects?${params.toString()}`;
-    
+
     // Progress Reporting
     if (options.setProgress) {
         const levelText = options.levels ? ` für Level ${options.levels}` : '';
         const limitText = options.limit ? ` (max ${options.limit})` : '';
-        
+
         options.setProgress({
             text: `Lade Combined Items${levelText}${limitText}...`,
             currentStep: 1,
             lastStep: 1,
         });
     }
-    
+
     // Single Request (mit limit) oder Pagination (ohne limit)
     if (options.limit) {
         // Single Page Request
@@ -126,12 +126,12 @@ export async function fetchCombinedSubjects(
                 },
             })
         );
-        
+
         const collection = response.data as WKCollection;
-        
+
         // Apply limit (API kann mehr zurückgeben)
         const limited = collection.data.slice(0, options.limit);
-        
+
         if (options.setProgress) {
             options.setProgress({
                 text: `${limited.length} Combined Items geladen`,
@@ -139,15 +139,15 @@ export async function fetchCombinedSubjects(
                 lastStep: 1,
             });
         }
-        
+
         return limited as WKSubject[];
     }
-    
+
     // Paginated Request (alle Seiten laden)
     const result: WKSubject[] = [];
     let nextUrl: string | null = url;
     let page = 0;
-    
+
     while (nextUrl) {
         const response = await limiter.schedule(() =>
             axios.get(nextUrl!, {
@@ -156,24 +156,24 @@ export async function fetchCombinedSubjects(
                 },
             })
         );
-        
+
         const collection = response.data as WKCollection;
         result.push(...(collection.data as WKSubject[]));
-        
+
         // Progress Update
         if (options.setProgress) {
             const totalPages = Math.ceil(collection.total_count / collection.pages.per_page);
-            
+
             options.setProgress({
                 text: `Lade Combined Items (Seite ${++page}/${totalPages})...`,
                 currentStep: page,
                 lastStep: totalPages,
             });
         }
-        
+
         nextUrl = collection.pages.next_url;
     }
-    
+
     if (options.setProgress) {
         options.setProgress({
             text: `${result.length} Combined Items geladen`,
@@ -181,7 +181,7 @@ export async function fetchCombinedSubjects(
             lastStep: 1,
         });
     }
-    
+
     return result;
 }
 
@@ -221,35 +221,35 @@ export function convertToCombinedItem(
     studyMaterials?: WKStudyMaterial[]
 ): CombinedItem {
     const subjectType = subject.object as CombinedItemType;
-    
+
     // Find study material for this subject
     const studyMaterial = studyMaterials?.find(sm => sm.data.subject_id === subject.id);
-    
+
     // Extract meanings
     const meanings = subject.data.meanings
         .filter(m => m.accepted_answer)
         .map(m => m.meaning);
-    
-    const primaryMeaning = subject.data.meanings.find(m => m.primary)?.meaning 
-        || meanings[0] 
+
+    const primaryMeaning = subject.data.meanings.find(m => m.primary)?.meaning
+        || meanings[0]
         || '';
-    
+
     // Extract alternative meanings (non-primary)
     const alternativeMeanings = subject.data.meanings
         .filter(m => !m.primary && m.accepted_answer)
         .map(m => m.meaning);
-    
+
     // Extract existing synonyms
     const existingSynonyms = studyMaterial?.data.meaning_synonyms || [];
-    
+
     // Characters (nullable für text-only radicals)
     const characters = subject.data.characters;
-    
+
     // Meaning Mnemonic (nur für Radicals und Kanji)
-    const meaningMnemonic = ('meaning_mnemonic' in subject.data) 
-        ? subject.data.meaning_mnemonic 
+    const meaningMnemonic = ('meaning_mnemonic' in subject.data)
+        ? subject.data.meaning_mnemonic
         : undefined;
-    
+
     // Create base item compatible with ProcessableItem
     const baseItem = {
         id: subject.id,
@@ -260,7 +260,7 @@ export function convertToCombinedItem(
         alternativeMeanings,
         meaningMnemonic,
     };
-    
+
     // Convert to CombinedItem via createCombinedItem helper
     return createCombinedItem(
         baseItem as any, // Type assertion - createCombinedItem handles different types
@@ -282,7 +282,7 @@ export function convertToCombinedItems(
     subjects: WKSubject[],
     studyMaterials?: WKStudyMaterial[]
 ): CombinedItem[] {
-    return subjects.map(subject => 
+    return subjects.map(subject =>
         convertToCombinedItem(subject, studyMaterials)
     );
 }
@@ -304,13 +304,13 @@ export async function fetchCombinedStudyMaterials(
     if (subjectIds.length === 0) {
         return [];
     }
-    
+
     const limiter = new Bottleneck(API_LIMITS);
-    
+
     // WaniKani API: subject_ids als comma-separated string
     const subjectIdsParam = subjectIds.join(',');
     const url = `https://api.wanikani.com/v2/study_materials?subject_ids=${subjectIdsParam}`;
-    
+
     try {
         const response = await limiter.schedule(() =>
             axios.get(url, {
@@ -319,7 +319,7 @@ export async function fetchCombinedStudyMaterials(
                 },
             })
         );
-        
+
         const collection = response.data as { data: WKStudyMaterial[] };
         return collection.data;
     } catch (error) {
@@ -349,13 +349,13 @@ export async function fetchCompleteCombinedItems(
 ): Promise<CombinedItem[]> {
     // Step 1: Fetch Subjects
     const subjects = await fetchCombinedSubjects(token, options);
-    
+
     // Step 2: Fetch Study Materials
     const subjectIds = subjects.map(s => s.id);
     const studyMaterials = await fetchCombinedStudyMaterials(token, subjectIds);
-    
+
     // Step 3: Convert to CombinedItems
     const combinedItems = convertToCombinedItems(subjects, studyMaterials);
-    
+
     return combinedItems;
 }
