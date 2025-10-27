@@ -15,6 +15,7 @@ import {
 } from '../../../shared/lib/storage';
 import {
     fetchCombinedPreview,
+    fetchCombinedSubjects,
     fetchCombinedStudyMaterials,
     convertToCombinedItem
 } from '../lib/combined-wanikani';
@@ -182,30 +183,31 @@ export function useCombinedManager(): CombinedManagerState {
 
             console.log(`[CombinedManager] 🔄 Loading combined items for level ${level || 'all'}`);
 
-            // Load preview items (first batch)
-            const previewCount = Math.max(displayedPreviewCount * 2, 48);
-            const previewSubjects = await fetchCombinedPreview(apiToken, level, previewCount);
+            // Load ALL subjects for the level (not just a preview)
+            // WaniKani API has no limit by default, so it fetches all items
+            const allSubjects = await fetchCombinedSubjects(apiToken, {
+                levels: level ? level.toString() : undefined,
+                // No limit - fetch all items for the level
+            });
 
-            // Load study materials for preview items
+            // Load study materials for all items
             let studyMaterials: any[] = [];
-            if (previewSubjects.length > 0) {
-                const subjectIds = previewSubjects.map((subject) => subject.id);
+            if (allSubjects.length > 0) {
+                const subjectIds = allSubjects.map((subject) => subject.id);
                 studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
                 console.log(`[CombinedManager] ✅ Loaded ${studyMaterials.length} study materials`);
             }
 
             // Convert to CombinedItems
-            const previewItems = previewSubjects.map(subject =>
+            const allItems = allSubjects.map(subject =>
                 convertToCombinedItem(subject, studyMaterials)
             );
 
-            console.log(`[CombinedManager] ✅ Loaded ${previewItems.length} preview items`);
-            setCombinedItems(previewItems);
+            console.log(`[CombinedManager] ✅ Loaded ${allItems.length} items`);
+            setCombinedItems(allItems);
 
-            // Get total count
-            // Note: WaniKani API doesn't provide total count directly for combined types
-            // We use the preview count as approximation for now
-            setTotalItemCount(previewItems.length);
+            // Set total count
+            setTotalItemCount(allItems.length);
 
         } catch (error) {
             console.error('[CombinedManager] ❌ Error loading items:', error);
