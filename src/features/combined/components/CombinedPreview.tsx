@@ -120,7 +120,6 @@ export const CombinedPreview = ({
     displayedPreviewCount = 12,
     isLoadingItems = false,
     onLoadMore,
-    errorItems = new Map(),
 }: CombinedPreviewProps) => {
     // Helper function to get count info for preview display
     const getCountInfo = () => {
@@ -201,7 +200,7 @@ export const CombinedPreview = ({
                         totalCount={currentLevelCount}
                         isLoading={isLoadingItems}
                         onLoadMore={onLoadMore}
-                        itemType="Items" // Generic für Mixed
+                        itemType="Radicals" // Generic label, wird von PreviewLoadMore als "Items" interpretiert
                     />
                 )}
             </CardContent>

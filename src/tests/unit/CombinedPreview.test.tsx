@@ -194,7 +194,8 @@ describe('CombinedPreview Component', () => {
                 />
             );
 
-            expect(screen.getByRole('button', { name: /Weitere.*Items anzeigen/i })).toBeInTheDocument();
+            // PreviewLoadMore verwendet "Radicals" als itemType
+            expect(screen.getByRole('button', { name: /Weitere.*Radicals anzeigen/i })).toBeInTheDocument();
         });
 
         it('sollte Load More Button nicht anzeigen wenn alle Items displayed', () => {
