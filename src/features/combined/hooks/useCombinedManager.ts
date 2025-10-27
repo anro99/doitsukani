@@ -13,7 +13,7 @@ import {
     loadDeepLToken,
     saveDeepLToken
 } from '../../../shared/lib/storage';
-import { 
+import {
     fetchCombinedPreview,
     fetchCombinedStudyMaterials,
     convertToCombinedItem
@@ -186,7 +186,7 @@ export function useCombinedManager(): CombinedManagerState {
             // Load preview items (first batch)
             const previewCount = Math.max(displayedPreviewCount * 2, 48);
             const previewSubjects = await fetchCombinedPreview(apiToken, level, previewCount);
-            
+
             // Load study materials for preview items
             let studyMaterials: any[] = [];
             if (previewSubjects.length > 0) {
@@ -196,7 +196,7 @@ export function useCombinedManager(): CombinedManagerState {
             }
 
             // Convert to CombinedItems
-            const previewItems = previewSubjects.map(subject => 
+            const previewItems = previewSubjects.map(subject =>
                 convertToCombinedItem(subject, studyMaterials)
             );
 
@@ -235,7 +235,7 @@ export function useCombinedManager(): CombinedManagerState {
                     level,
                     newDisplayCount + PREVIEW_BATCH_SIZE
                 );
-                
+
                 // Load study materials
                 let studyMaterials: any[] = [];
                 if (moreSubjects.length > 0) {
