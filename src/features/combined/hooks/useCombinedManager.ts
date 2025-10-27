@@ -13,14 +13,14 @@ import {
     loadDeepLToken,
     saveDeepLToken
 } from '../../../shared/lib/storage';
-import { 
+import {
     fetchCombinedPreview,
     fetchCombinedStudyMaterials,
     convertToCombinedItem
 } from '../lib/combined-wanikani';
 import { processCombinedStreaming } from '../lib/combined-streaming-integration';
 import type { CombinedItem } from '../types/combined-types';
-import { isRadical, isKanji, isVocabulary } from '../types/combined-types';export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
+import { isRadical, isKanji, isVocabulary } from '../types/combined-types'; export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export interface CombinedManagerState {
     // Settings
@@ -297,7 +297,7 @@ export function useCombinedManager(): CombinedManagerState {
 
             if (mountedRef.current) {
                 setProgress(100);
-                
+
                 if (result.wasStopped) {
                     console.log('[CombinedManager] ⏹️ Processing stopped by user');
                 } else if (result.errorCount > 0) {
@@ -305,7 +305,7 @@ export function useCombinedManager(): CombinedManagerState {
                     setApiError(`Processing completed with ${result.errorCount} errors`);
                 } else {
                     console.log('[CombinedManager] ✅ Processing completed successfully:', result);
-                    
+
                     // Reload items to show updated synonyms
                     if (result.uploadCount > 0) {
                         setTimeout(() => loadItemsFromAPI(), 1000);

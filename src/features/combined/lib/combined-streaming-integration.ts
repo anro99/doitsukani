@@ -39,7 +39,7 @@ export interface CombinedStreamingOptions {
     batchSize?: number;
     enableProgressReporting?: boolean;
     stopOnFirstError?: boolean;
-    
+
     // Callbacks
     onProgress?: (progress: CombinedProcessingProgress) => void;
     onItemUpdated?: (item: CombinedItem, result: CombinedItemResult) => void;
@@ -54,7 +54,7 @@ export interface CombinedProcessingProgress {
     processedCount: number;
     totalCount: number;
     currentItem?: string;
-    
+
     // Type-specific stats
     stats: {
         total: number;
@@ -93,7 +93,7 @@ export interface CombinedProcessingResult {
     uploadCount: number;
     errorCount: number;
     processingTime: number;
-    
+
     // Type-specific results
     byType: {
         radicals: { total: number; successful: number; failed: number };
@@ -289,7 +289,7 @@ export async function processCombinedStreaming(
                 }
 
                 const result = await combinedUploadService.uploadItem(item, synonyms);
-                
+
                 // Live-Update: Rufe onItemUpdated sofort nach erfolgreichem Upload auf
                 if (result.success && options.onItemUpdated && !processedItemIds.has(itemId)) {
                     processedItemIds.add(itemId);
@@ -364,7 +364,7 @@ export async function processCombinedStreaming(
 
     } catch (error) {
         logger.error(`Processing failed`, { error });
-        
+
         return {
             success: false,
             wasStopped: false,
