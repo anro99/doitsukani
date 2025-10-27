@@ -13,15 +13,14 @@ import {
     loadDeepLToken,
     saveDeepLToken
 } from '../../../shared/lib/storage';
-import {
+import { 
     fetchCombinedPreview,
     fetchCombinedStudyMaterials,
     convertToCombinedItem
 } from '../lib/combined-wanikani';
+import { processCombinedStreaming } from '../lib/combined-streaming-integration';
 import type { CombinedItem } from '../types/combined-types';
-import { isRadical, isKanji, isVocabulary } from '../types/combined-types';
-
-export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
+import { isRadical, isKanji, isVocabulary } from '../types/combined-types';export type SynonymMode = 'replace' | 'smart-merge' | 'delete';
 
 export interface CombinedManagerState {
     // Settings
@@ -260,7 +259,7 @@ export function useCombinedManager(): CombinedManagerState {
         }
     };
 
-    // Start processing (placeholder - will be implemented in Phase 2.2)
+    // Start processing
     const startProcessing = async () => {
         if (!apiToken || !deeplToken) {
             setApiError('API-Tokens nicht verfügbar');
@@ -272,26 +271,47 @@ export function useCombinedManager(): CombinedManagerState {
             setProgress(0);
             setApiError('');
 
-            console.log('[CombinedManager] 🚀 Starting processing (placeholder)');
+            console.log('[CombinedManager] 🚀 Starting processing');
 
             // Reset stop signal
             stopSignalRef.current = { current: false };
 
-            // TODO: Implement in Phase 2.2
-            // const result = await processCombinedItemsStreaming(filteredItems, {
-            //     apiToken,
-            //     deeplToken,
-            //     synonymMode,
-            //     onProgress: (progress) => {
-            //         if (mountedRef.current) {
-            //             setProgress(progress);
-            //         }
-            //     },
-            //     stopSignal: stopSignalRef.current
-            // });
+            // Process combined items
+            const result = await processCombinedStreaming(filteredItems, {
+                apiToken,
+                deeplToken,
+                synonymMode,
+                batchSize: 10,
+                onProgress: (progress) => {
+                    if (mountedRef.current) {
+                        setProgress(progress.overallProgress);
+                        console.log('[CombinedManager] 📊 Progress:', {
+                            overall: progress.overallProgress,
+                            phase: progress.phase,
+                            processed: progress.processedCount,
+                            total: progress.totalCount,
+                        });
+                    }
+                },
+            }, stopSignalRef.current);
 
-            console.log('[CombinedManager] ⚠️ Processing not yet implemented');
-            setApiError('Processing wird in Phase 2.2 implementiert');
+            if (mountedRef.current) {
+                setProgress(100);
+                
+                if (result.wasStopped) {
+                    console.log('[CombinedManager] ⏹️ Processing stopped by user');
+                } else if (result.errorCount > 0) {
+                    console.warn('[CombinedManager] ⚠️ Processing completed with errors:', result);
+                    setApiError(`Processing completed with ${result.errorCount} errors`);
+                } else {
+                    console.log('[CombinedManager] ✅ Processing completed successfully:', result);
+                    
+                    // Reload items to show updated synonyms
+                    if (result.uploadCount > 0) {
+                        setTimeout(() => loadItemsFromAPI(), 1000);
+                    }
+                }
+            }
 
         } catch (error) {
             if (mountedRef.current) {
