@@ -19,16 +19,17 @@ import { writeProgressAtom } from "./shared/lib/progressreporter";
 import { RadicalsManagerRefactored } from "./features/radicals/components/RadicalsManagerRefactored";
 import { KanjiManagerRefactored } from "./features/kanji/components/KanjiManagerRefactored";
 import { VocabularyManagerRefactored } from "./features/vocabulary/components/VocabularyManagerRefactored";
+import { CombinedManager } from "./features/combined/components/CombinedManager";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager'>('vocabulary');
+  const [activeTab, setActiveTab] = useState<'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager' | 'combined'>('vocabulary');
   const [, setProgress] = useAtom(writeProgressAtom);
 
   // React 19 best practice: Use startTransition for non-urgent tab updates
-  const handleTabChange = (newTab: 'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager') => {
+  const handleTabChange = (newTab: 'vocabulary' | 'radicals' | 'kanji' | 'vocabulary-manager' | 'combined') => {
     startTransition(() => {
       setActiveTab(newTab);
     });
@@ -129,6 +130,15 @@ function App() {
                 >
                   📚 Vocabulary Manager
                 </button>
+                <button
+                  onClick={() => handleTabChange('combined')}
+                  className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'combined'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  🎯 Combined Manager
+                </button>
               </div>
             </div>
           </div>
@@ -217,6 +227,10 @@ function App() {
 
           {activeTab === 'vocabulary-manager' && (
             <VocabularyManagerRefactored />
+          )}
+
+          {activeTab === 'combined' && (
+            <CombinedManager />
           )}
         </div>
       </div>
