@@ -15,6 +15,7 @@ import {
 } from '../../../shared/lib/storage';
 import {
     fetchCombinedPreview,
+    fetchCombinedSubjects,
     fetchCombinedStudyMaterials,
     convertToCombinedItem,
     getCombinedCount
@@ -286,8 +287,34 @@ export function useCombinedManager(): CombinedManagerState {
             // Reset stop signal
             stopSignalRef.current = { current: false };
 
-            // Process combined items
-            const result = await processCombinedStreaming(combinedItems, {
+            // ✅ Load ALL items of the selected level, not just preview items
+            const level = selectedLevel === 'all' ? undefined : selectedLevel;
+            console.log(`[CombinedManager] 🔄 Loading all items for level ${level ?? 'all'}...`);
+
+            const allSubjects = await fetchCombinedSubjects(apiToken, {
+                levels: level ? level.toString() : undefined
+                // No limit = load ALL items
+            });
+
+            console.log(`[CombinedManager] ✅ Loaded ${allSubjects.length} items for processing`);
+
+            // Load study materials for all items
+            let studyMaterials: any[] = [];
+            if (allSubjects.length > 0) {
+                const subjectIds = allSubjects.map((subject) => subject.id);
+                studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
+                console.log(`[CombinedManager] ✅ Loaded ${studyMaterials.length} study materials`);
+            }
+
+            // Convert to CombinedItems
+            const allItems = allSubjects.map(subject =>
+                convertToCombinedItem(subject, studyMaterials)
+            );
+
+            console.log(`[CombinedManager] 📊 Items to process: R=${allItems.filter(isRadical).length}, K=${allItems.filter(isKanji).length}, V=${allItems.filter(isVocabulary).length}`);
+
+            // Process ALL items
+            const result = await processCombinedStreaming(allItems, {
                 apiToken,
                 deeplToken,
                 synonymMode,
