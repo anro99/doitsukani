@@ -52,6 +52,13 @@ export interface CombinedManagerState {
     // Processing states
     isProcessing: boolean;
     progress: number;
+    streamingResult: import('../lib/combined-streaming-integration').CombinedProcessingResult | null;
+
+    // Upload stats für UI
+    uploadStats: import('../lib/combined-types').CombinedUploadStats;
+
+    // Error tracking
+    errorItems: Map<number, string>;
 
     // Actions
     loadItemsFromAPI: () => Promise<void>;
@@ -59,6 +66,7 @@ export interface CombinedManagerState {
     startProcessing: () => Promise<void>;
     stopProcessing: () => void;
     clearResults: () => void;
+    clearErrors: () => void;
 }
 
 export function useCombinedManager(): CombinedManagerState {
@@ -112,12 +120,20 @@ export function useCombinedManager(): CombinedManagerState {
     const [progress, setProgress] = useState(0);
     const stopSignalRef = useRef({ current: false });
 
+    // Streaming processing states (wie Vocabulary Manager)
+    const [streamingResult, setStreamingResult] = useState<import('../lib/combined-streaming-integration').CombinedProcessingResult | null>(null);
+
+    // Error tracking for display
+    const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
+
     // Reset processing state when level changes
     useEffect(() => {
         console.log('[CombinedManager] 🔄 Level changed, resetting processing state');
         setProgress(0);
         setApiError('');
         setIsProcessing(false);
+        setStreamingResult(null);
+        setErrorItems(new Map());
     }, [selectedLevel]);
 
     // Handle token changes
@@ -141,6 +157,38 @@ export function useCombinedManager(): CombinedManagerState {
                 removeToken(STORAGE_KEYS.DEEPL_TOKEN);
             }
         }
+    };
+
+    // Processing callback functions (wie Vocabulary Manager)
+    const handleItemProcessing = (item: CombinedItem, phase: 'translation' | 'upload') => {
+        if (!mountedRef.current) return;
+
+        console.log(`🔄 Processing ${item.type} ${item.id} (${item.characters}) - ${phase}`);
+
+        // Entferne aus Error-Liste (falls vorhanden)
+        setErrorItems(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(item.id);
+            return newMap;
+        });
+    };
+
+    const handleItemUpdated = (item: CombinedItem, result: import('../lib/combined-streaming-integration').CombinedItemResult) => {
+        if (!mountedRef.current) return;
+
+        console.log(`✅ Updated ${item.type} ${item.id}:`, result);
+
+        // Live-Update der Combined Items könnte hier implementiert werden
+        // Aktuell verwenden wir setCombinedItems nicht live während Processing
+    };
+
+    const handleItemError = (item: CombinedItem, error: import('../lib/combined-streaming-integration').CombinedItemError) => {
+        if (!mountedRef.current) return;
+
+        console.error(`❌ Error processing ${item.type} ${item.id}:`, error);
+
+        // Zur Error-Liste hinzufügen
+        setErrorItems(prev => new Map(prev).set(item.id, error.error));
     };
 
     // Count items by type from loaded items
@@ -281,6 +329,7 @@ export function useCombinedManager(): CombinedManagerState {
             setIsProcessing(true);
             setProgress(0);
             setApiError('');
+            setStreamingResult(null);  // Reset result
 
             console.log('[CombinedManager] 🚀 Starting processing');
 
@@ -313,15 +362,16 @@ export function useCombinedManager(): CombinedManagerState {
 
             console.log(`[CombinedManager] 📊 Items to process: R=${allItems.filter(isRadical).length}, K=${allItems.filter(isKanji).length}, V=${allItems.filter(isVocabulary).length}`);
 
-            // Process ALL items
+            // Process ALL items mit erweiterten Callbacks
             const result = await processCombinedStreaming(allItems, {
                 apiToken,
                 deeplToken,
                 synonymMode,
-                batchSize: 10,
+                batchSize: 1, // ✅ Process one-by-one for frequent UI updates
                 onProgress: (progress) => {
                     if (mountedRef.current) {
-                        setProgress(progress.overallProgress);
+                        // ✅ Progress RUNDEN (keine Nachkommastellen)
+                        setProgress(Math.round(progress.overallProgress));
                         console.log('[CombinedManager] 📊 Progress:', {
                             overall: progress.overallProgress,
                             phase: progress.phase,
@@ -330,13 +380,19 @@ export function useCombinedManager(): CombinedManagerState {
                         });
                     }
                 },
+                // ✅ Item-Callbacks für Live-Updates
+                onItemProcessing: handleItemProcessing,
+                onItemUpdated: handleItemUpdated,
+                onItemError: handleItemError,
             }, stopSignalRef.current);
 
             if (mountedRef.current) {
+                // ✅ Result speichern
+                setStreamingResult(result);
                 setProgress(100);
 
                 if (result.wasStopped) {
-                    console.log('[CombinedManager] ⏹️ Processing stopped by user');
+                    console.log('[CombinedManager] ⏹️ Processing stopped by user:', result);
                 } else if (result.errorCount > 0) {
                     console.warn('[CombinedManager] ⚠️ Processing completed with errors:', result);
                     setApiError(`Processing completed with ${result.errorCount} errors`);
@@ -374,7 +430,15 @@ export function useCombinedManager(): CombinedManagerState {
     // Clear results
     const clearResults = () => {
         console.log('[CombinedManager] 🗑️ Clearing processing results');
+        setStreamingResult(null);
         setProgress(0);
+        setErrorItems(new Map());
+    };
+
+    // Clear errors only
+    const clearErrors = () => {
+        console.log('[CombinedManager] 🗑️ Clearing error items');
+        setErrorItems(new Map());
     };
 
     // Load items when component mounts or token/level changes
@@ -412,12 +476,26 @@ export function useCombinedManager(): CombinedManagerState {
         // Processing states
         isProcessing,
         progress,
+        streamingResult,
+
+        // Upload stats für UI
+        uploadStats: {
+            created: 0,
+            updated: 0,
+            failed: streamingResult?.errorCount || 0,
+            skipped: 0,
+            successful: streamingResult?.uploadCount || 0
+        },
+
+        // Error tracking
+        errorItems,
 
         // Actions
         loadItemsFromAPI,
         loadMorePreviewItems,
         startProcessing,
         stopProcessing,
-        clearResults
+        clearResults,
+        clearErrors
     };
 }

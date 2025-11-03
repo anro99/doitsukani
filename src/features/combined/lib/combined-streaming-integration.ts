@@ -42,6 +42,7 @@ export interface CombinedStreamingOptions {
 
     // Callbacks
     onProgress?: (progress: CombinedProcessingProgress) => void;
+    onItemProcessing?: (item: CombinedItem, phase: 'translation' | 'upload') => void;
     onItemUpdated?: (item: CombinedItem, result: CombinedItemResult) => void;
     onItemError?: (item: CombinedItem, error: CombinedItemError) => void;
 }
@@ -330,7 +331,7 @@ export async function processCombinedStreaming(
 
         // Configure GenericStreamingProcessor
         const processingOptions: ProcessingOptions = {
-            batchSize: options.batchSize || 10,
+            batchSize: 1, // ✅ Process one-by-one for streaming (immediate upload + UI updates)
             synonymMode,
             onProgress: (progress: ProcessingProgress) => {
                 if (options.onProgress) {

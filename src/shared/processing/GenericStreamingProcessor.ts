@@ -300,9 +300,10 @@ export class GenericStreamingProcessor<T extends ProcessableItem> {
         const progress = processedCount / totalCount;
 
         // Translation und Upload laufen parallel, daher jeweils 50%
-        const translationProgress = Math.min(100, progress * 100);
-        const uploadProgress = Math.min(100, progress * 100);
-        const overallProgress = Math.min(100, progress * 100);
+        // ✅ Math.round() für keine Nachkommastellen
+        const translationProgress = Math.round(Math.min(100, progress * 100));
+        const uploadProgress = Math.round(Math.min(100, progress * 100));
+        const overallProgress = Math.round(Math.min(100, progress * 100));
 
         // Estimate remaining time (in seconds)
         const estimatedTimeRemaining =
