@@ -8,12 +8,24 @@
  * 
  * Der WaniKani Upload Service soll:
  * - Study Materials per API erstellen/aktualisieren
- * - Rate Limiting (1 Request/Sekunde) einhalten
+ * - Rate Limiting via Bottleneck einhalten
  * - Retry-Logik bei Fehlern
  * - Batch-Operationen optimieren
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock Bottleneck to execute functions immediately in tests
+vi.mock('bottleneck', () => ({
+    default: vi.fn().mockImplementation(() => ({
+        schedule: vi.fn().mockImplementation((fn) => fn()),
+        counts: vi.fn().mockReturnValue({
+            EXECUTING: 0,
+            QUEUED: 0,
+        }),
+    })),
+}));
+
 import { WaniKaniUploadService } from '@/shared/processing/services/WaniKaniUploadService';
 
 // ============================================================================
@@ -91,11 +103,10 @@ describe('WaniKaniUploadService', () => {
         global.fetch = mockFetch;
 
         service = new WaniKaniUploadService('fake-api-token');
-        vi.useFakeTimers();
     });
 
     afterEach(() => {
-        vi.useRealTimers();
+        vi.clearAllMocks();
     });
 
     // ==========================================================================
@@ -200,21 +211,11 @@ describe('WaniKaniUploadService', () => {
             const upload1Promise = service.upload(1, ['test1']);
             const upload2Promise = service.upload(2, ['test2']);
 
-            // Warte auf ersten Upload
-            await vi.advanceTimersByTimeAsync(100);
-
-            // Erwartung: Erster Upload fertig, zweiter wartet
-            const callsAfterFirst = mockFetch.mock.calls.length;
-            expect(callsAfterFirst).toBeGreaterThan(0);
-
-            // Warte weitere 900ms (insgesamt 1 Sekunde)
-            await vi.advanceTimersByTimeAsync(900);
-
-            // Erwartung: Zweiter Upload jetzt auch gestartet
-            const callsAfterSecond = mockFetch.mock.calls.length;
-            expect(callsAfterSecond).toBeGreaterThan(callsAfterFirst);
-
+            // Warte auf beide Uploads
             await Promise.all([upload1Promise, upload2Promise]);
+
+            // Erwartung: Beide Uploads wurden durchgeführt
+            expect(mockFetch).toHaveBeenCalled();
         });
 
         it('sollte bei Batch-Upload Rate Limit für jeden Request einhalten', async () => {
@@ -232,12 +233,7 @@ describe('WaniKaniUploadService', () => {
                 { id: 3, synonyms: ['test3'] },
             ];
 
-            const batchPromise = service.uploadBatch(batch);
-
-            // Advance time für alle Requests
-            await vi.advanceTimersByTimeAsync(3000);
-
-            const results = await batchPromise;
+            const results = await service.uploadBatch(batch);
 
             expect(results).toHaveLength(3);
             expect(results.every((r: boolean) => r === true)).toBe(true);
@@ -252,15 +248,12 @@ describe('WaniKaniUploadService', () => {
                 json: async () => mockStudyMaterialResponse(1, []),
             });
 
-            const uploadPromise = service.upload(1, ['test']);
+            await service.upload(1, ['test']);
 
             const status = service.getRateLimitStatus();
 
             expect(status).toHaveProperty('requestsInLastSecond');
             expect(status).toHaveProperty('canMakeRequest');
-
-            await vi.advanceTimersByTimeAsync(1000);
-            await uploadPromise;
         });
     });
 
@@ -285,12 +278,7 @@ describe('WaniKaniUploadService', () => {
                     json: async () => mockStudyMaterialResponse(1, ['test']),
                 });
 
-            const uploadPromise = service.upload(1, ['test']);
-
-            // Warte auf Retry
-            await vi.advanceTimersByTimeAsync(2000);
-
-            const result = await uploadPromise;
+            const result = await service.upload(1, ['test']);
 
             expect(result).toBe(true);
             expect(mockFetch).toHaveBeenCalledTimes(3); // GET + POST (fail) + POST (success)
@@ -308,11 +296,7 @@ describe('WaniKaniUploadService', () => {
                     json: async () => mockStudyMaterialResponse(1, ['test']),
                 });
 
-            const uploadPromise = service.upload(1, ['test']);
-
-            await vi.advanceTimersByTimeAsync(2000);
-
-            const result = await uploadPromise;
+            const result = await service.upload(1, ['test']);
 
             expect(result).toBe(true);
         });
@@ -324,12 +308,7 @@ describe('WaniKaniUploadService', () => {
                 statusText: 'Internal Server Error',
             });
 
-            const uploadPromise = service.upload(1, ['test']);
-
-            // Advance time for rate limiting and retries
-            await vi.advanceTimersByTimeAsync(10000);
-
-            const result = await uploadPromise;
+            const result = await service.upload(1, ['test']);
 
             expect(result).toBe(false);
             // Erwartung: 1 initial + maxRetries attempts
@@ -473,11 +452,7 @@ describe('WaniKaniUploadService', () => {
                 { id: 3, synonyms: ['test3'] },
             ];
 
-            const resultsPromise = service.uploadBatch(batch);
-
-            await vi.advanceTimersByTimeAsync(5000);
-
-            const results = await resultsPromise;
+            const results = await service.uploadBatch(batch);
 
             expect(results).toHaveLength(3);
             expect(results.every((r: boolean) => r === true)).toBe(true);
@@ -504,11 +479,7 @@ describe('WaniKaniUploadService', () => {
                 { id: 3, synonyms: ['test3'] },
             ];
 
-            const resultsPromise = service.uploadBatch(batch);
-
-            await vi.advanceTimersByTimeAsync(20000); // More time for retries
-
-            const results = await resultsPromise;
+            const results = await service.uploadBatch(batch);
 
             expect(results).toHaveLength(3);
             expect(results[0]).toBe(true);

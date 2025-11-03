@@ -2,11 +2,16 @@
  * WaniKani Upload Service
  * 
  * Verwaltet Study Materials über die WaniKani API v2.
- * Implementiert Rate Limiting (1 req/sec), Retry Logic und Batch-Processing.
+ * Implementiert Rate Limiting via Bottleneck, Retry Logic und Batch-Processing.
+ * 
+ * Rate Limits:
+ * - Study Materials PUT/POST: 10 requests per minute (WaniKani API Limit)
+ * - Study Materials GET: 60 requests per minute
  * 
  * API Dokumentation: https://docs.api.wanikani.com/20170710/
  */
 
+import Bottleneck from 'bottleneck';
 import type { UploadService } from '../types/processing.types';
 import { createLogger } from '../../lib/logger';
 
@@ -34,21 +39,75 @@ interface WaniKaniCollectionResponse {
     data_updated_at: string;
 }
 
+/**
+ * Rate Limit Configuration für Study Materials
+ * 
+ * WaniKani API Limits:
+ * - POST/PUT (Create/Update): 10 requests per minute
+ * - GET (Read): 60 requests per minute
+ * 
+ * Bottleneck Strategy:
+ * - reservoir: 10 requests
+ * - reservoirRefreshAmount: 10 requests
+ * - reservoirRefreshInterval: 60000ms (1 minute)
+ * - minTime: 6000ms (6 seconds between requests - safe margin)
+ */
+const UPLOAD_RATE_LIMITS = {
+    reservoir: 10,                    // Start with 10 requests available
+    reservoirRefreshAmount: 10,       // Refill to 10 requests
+    reservoirRefreshInterval: 60000,  // Every 60 seconds
+    minTime: 6000,                    // Minimum 6 seconds between requests
+    maxConcurrent: 1,                 // Only 1 concurrent request
+};
+
+/**
+ * Rate Limit Configuration für GET requests (Study Materials lookup)
+ * 
+ * GET requests haben höheres Limit: 60 per minute
+ */
+const GET_RATE_LIMITS = {
+    reservoir: 60,
+    reservoirRefreshAmount: 60,
+    reservoirRefreshInterval: 60000,
+    minTime: 1000,  // 1 second between requests
+    maxConcurrent: 1,
+};
+
 export class WaniKaniUploadService implements UploadService {
     readonly name = 'WaniKani';
 
     private apiToken: string;
     private readonly API_BASE = 'https://api.wanikani.com/v2';
-    private readonly RATE_LIMIT_MS = 1000; // 1 request per second
     private readonly logger = createLogger('WaniKaniUploadService');
 
-    // Rate limiting
-    private lastRequestTime = 0;
-    private requestQueue: Array<() => Promise<void>> = [];
-    private isProcessingQueue = false;
+    // Bottleneck rate limiters
+    private readonly uploadLimiter: Bottleneck;  // For POST/PUT requests
+    private readonly getLimiter: Bottleneck;     // For GET requests
 
-    constructor(apiToken: string) {
+    constructor(apiToken: string, testMode = false) {
         this.apiToken = apiToken;
+
+        // Initialize rate limiters
+        // In test mode: Use minimal delays (10ms instead of 6000ms)
+        if (testMode) {
+            this.uploadLimiter = new Bottleneck({
+                ...UPLOAD_RATE_LIMITS,
+                minTime: 10,
+                reservoir: 1000,
+                reservoirRefreshAmount: 1000,
+                reservoirRefreshInterval: 100,
+            });
+            this.getLimiter = new Bottleneck({
+                ...GET_RATE_LIMITS,
+                minTime: 10,
+                reservoir: 1000,
+                reservoirRefreshAmount: 1000,
+                reservoirRefreshInterval: 100,
+            });
+        } else {
+            this.uploadLimiter = new Bottleneck(UPLOAD_RATE_LIMITS);
+            this.getLimiter = new Bottleneck(GET_RATE_LIMITS);
+        }
     }
 
     /**
@@ -60,25 +119,27 @@ export class WaniKaniUploadService implements UploadService {
 
     /**
      * Lädt Synonyme für ein Item hoch
+     * 
+     * Verwendet Bottleneck für automatisches Rate Limiting:
+     * - GET request via getLimiter (60/min)
+     * - PUT/POST request via uploadLimiter (10/min)
      */
     async upload(itemId: number, synonyms: string[]): Promise<boolean> {
-        return this.enqueueRequest(async () => {
-            try {
-                // First, check if study material already exists
-                const existingMaterial = await this.findStudyMaterial(itemId);
+        try {
+            // First, check if study material already exists (GET request)
+            const existingMaterial = await this.findStudyMaterial(itemId);
 
-                if (existingMaterial) {
-                    // Update existing study material
-                    return await this.updateStudyMaterial(existingMaterial.id, synonyms);
-                } else {
-                    // Create new study material
-                    return await this.createStudyMaterial(itemId, synonyms);
-                }
-            } catch (error) {
-                this.logger.error(`Upload failed for item ${itemId}`, error as Error);
-                return false;
+            if (existingMaterial) {
+                // Update existing study material (PUT request)
+                return await this.updateStudyMaterial(existingMaterial.id, synonyms);
+            } else {
+                // Create new study material (POST request)
+                return await this.createStudyMaterial(itemId, synonyms);
             }
-        });
+        } catch (error) {
+            this.logger.error(`Upload failed for item ${itemId}`, error as Error);
+            return false;
+        }
     }
 
     /**
@@ -97,75 +158,30 @@ export class WaniKaniUploadService implements UploadService {
 
     /**
      * Gibt Rate Limit Status zurück
+     * 
+     * Returns status from Bottleneck upload limiter
      */
     getRateLimitStatus(): { requestsInLastSecond: number; canMakeRequest: boolean } {
-        const now = Date.now();
-        const timeSinceLastRequest = now - this.lastRequestTime;
-        const canMakeRequest = timeSinceLastRequest >= this.RATE_LIMIT_MS;
+        const counts = this.uploadLimiter.counts();
 
         return {
-            requestsInLastSecond: canMakeRequest ? 0 : 1,
-            canMakeRequest,
+            requestsInLastSecond: counts.EXECUTING + counts.QUEUED,
+            canMakeRequest: counts.QUEUED === 0,
         };
     }
 
     /**
-     * Fügt Request zur Queue hinzu und verarbeitet sie mit Rate Limiting
-     */
-    private async enqueueRequest<T>(request: () => Promise<T>): Promise<T> {
-        return new Promise((resolve, reject) => {
-            this.requestQueue.push(async () => {
-                try {
-                    const result = await request();
-                    resolve(result);
-                } catch (error) {
-                    reject(error);
-                }
-            });
-
-            if (!this.isProcessingQueue) {
-                this.processQueue();
-            }
-        });
-    }
-
-    /**
-     * Verarbeitet die Request Queue mit Rate Limiting
-     */
-    private async processQueue(): Promise<void> {
-        if (this.isProcessingQueue || this.requestQueue.length === 0) {
-            return;
-        }
-
-        this.isProcessingQueue = true;
-
-        while (this.requestQueue.length > 0) {
-            // Wait for rate limit
-            const now = Date.now();
-            const timeSinceLastRequest = now - this.lastRequestTime;
-
-            if (timeSinceLastRequest < this.RATE_LIMIT_MS) {
-                await this.sleep(this.RATE_LIMIT_MS - timeSinceLastRequest);
-            }
-
-            // Execute next request
-            const request = this.requestQueue.shift();
-            if (request) {
-                this.lastRequestTime = Date.now();
-                await request();
-            }
-        }
-
-        this.isProcessingQueue = false;
-    }
-
-    /**
      * Sucht existierendes Study Material für ein Item
+     * 
+     * Verwendet getLimiter (60 requests/minute)
      */
     private async findStudyMaterial(subjectId: number, retryCount = 0): Promise<StudyMaterialData | null> {
         const url = `${this.API_BASE}/study_materials?subject_ids=${subjectId}`;
 
-        const response = await this.makeRequest(url, 'GET');
+        // Use GET rate limiter
+        const response = await this.getLimiter.schedule(() =>
+            this.makeRequest(url, 'GET')
+        );
 
         // Handle rate limiting with exponential backoff
         if (response.status === 429) {
@@ -192,6 +208,8 @@ export class WaniKaniUploadService implements UploadService {
 
     /**
      * Erstellt neues Study Material
+     * 
+     * Verwendet uploadLimiter (10 requests/minute)
      */
     private async createStudyMaterial(subjectId: number, synonyms: string[]): Promise<boolean> {
         const url = `${this.API_BASE}/study_materials`;
@@ -203,13 +221,18 @@ export class WaniKaniUploadService implements UploadService {
             },
         };
 
-        const response = await this.makeRequest(url, 'POST', body);
+        // Use upload rate limiter (10 req/min)
+        const response = await this.uploadLimiter.schedule(() =>
+            this.makeRequest(url, 'POST', body)
+        );
 
         return response.ok;
     }
 
     /**
      * Aktualisiert existierendes Study Material
+     * 
+     * Verwendet uploadLimiter (10 requests/minute)
      */
     private async updateStudyMaterial(studyMaterialId: number, synonyms: string[]): Promise<boolean> {
         const url = `${this.API_BASE}/study_materials/${studyMaterialId}`;
@@ -220,7 +243,10 @@ export class WaniKaniUploadService implements UploadService {
             },
         };
 
-        const response = await this.makeRequest(url, 'PUT', body);
+        // Use upload rate limiter (10 req/min)
+        const response = await this.uploadLimiter.schedule(() =>
+            this.makeRequest(url, 'PUT', body)
+        );
 
         return response.ok;
     }
