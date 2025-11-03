@@ -15,11 +15,9 @@ import {
 } from '../../../shared/lib/storage';
 import {
     fetchCombinedPreview,
-    fetchCombinedSubjects,
     fetchCombinedStudyMaterials,
     convertToCombinedItem,
-    getCombinedCount,
-    type CombinedCountResult
+    getCombinedCount
 } from '../lib/combined-wanikani';
 import { processCombinedStreaming } from '../lib/combined-streaming-integration';
 import type { CombinedItem } from '../types/combined-types';
@@ -289,7 +287,7 @@ export function useCombinedManager(): CombinedManagerState {
             stopSignalRef.current = { current: false };
 
             // Process combined items
-            const result = await processCombinedStreaming(filteredItems, {
+            const result = await processCombinedStreaming(combinedItems, {
                 apiToken,
                 deeplToken,
                 synonymMode,
