@@ -19,7 +19,7 @@ import { writeProgressAtom } from "./shared/lib/progressreporter";
 import { RadicalsManagerRefactored } from "./features/radicals/components/RadicalsManagerRefactored";
 import { KanjiManagerRefactored } from "./features/kanji/components/KanjiManagerRefactored";
 import { VocabularyManagerRefactored } from "./features/vocabulary/components/VocabularyManagerRefactored";
-import { CombinedManager } from "./features/combined/components/CombinedManager";
+import { CombinedManagerRefactored } from "./features/combined/components/CombinedManagerRefactored";
 
 function App() {
   const [apiToken, setApiToken] = useState("");
@@ -230,7 +230,7 @@ function App() {
           )}
 
           {activeTab === 'combined' && (
-            <CombinedManager />
+            <CombinedManagerRefactored />
           )}
         </div>
       </div>

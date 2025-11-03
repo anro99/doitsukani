@@ -32,22 +32,18 @@ interface TypeCounts {
 /**
  * Props für CombinedPreview
  */
-interface CombinedPreviewProps {
+export interface CombinedPreviewProps {
     /** Combined Items zur Anzeige */
     previewItems: CombinedItem[];
 
-    /** Count information für Preview Display */
-    currentLevelCount?: number;
-    currentLevelCountLoading?: boolean;
-
     /** Per-Type Counts für detaillierte Anzeige */
-    totalRadicals?: number;
-    totalKanji?: number;
-    totalVocabulary?: number;
+    radicalCount: number;
+    kanjiCount: number;
+    vocabularyCount: number;
 
     /** Load More Funktionalität */
-    displayedPreviewCount?: number;
-    isLoadingItems?: boolean;
+    displayedPreviewCount: number;
+    isLoading: boolean;
     onLoadMore?: () => void;
 
     /** Error tracking */
@@ -85,20 +81,19 @@ function calculateTypeCounts(items: CombinedItem[]): TypeCounts {
  */
 export const CombinedPreview = ({
     previewItems,
-    currentLevelCount,
-    currentLevelCountLoading = false,
-    totalRadicals = 0,
-    totalKanji = 0,
-    totalVocabulary = 0,
-    displayedPreviewCount = 12,
-    isLoadingItems = false,
-    onLoadMore,
+    radicalCount,
+    kanjiCount,
+    vocabularyCount,
+    displayedPreviewCount,
+    isLoading,
+    onLoadMore
 }: CombinedPreviewProps) => {
+    const totalCount = radicalCount + kanjiCount + vocabularyCount;
+
     // Helper function to get count info for preview display
     const getCountInfo = () => {
-        if (currentLevelCountLoading) return 'Lade Count...';
-        if (currentLevelCount !== undefined) return `${currentLevelCount} Items insgesamt`;
-        return 'Count nicht verfügbar';
+        if (isLoading) return 'Lade Count...';
+        return `${totalCount} Items insgesamt (${radicalCount} Radicals, ${kanjiCount} Kanji, ${vocabularyCount} Vocabulary)`;
     };
 
     // Calculate type counts für alle geladenen Items
@@ -136,7 +131,7 @@ export const CombinedPreview = ({
             <CardHeader>
                 <CardTitle>🎯 Combined Vorschau</CardTitle>
                 <p className="text-sm text-gray-600">
-                    Zeigt {loadedCounts.radicals} von {totalRadicals} Radicals, {loadedCounts.kanji} von {totalKanji} Kanji und {loadedCounts.vocabulary} von {totalVocabulary} Vocabulary
+                    Zeigt {loadedCounts.radicals} von {radicalCount} Radicals, {loadedCounts.kanji} von {kanjiCount} Kanji und {loadedCounts.vocabulary} von {vocabularyCount} Vocabulary
                 </p>
             </CardHeader>
             <CardContent>
@@ -148,14 +143,14 @@ export const CombinedPreview = ({
                 </div>
 
                 {/* Load More Button */}
-                {onLoadMore && (
+                {onLoadMore && previewItems.length < totalCount && (
                     <PreviewLoadMore
                         displayedCount={displayedPreviewCount}
                         loadedCount={previewItems.length}
-                        totalCount={currentLevelCount}
-                        isLoading={isLoadingItems}
+                        totalCount={totalCount}
+                        isLoading={isLoading}
                         onLoadMore={onLoadMore}
-                        itemType="Items"
+                        itemType="Vocabulary"
                     />
                 )}
             </CardContent>

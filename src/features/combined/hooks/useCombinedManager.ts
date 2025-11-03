@@ -53,6 +53,7 @@ export interface CombinedManagerState {
     isProcessing: boolean;
     progress: number;
     streamingResult: import('../lib/combined-streaming-integration').CombinedProcessingResult | null;
+    streamingPhases: import('@/shared/components/processing/ProcessingControls').StreamingProcessingPhase | null;
 
     // Upload stats für UI
     uploadStats: import('../lib/combined-types').CombinedUploadStats;
@@ -122,6 +123,7 @@ export function useCombinedManager(): CombinedManagerState {
 
     // Streaming processing states (wie Vocabulary Manager)
     const [streamingResult, setStreamingResult] = useState<import('../lib/combined-streaming-integration').CombinedProcessingResult | null>(null);
+    const [streamingPhases, setStreamingPhases] = useState<import('@/shared/components/processing/ProcessingControls').StreamingProcessingPhase | null>(null);
 
     // Error tracking for display
     const [errorItems, setErrorItems] = useState<Map<number, string>>(new Map());
@@ -133,6 +135,7 @@ export function useCombinedManager(): CombinedManagerState {
         setApiError('');
         setIsProcessing(false);
         setStreamingResult(null);
+        setStreamingPhases(null);
         setErrorItems(new Map());
     }, [selectedLevel]);
 
@@ -251,7 +254,7 @@ export function useCombinedManager(): CombinedManagerState {
             );
 
             // Load study materials for preview items only
-            let studyMaterials: any[] = [];
+            let studyMaterials: import('@wanikani/wk-types').StudyMaterial[] = [];
             if (previewSubjects.length > 0) {
                 const subjectIds = previewSubjects.map((subject) => subject.id);
                 studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
@@ -295,7 +298,7 @@ export function useCombinedManager(): CombinedManagerState {
                 );
 
                 // Load study materials
-                let studyMaterials: any[] = [];
+                let studyMaterials: import('@wanikani/wk-types').StudyMaterial[] = [];
                 if (moreSubjects.length > 0) {
                     const subjectIds = moreSubjects.map((subject) => subject.id);
                     studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
@@ -348,7 +351,7 @@ export function useCombinedManager(): CombinedManagerState {
             console.log(`[CombinedManager] ✅ Loaded ${allSubjects.length} items for processing`);
 
             // Load study materials for all items
-            let studyMaterials: any[] = [];
+            let studyMaterials: import('@wanikani/wk-types').StudyMaterial[] = [];
             if (allSubjects.length > 0) {
                 const subjectIds = allSubjects.map((subject) => subject.id);
                 studyMaterials = await fetchCombinedStudyMaterials(apiToken, subjectIds);
@@ -372,6 +375,25 @@ export function useCombinedManager(): CombinedManagerState {
                     if (mountedRef.current) {
                         // ✅ Progress RUNDEN (keine Nachkommastellen)
                         setProgress(Math.round(progress.overallProgress));
+
+                        // Create streaming phases from progress data
+                        const phases: import('@/shared/components/processing/ProcessingControls').StreamingProcessingPhase = {
+                            translationPhase: {
+                                status: progress.phase === 'translating' ? 'Active' : 'Completed',
+                                progress: progress.translationProgress,
+                            },
+                            uploadPhase: {
+                                status: progress.phase === 'uploading' ? 'Active' : progress.phase === 'translating' ? 'Pending' : 'Completed',
+                                progress: progress.uploadProgress,
+                            },
+                            overallPhase: {
+                                status: `${progress.processedCount}/${progress.totalCount}`,
+                                progress: progress.overallProgress,
+                                currentItem: progress.currentItem,
+                            },
+                        };
+                        setStreamingPhases(phases);
+
                         console.log('[CombinedManager] 📊 Progress:', {
                             overall: progress.overallProgress,
                             phase: progress.phase,
@@ -431,6 +453,7 @@ export function useCombinedManager(): CombinedManagerState {
     const clearResults = () => {
         console.log('[CombinedManager] 🗑️ Clearing processing results');
         setStreamingResult(null);
+        setStreamingPhases(null);
         setProgress(0);
         setErrorItems(new Map());
     };
@@ -477,6 +500,7 @@ export function useCombinedManager(): CombinedManagerState {
         isProcessing,
         progress,
         streamingResult,
+        streamingPhases,
 
         // Upload stats für UI
         uploadStats: {

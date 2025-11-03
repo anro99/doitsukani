@@ -8,14 +8,14 @@ import type { StreamingProcessingPhase, StreamingCompleteProcessingResult } from
 /**
  * Base Manager Props
  * 
- * Generische Props für alle Manager-Komponenten (Vocabulary, Kanji, Radicals).
+ * Generische Props für alle Manager-Komponenten (Vocabulary, Kanji, Radicals, Combined).
  */
 export interface BaseManagerProps<TItem> {
     // Page Info
     title: string;
     subtitle: string;
-    itemType: 'vocabulary' | 'kanji' | 'radicals';
-    itemTypeName: string; // "Vocabulary", "Kanji", "Radicals"
+    itemType: 'vocabulary' | 'kanji' | 'radicals' | 'combined';
+    itemTypeName: string; // "Vocabulary", "Kanji", "Radicals", "Combined"
     spinnerColor: string; // "purple-600", "blue-600", etc.
 
     // Settings

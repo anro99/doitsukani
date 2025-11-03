@@ -1,33 +1,28 @@
 /**
- * Combined Manager - Main Component
+ * CombinedManagerRefactored Component
  * 
- * Hauptkomponente für das Combined Manager Feature.
- * Verwaltet Radicals, Kanji und Vocabulary gleichzeitig.
+ * Refactored Combined Manager basierend auf BaseManager.
+ * Vereinheitlicht die UI mit Vocabulary/Kanji/Radicals Managern.
  * 
  * Features:
  * - BaseManager Integration
- * - Vollständiger Workflow (Tokens → Level → Preview → Processing)
- * - Type-spezifische Statistiken
- * - Mixed Item Processing
+ * - Combined Items Preview (Radicals, Kanji, Vocabulary)
+ * - Type-spezifische Statistiken (byType breakdown)
+ * - Streaming Processing mit Live-Updates
+ * - Error Tracking & Display
  */
 
 import { BaseManager } from '../../../shared/components/BaseManager';
-import { CombinedPreview } from './CombinedPreview';
 import { useCombinedManager } from '../hooks/useCombinedManager';
+import { CombinedPreview } from './CombinedPreview';
 
-/**
- * Combined Manager Component
- * 
- * Vereint Radicals, Kanji und Vocabulary Management in einer Komponente.
- * Nutzt BaseManager für gemeinsame UI-Struktur und useCombinedManager für State.
- */
-export const CombinedManager = () => {
+export const CombinedManagerRefactored = () => {
     const {
         // Settings
         selectedLevel,
-        setSelectedLevel,
         synonymMode,
         setSynonymMode,
+        setSelectedLevel,
 
         // Tokens
         apiToken,
@@ -37,34 +32,36 @@ export const CombinedManager = () => {
 
         // Data
         combinedItems,
-        totalCount,
         radicalCount,
         kanjiCount,
         vocabularyCount,
         displayedPreviewCount,
 
-        // Loading states
-        isLoadingItems,
+        // States
         apiError,
-
-        // Processing states
+        isLoadingItems,
         isProcessing,
         progress,
+
+        // Streaming states
+        streamingResult,
+        errorItems,
 
         // Actions
         startProcessing,
         stopProcessing,
         clearResults,
-        loadMorePreviewItems,
+        clearErrors,
+        loadMorePreviewItems
     } = useCombinedManager();
 
     return (
         <BaseManager
             title="Doitsukani - WaniKani Combined Manager"
-            subtitle="Automatische deutsche Übersetzungen für Radicals, Kanji und Vocabulary mit DeepL"
-            itemType="vocabulary" // Generic label für BaseManager
-            itemTypeName="Items" // Generic name für Mixed Items
-            spinnerColor="indigo-600"
+            subtitle="Kombinierte Verarbeitung von Radicals, Kanji und Vocabulary mit deutschen Übersetzungen"
+            itemType="combined"
+            itemTypeName="Combined"
+            spinnerColor="blue-600"
 
             selectedLevel={selectedLevel as number}
             synonymMode={synonymMode}
@@ -83,21 +80,25 @@ export const CombinedManager = () => {
             isProcessing={isProcessing}
             progress={progress}
 
+            streamingPhases={undefined} // TODO: Add in Todo 6
+            streamingResult={streamingResult}
+            errorItems={errorItems}
+
             onStartProcessing={startProcessing}
             onStopProcessing={stopProcessing}
             onClearResults={clearResults}
+            onClearErrors={clearErrors}
 
             previewComponent={
                 <CombinedPreview
                     previewItems={combinedItems}
-                    currentLevelCount={totalCount}
-                    currentLevelCountLoading={false}
+                    radicalCount={radicalCount}
+                    kanjiCount={kanjiCount}
+                    vocabularyCount={vocabularyCount}
                     displayedPreviewCount={displayedPreviewCount}
-                    isLoadingItems={isLoadingItems}
+                    isLoading={isLoadingItems}
                     onLoadMore={loadMorePreviewItems}
-                    totalRadicals={radicalCount}
-                    totalKanji={kanjiCount}
-                    totalVocabulary={vocabularyCount}
+                    errorItems={errorItems}
                 />
             }
         />

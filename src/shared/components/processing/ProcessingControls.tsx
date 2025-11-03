@@ -31,7 +31,13 @@ export interface StreamingCompleteProcessingResult {
     uploadCount: number;
     errorCount: number;
     processingTime: number;
-    phases?: any[];
+    phases?: unknown[];
+    // Combined Manager: Type-specific breakdown
+    byType?: {
+        radicals: { total: number; successful: number; failed: number };
+        kanji: { total: number; successful: number; failed: number };
+        vocabulary: { total: number; successful: number; failed: number };
+    };
 }
 
 interface ProcessingControlsProps {
@@ -44,7 +50,7 @@ interface ProcessingControlsProps {
     onStartProcessing: () => void;
     onStopProcessing: () => void;
     onClearResults?: () => void;
-    itemType: 'radicals' | 'kanji' | 'vocabulary';
+    itemType: 'radicals' | 'kanji' | 'vocabulary' | 'combined';
 
     // Streaming processing props
     streamingPhases?: StreamingProcessingPhase | null;
@@ -257,6 +263,24 @@ export const ProcessingControls = ({
                             <div>📤 Uploaded: <strong>{streamingResult.uploadCount}</strong></div>
                             <div>❌ Errors: <strong>{streamingResult.errorCount}</strong></div>
                         </div>
+
+                        {/* Type-specific breakdown for Combined Manager */}
+                        {streamingResult.byType && (
+                            <div className="mt-2 text-xs text-gray-600 border-t pt-2">
+                                <div className="font-medium mb-1">📋 Breakdown by Type:</div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        🔲 Radicals: <strong>{streamingResult.byType.radicals.successful}/{streamingResult.byType.radicals.total}</strong>
+                                    </div>
+                                    <div>
+                                        🔣 Kanji: <strong>{streamingResult.byType.kanji.successful}/{streamingResult.byType.kanji.total}</strong>
+                                    </div>
+                                    <div>
+                                        📚 Vocabulary: <strong>{streamingResult.byType.vocabulary.successful}/{streamingResult.byType.vocabulary.total}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {streamingResult.errorCount > 0 && (
                             <div className="mt-2 text-xs text-red-600">
