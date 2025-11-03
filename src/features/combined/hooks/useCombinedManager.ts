@@ -103,6 +103,11 @@ export function useCombinedManager(): CombinedManagerState {
     const [apiError, setApiError] = useState<string>('');
     const [totalItemCount, setTotalItemCount] = useState<number>(0);
 
+    // Separate States für total verfügbare Counts (von API)
+    const [totalRadicalCount, setTotalRadicalCount] = useState<number>(0);
+    const [totalKanjiCount, setTotalKanjiCount] = useState<number>(0);
+    const [totalVocabularyCount, setTotalVocabularyCount] = useState<number>(0);
+
     // Processing states
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -181,8 +186,11 @@ export function useCombinedManager(): CombinedManagerState {
             // ✅ Step 1: Load ONLY counts (3 API calls, minimal data)
             const counts = await getCombinedCount(apiToken, level);
 
-            // Set total counts from API
+            // Set ALL counts from API (nicht nur total!)
             setTotalItemCount(counts.total);
+            setTotalRadicalCount(counts.radicals);
+            setTotalKanjiCount(counts.kanji);
+            setTotalVocabularyCount(counts.vocabulary);
 
             console.log(`[CombinedManager] ✅ Total: ${counts.total} items (R=${counts.radicals}, K=${counts.kanji}, V=${counts.vocabulary})`);
 
@@ -367,9 +375,9 @@ export function useCombinedManager(): CombinedManagerState {
         // Data
         combinedItems,
         totalCount: totalItemCount > 0 ? totalItemCount : typeCounts.total,
-        radicalCount: typeCounts.radicals,
-        kanjiCount: typeCounts.kanji,
-        vocabularyCount: typeCounts.vocabulary,
+        radicalCount: totalRadicalCount > 0 ? totalRadicalCount : typeCounts.radicals,
+        kanjiCount: totalKanjiCount > 0 ? totalKanjiCount : typeCounts.kanji,
+        vocabularyCount: totalVocabularyCount > 0 ? totalVocabularyCount : typeCounts.vocabulary,
         displayedPreviewCount,
 
         // Loading states
